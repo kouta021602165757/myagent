@@ -9413,6 +9413,12 @@ function _renderTabArticles(site){
   var tabBtn = function(key, lbl, count, isActive){
     return '<button onclick="_artSwitchTab(\''+key+'\')" data-art-tab="'+key+'" style="background:'+(isActive?'var(--teal)':'transparent')+';color:'+(isActive?'#fff':'var(--text2)')+';border:'+(isActive?'0':'1px solid var(--wire2)')+';padding:9px 18px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">'+lbl+' <span style="opacity:.7;margin-left:3px">('+count+')</span></button>';
   };
+  // 🔄 候補更新 + ⊕ 手動 KW 追加 のアクション bar (= 「記事生成前」 タブ専用)
+  var actionsHTML = '<div id="artActionsBar" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'
+    + '<button onclick="_artRefreshCandidates(\''+siteId+'\')" title="公開済を除外して AI 候補を 再生成 (= ¥3-5 程度)" style="background:#fff;border:1px solid var(--wire2);color:var(--text2);padding:7px 13px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">🔄 候補を更新</button>'
+    + '<button onclick="_artManualAdd(\''+siteId+'\')" title="KW を 自分で入力して 候補に追加" style="background:#fff;border:1px solid var(--wire2);color:var(--text2);padding:7px 13px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">⊕ 手動で KW 追加</button>'
+    + '<span style="font-size:10.5px;color:var(--text3);margin-left:auto">💡 ▸ で タイトル候補 5 つ 表示</span>'
+    + '</div>';
 
   // panel open 時に keyword_suggestions が cache に無ければ fetch (= site list endpoint で除外されてる)
   if(!ks.fetched_at){
@@ -9431,9 +9437,49 @@ function _renderTabArticles(site){
     +   tabBtn('pre',  '📥 記事生成前', preCount,    true)
     +   tabBtn('pub',  '✅ 公開済',     posts.length, false)
     + '</div>'
-    + '<div id="artTabPre">' + preHTML + '</div>'
+    + '<div id="artTabPre">' + actionsHTML + preHTML + '</div>'
     + '<div id="artTabPub" style="display:none">' + pubHTML + '</div>';
 }
+
+// 🔄 KW 候補を refresh (= /keyword-suggestions?refresh=1)
+window._artRefreshCandidates = async function(siteId){
+  var btn = event && event.target;
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ 生成中…'; }
+  try {
+    var r = await api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/keyword-suggestions?refresh=1');
+    var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+    if(ag && r) ag.keyword_suggestions = r;
+    showToast('✓ 候補 更新完了 (' + ((r && r.candidates||[]).length + (r && r.aeo_candidates||[]).length) + ' 件)', 'ok');
+    openArticlesPanel(siteId);  // 再描画
+  } catch(e){
+    showToast('更新失敗: ' + (e.message||''), 'ng');
+    if(btn){ btn.disabled = false; btn.textContent = '🔄 候補を更新'; }
+  }
+};
+
+// ⊕ 手動で KW 追加 (= prompt 入力 → planned_articles に push)
+window._artManualAdd = async function(siteId){
+  var kw = prompt('追加する KW (= 記事タイトル) を 入力:\n\n例: AI マーケティング 自動化 ツール 比較');
+  if(!kw || !kw.trim()) return;
+  kw = kw.trim();
+  try {
+    var r = await api('POST', '/api/agents/' + encodeURIComponent(siteId) + '/media/planned', {
+      title: kw, keyword: kw, mode: 'seo', source: 'manual'
+    });
+    var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+    if(ag){
+      if(!Array.isArray(ag.planned_articles)) ag.planned_articles = [];
+      if(r && r.planned && !ag.planned_articles.find(function(p){return p && p.id === r.planned.id;})){
+        ag.planned_articles.unshift(r.planned);
+      }
+    }
+    if(r && r.deduped) showToast('既に予約済の KW です', 'ok');
+    else showToast('✓ 追加完了 (= 「予約済」 セクションに表示)', 'ok');
+    openArticlesPanel(siteId);  // 再描画
+  } catch(e){
+    showToast('追加失敗: ' + (e.message||''), 'ng');
+  }
+};
 
 // 📄 KW 行を 展開 → タイトル候補 5 つを 表示 (= /keyword-detail から fetch)
 window._artToggleTitles = function(kwId, siteId, kwB64, mode, btn){
@@ -13495,11 +13541,11 @@ async function openAgent(id){
       var _hasMedia = !!(ag.media && ag.media.id);
       var _isMediaSite = (ag.site_type === 'media' || ag.site_vertical === 'blog' || ag.site_vertical === 'news');
 
-      // 3 step (= メディア構築 → KW 調査 → 記事一覧、 シンプル化 2026-06-04)
-      //   戦略・KPI / タスク一覧 は ボタン非表示 (= コードは残す、 直接 panel 呼び出しは生きてる)
+      // 2 step (= メディア構築 → 記事一覧、 さらに シンプル化 2026-06-04)
+      //   KW 調査 / 戦略 / タスク は ボタン非表示 (= コードは残す、 直接 panel 呼び出しは生きてる)
+      //   KW 候補 + タイトル + 公開 は 記事一覧に統合済、 KW 詳細分析は AI 生成内部で利用
       actsHTML += '<button class="ct-act ct-tool ct-media-tool'+(_hasMedia ? ' has-media' : ' new-media')+'" onclick="openMediaPanel(\''+_siteId+'\')" title="'+L('1️⃣ メディア構築','1️⃣ Build media')+'">📝</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openKeywordPanel(\''+_siteId+'\')" title="'+L('2️⃣ キーワード調査','2️⃣ Keyword research')+'">🔍</button>';
-      actsHTML += '<button class="ct-act ct-tool" onclick="openArticlesPanel(\''+_siteId+'\')" title="'+L('3️⃣ 記事一覧','3️⃣ Articles')+'">📄</button>';
+      actsHTML += '<button class="ct-act ct-tool" onclick="openArticlesPanel(\''+_siteId+'\')" title="'+L('2️⃣ 記事一覧','2️⃣ Articles')+'">📄</button>';
 
       // ⚙ メニュー (= 運用 + 管理 を集約、 click で dropdown 開閉)
       actsHTML += '<div class="ct-menu-wrap">'

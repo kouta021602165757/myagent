@@ -2818,8 +2818,8 @@
   window._kwBatchPublish = function(){
     var checks = Array.prototype.slice.call(document.querySelectorAll('.cand-cb:checked'));
     if(checks.length === 0) return;
-    if(checks.length > 10){
-      alert('一度に 公開できるのは 10 件まで。 選択を 減らしてください。');
+    if(checks.length > 5){
+      alert('一度に 公開できるのは 5 件まで。 選択を 減らしてください。');
       return;
     }
     var items = checks.map(function(cb){

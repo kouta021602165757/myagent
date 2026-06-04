@@ -2806,7 +2806,7 @@ function _openSiteTabModal(siteId, tabKey){
     // PHASE-1A: mock を iframe で表示。iframe は別 document で JWT token を持たないので、
     // 親 (この window) が api() で /api/agents/:id/keyword-suggestions を fetch して
     // postMessage で iframe にデータを送る。iframe からは ready signal + refresh signal を受信。
-    content = '<iframe id="kwIframe" src="/mock-keyword-research.html?embed=1&site=' + encodeURIComponent(site.id) + '" '
+    content = '<iframe id="kwIframe" src="/mock-keyword-research.html?embed=1&site=' + encodeURIComponent(site.id) + '&v=20260604b" '
             + 'style="display:block;width:100%;height:100%;border:0;background:var(--cream)" loading="eager"></iframe>';
     // Per-site listener tracking (= cached overlay 復元時に listener が消えないように)
     // 同じ site の重複だけ掃除、 他 site の listener は別 overlay の cache 用に残す
@@ -2880,7 +2880,7 @@ function _openSiteTabModal(siteId, tabKey){
       else if(t === 'kw-refresh')        _kwFetch(true);
       else if(t === 'kw-batch-publish'){
         // ✨ 一括公開 — items を サーバに 投げ、 polling で chat 反映
-        var items = Array.isArray(e.data.items) ? e.data.items.slice(0, 10) : [];
+        var items = Array.isArray(e.data.items) ? e.data.items.slice(0, 5) : [];
         if(items.length === 0) return;
         api('POST', '/api/agents/' + encodeURIComponent(_kwSiteId) + '/keyword-batch-publish', { items: items })
           .then(function(r){

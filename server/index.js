@@ -25345,7 +25345,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!ag) return jres(res, 404, { error: 'agent not found' });
     if(!ag.media || !ag.media.id) return jres(res, 400, { error: 'media not created yet' });
     const body = await readBody(req).catch(() => ({}));
-    const items = Array.isArray(body && body.items) ? body.items.slice(0, 10) : [];
+    const items = Array.isArray(body && body.items) ? body.items.slice(0, 5) : [];
     if(items.length === 0) return jres(res, 400, { error: 'no items' });
     // プラン cap
     const _cap = _mediaPlanArticleCap(user);

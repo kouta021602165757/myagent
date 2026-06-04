@@ -15069,12 +15069,19 @@ function _linkInlineCitations(html, cites){
 // timeline or composer and would corrupt history if run on a thread msg).
 var _renderingInThread = false;
 function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
-  // 🎯 system_publish — 記事公開通知を カード化 (= タイトル + URL + 字数、 クリック可能)
+  // 🎯 system_publish — 記事公開通知の表示
+  //   - メイン timeline で start は 小さい pill 1 行 (= thread 開く誘導)
+  //   - thread 内 では full card (= タイトル + URL + 字数、 クリック可能)
   if(raw && (raw.kind === 'system_publish' || raw.kind === 'system_publish_fail' || raw.kind === 'system_publish_start') && (raw.article_title || raw.article_url)){
     const isStart = raw.kind === 'system_publish_start';
     const isFail = raw.kind === 'system_publish_fail';
     const url = raw.article_url || '';
     const title = raw.article_title || (raw.content || '').slice(0, 60);
+    // メイン timeline での start は 小さい pill (= 開いて中で 確認)
+    if(isStart && !_renderingInThread){
+      const parentId = raw.id || '';
+      return '<div class="sys-row" style="margin:6px 0"><span class="sys-pill" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;cursor:pointer" onclick="if(typeof _openThread===\'function\')_openThread(\''+esc(parentId)+'\')" title="スレッドを開く">⏳ 生成中: ' + esc((title||'').slice(0, 60)) + ' · 💬 スレッドを開く</span></div>';
+    }
     const icon = isStart ? '⏳' : (isFail ? '⚠️' : '✅');
     const statusColor = isStart ? '#f59e0b' : (isFail ? '#dc2626' : '#15803d');
     const statusBg = isStart ? '#fffbeb' : (isFail ? '#fee2e2' : '#dcfce7');
@@ -15110,7 +15117,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       +   '</div>'
       + '</div>'
       + '</div>';
-  }
+    }
   const isU = role==='user';
   const isGroup = !!(ag && ag.is_group);
   // For group chats, show speaker's actual name (not just "あなた")

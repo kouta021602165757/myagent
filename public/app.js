@@ -9547,7 +9547,23 @@ window._artBatchPublish = function(){
     if(!row) return null;
     return { title: row.getAttribute('data-title'), keyword: row.getAttribute('data-kw'), mode: row.getAttribute('data-mode') || 'seo' };
   }).filter(Boolean);
-  var sample = items.slice(0, 3).map(function(it){ return '・ ' + it.title; }).join('\n');
+  // カテゴリ 推定 (= 各タイトル + KW から media.categories の name を 部分一致)
+  var sidForCat = (document.getElementById('siteTabOverlay') || {}).getAttribute && document.getElementById('siteTabOverlay').getAttribute('data-site-id');
+  var agForCat = sidForCat ? (agents||[]).find(function(a){return a && a.id === sidForCat;}) : null;
+  var catsForCat = (agForCat && agForCat.media && agForCat.media.categories) || [];
+  var predictCat = function(s){
+    var t = String(s||'').toLowerCase();
+    for(var i=0;i<catsForCat.length;i++){
+      var c = catsForCat[i]; if(!c||!c.name) continue;
+      var cn = c.name.toLowerCase();
+      if(t.indexOf(cn) >= 0 || cn.indexOf(t.slice(0, 6)) >= 0) return c.name;
+    }
+    return catsForCat[0] && catsForCat[0].name || '';
+  };
+  var sample = items.slice(0, 3).map(function(it){
+    var pc = predictCat(it.keyword || it.title);
+    return '・ ' + it.title + (pc ? ' \n   📂 ' + pc + ' (推定)' : '');
+  }).join('\n');
   var more = items.length > 3 ? '\n... +' + (items.length - 3) + ' 件' : '';
   if(!confirm(items.length + ' 件を 一括公開します。\n\n' + sample + more + '\n\n合計 ~¥' + (items.length * 10) + ' ・ 約 ' + Math.ceil(items.length / 3) + ' 分。\nchat に 進捗 thread が 立ちます。\n\nOK?')) return;
   // 一括公開 API 呼ぶ
@@ -15077,10 +15093,12 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     const isFail = raw.kind === 'system_publish_fail';
     const url = raw.article_url || '';
     const title = raw.article_title || (raw.content || '').slice(0, 60);
+    const catName = raw.article_category || '';
+    const catChip = catName ? '<span style="background:#f3e8ff;color:#5b21b6;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;margin-right:5px">📂 ' + esc(catName) + (isStart ? '(推定)' : '') + '</span>' : '';
     // メイン timeline での start は 小さい pill (= 開いて中で 確認)
     if(isStart && !_renderingInThread){
       const parentId = raw.id || '';
-      return '<div class="sys-row" style="margin:6px 0"><span class="sys-pill" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;cursor:pointer" onclick="if(typeof _openThread===\'function\')_openThread(\''+esc(parentId)+'\')" title="スレッドを開く">⏳ 生成中: ' + esc((title||'').slice(0, 60)) + ' · 💬 スレッドを開く</span></div>';
+      return '<div class="sys-row" style="margin:6px 0"><span class="sys-pill" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;cursor:pointer" onclick="if(typeof _openThread===\'function\')_openThread(\''+esc(parentId)+'\')" title="スレッドを開く">⏳ 生成中: ' + esc((title||'').slice(0, 50)) + (catName ? ' · 📂 ' + esc(catName) : '') + ' · 💬 スレッドを開く</span></div>';
     }
     const icon = isStart ? '⏳' : (isFail ? '⚠️' : '✅');
     const statusColor = isStart ? '#f59e0b' : (isFail ? '#dc2626' : '#15803d');
@@ -15099,6 +15117,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       +   '<div style="flex:1;min-width:0">'
       +     '<div style="font-size:10px;font-weight:800;color:' + statusColor + ';letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase">📝 ' + statusLbl + (charsLbl ? ' · ' + esc(charsLbl) : '') + '</div>'
       +     '<div style="font-size:14px;font-weight:800;color:var(--text);line-height:1.45;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + esc(title) + '</div>'
+      +     (catName ? '<div style="margin-bottom:6px">' + catChip + '</div>' : '')
       +     (domain ? '<div style="font-size:11px;color:var(--text3);font-family:ui-monospace,monospace;display:flex;align-items:center;gap:5px"><span style="opacity:.7">🔗</span>' + esc(domain) + '<span style="margin-left:auto;color:var(--teal);font-weight:800">開く →</span></div>' : '')
       +   '</div>'
       + '</div>'

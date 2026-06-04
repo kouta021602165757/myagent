@@ -25528,16 +25528,37 @@ async function handleAPI(req,res,pathname,method,ip){
     // 各 job に対して thread parent message を先に push (= chat 内 thread 起点)
     if(!Array.isArray(ag.history)) ag.history = [];
     const now0 = new Date().toISOString();
+    // カテゴリ 推定 helper (= KW から media.categories の name と部分一致で best match)
+    //   AI が最終的に決めるが、 早めに pill / card で 「推定: X」 を表示するため
+    const _predictCategory = (kwOrTitle) => {
+      const cats = (ag.media && ag.media.categories) || [];
+      if(!cats.length) return '';
+      const txt = String(kwOrTitle || '').toLowerCase();
+      let best = null;
+      for(const c of cats){
+        if(!c || !c.name) continue;
+        const cn = c.name.toLowerCase();
+        // 完全一致 / 部分一致 (= 「ポイ活」 等の 短い単語 OK)
+        if(txt.indexOf(cn) >= 0 || cn.indexOf(txt.slice(0, 6)) >= 0){
+          return c.name;
+        }
+        // first cat as fallback
+        if(!best) best = c.name;
+      }
+      return best || '';
+    };
     jobs.forEach(j => {
       const parentId = 'm_' + crypto.randomBytes(5).toString('hex');
       j.thread_parent_id = parentId;
+      const predCat = _predictCategory(j.keyword || j.title);
       ag.history.push({
         id: parentId,
         role: 'assistant',
-        content: '📝 記事生成中: 「' + j.title + '」\n⏳ KW: ' + j.keyword + ' ・ mode: ' + j.mode,
+        content: '📝 記事生成中: 「' + j.title + '」\n⏳ KW: ' + j.keyword + (predCat ? ' ・ カテゴリ (推定): ' + predCat : '') + ' ・ mode: ' + j.mode,
         time: now0,
         kind: 'system_publish_start',
         article_title: j.title,
+        article_category: predCat,
       });
     });
     try { await DB.save(user); } catch(_){}
@@ -25586,11 +25607,12 @@ async function handleAPI(req,res,pathname,method,ip){
           ag.history.push({
             id: 'm_' + crypto.randomBytes(5).toString('hex'),
             role: 'assistant',
-            content: '✅ 「' + article.title + '」 を 公開しました\n→ ' + pubUrl + '\n⏱ ' + (article.body_html || '').length + ' 字',
+            content: '✅ 「' + article.title + '」 を 公開しました\n→ ' + pubUrl + '\n⏱ ' + (article.body_html || '').length + ' 字' + (article.category_name ? ' ・ ' + article.category_name : ''),
             time: now,
             kind: 'system_publish',
             article_url: pubUrl,
             article_title: article.title,
+            article_category: article.category_name || '',
             thread_parent_id: j.thread_parent_id || null,
           });
           await DB.save(user);

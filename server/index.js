@@ -16038,6 +16038,25 @@ function _mediaArticleTemplateFor(vert){
   return templates[vert] || templates.general;
 }
 
+// LP ブランド名抽出 (= module-level helper、 _mediaGenerateArticle + endCard 両方で使用)
+function _mediaExtractLpBrand(media){
+  if(!media) return 'このサービス';
+  if(media.lp_brand_name) return String(media.lp_brand_name).slice(0, 40);
+  const lpUrl = media.lp_url || '';
+  if(lpUrl){
+    try {
+      const u = new URL(lpUrl);
+      let host = u.hostname.replace(/^(www|lp|app|blog|m|en|ja|jp)\./i, '');
+      host = host.replace(/\.(com|jp|net|org|io|co|app|dev|info|biz|me|tv|jp|co\.jp)$/i, '');
+      host = host.split('.')[0];
+      const parts = host.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).filter(Boolean);
+      const brand = parts.join(' ');
+      if(brand && brand.length >= 2) return brand.slice(0, 40);
+    } catch(_){}
+  }
+  return String(media.name || '').replace(/\s*(Blog|ブログ|メディア)\s*$/i, '').trim() || 'このサービス';
+}
+
 async function _mediaGenerateArticle(agent, params){
   const keyword = String(params.keyword || params.title || '').trim();
   if(!keyword) throw new Error('keyword required');
@@ -16249,6 +16268,23 @@ async function _mediaGenerateArticle(agent, params){
       + '配置例: 本文中で 関連話題に触れる時 「<a href="URL">関連記事 タイトル</a> で詳しく解説」 のように 自然に挿入。\n';
   }
 
+  // 🎯 自社 LP の 自然紹介 (= 記事の funnel 化)
+  //   AI に 「本文中 1-2 箇所で 押し付けがましくなく 自社 LP に 言及」 と指示
+  const lpBrand = _mediaExtractLpBrand(agent.media || {});
+  const lpDescription = (agent.media && agent.media.lp_description) || '';
+  let lpFunnelText = '';
+  if(lpUrl && lpDescription){
+    lpFunnelText = '\n【🎯 自社 LP の 自然な紹介 — 必須】\n'
+      + '- ブランド名: ' + lpBrand + '\n'
+      + '- LP URL: ' + lpUrl + '\n'
+      + '- 価値提案: ' + lpDescription + '\n'
+      + '\n本文中の 1-2 箇所 (= 中盤 + 終盤近辺) に、 ' + lpBrand + ' を 読者の悩み解決と 関連付けて 自然に紹介する。\n'
+      + '押し付けがましくない、 「選択肢の 1 つとして」 「○○ なら」 等の トーン。 文末は 「公式サイトを 見る」 や リンク禁止 (= サーバ側で 自動 CTA を 後で 挿入するので、 ここでは 説明文だけ)。\n'
+      + '記事内容と 関連付ける 例:\n'
+      + '  ・「'+keyword+' で 悩む人 向けには、 '+lpBrand+' のような 選択肢も 検討する 価値があります。 (' + lpDescription.slice(0, 60) + '...)」\n'
+      + '  ・「実用的な 解決策の 1 つが '+lpBrand+'。 (1 文で 価値提案を 言い換え) で、 (記事内容と どう接続するか)。」\n'
+      + '【NG】 「' + lpBrand + ' は 最高!」 等の 直接プロモ、 「今すぐ 登録」 等の CTA 文言、 ★評価 等の マーケコピー。\n';
+  }
   const userText = ''
     + '【キーワード】' + keyword + '\n'
     + '【検出意図】 ' + intent.type + ' (= ' + intent.label + ')\n'
@@ -16257,6 +16293,7 @@ async function _mediaGenerateArticle(agent, params){
     + '【目標文字数】 約 ' + targetChars + ' 文字\n'
     + (categories ? '【既存カテゴリ】 ' + categories + '\n' : '')
     + (lpUrl ? '【自社 LP】' + lpUrl + '\n' : '')
+    + lpFunnelText
     + serpContextText
     + paaText
     + internalLinksText
@@ -16416,7 +16453,35 @@ async function _mediaGenerateArticle(agent, params){
     }
   }
 
-  const withImages = sanitized;
+  let withImages = sanitized;
+
+  // 🎯 本文中盤に inline CTA 自動挿入 (= 末尾まで読まずに 離脱する読者を 拾う)
+  //   H2 を find して 中央近辺の H2 直後に 挿入。 H2 が 5 個未満なら 挿入しない (短記事は 末尾 CTA で十分)
+  if(lpUrl){
+    const h2Matches = [];
+    const re = /<h2[^>]*>[\s\S]*?<\/h2>/gi;
+    let mh;
+    while((mh = re.exec(withImages)) !== null){
+      h2Matches.push({ idx: mh.index, end: mh.index + mh[0].length });
+    }
+    if(h2Matches.length >= 5){
+      const mid = Math.floor(h2Matches.length / 2);
+      const insertAt = h2Matches[mid].end;
+      const lpBrandFinal = _mediaExtractLpBrand(agent.media || {});
+      const utmCampaign = (agent.media && agent.media.slug || 'media') + '_inline';
+      const ctaHtml = '\n<div class="inline-cta" style="margin:32px 0;padding:22px 26px;background:linear-gradient(135deg,#f7ffe9 0%,#fff 100%);border:2px solid #c0ff5c;border-radius:14px;text-align:center">'
+        + '<div style="font-size:11px;font-weight:800;color:#0a3d39;letter-spacing:.08em;margin-bottom:7px">▌ ' + _mediaEsc(lpBrandFinal).toUpperCase() + '</div>'
+        + '<div style="font-size:14px;color:#1a1a1a;line-height:1.65;margin-bottom:14px;font-weight:600">'
+        +   _mediaEsc((agent.media && agent.media.lp_description) || '公式サイトで 詳細を チェックしてください。')
+        + '</div>'
+        + '<a href="' + lpUrl + '?utm_source=media&utm_medium=inline_mid&utm_campaign=' + _mediaEsc(utmCampaign) + '" target="_blank" rel="noopener" '
+        +   'style="display:inline-flex;align-items:center;gap:8px;background:#0d4f4a;color:#fff;padding:11px 22px;border-radius:9px;text-decoration:none;font-size:13px;font-weight:800">'
+        +   '👉 ' + _mediaEsc(lpBrandFinal) + ' を 試してみる <span style="font-size:15px">→</span>'
+        + '</a>'
+        + '</div>\n';
+      withImages = withImages.slice(0, insertAt) + ctaHtml + withImages.slice(insertAt);
+    }
+  }
 
   return {
     title: String(parsed.title).slice(0, 120),

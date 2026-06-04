@@ -6094,6 +6094,23 @@ const BLOG_TOOLS = [
       },
     },
   },
+  {
+    name: 'rewrite_media_article',
+    description: '✏️ 公開済メディア記事を ユーザの 修正指示に従って 書き直す。\n'
+      + '【利用シーン】 thread 内で「この記事の 3 章を 短くして」 「結論を 強くして」 「冒頭に 統計データを 追加」 等の修正依頼。\n'
+      + '【thread context】 thread parent が system_publish_start kind (= article_title が set されてる) なら、 その article_title から post_slug を 自動引き。 明示指定も可能。\n'
+      + '【動作】 サーバが 現 body_html を 取得 → 修正指示 + 現本文 を Claude Sonnet に投げる → 再生成 → DB 更新 → chat に「✓ 修正完了 → URL」 を thread に post。\n'
+      + '【失敗時】 「該当記事が 見つかりません」「修正指示が 曖昧」 等の理由を 返却するので、 ユーザに 具体化を 促す。',
+    input_schema: {
+      type: 'object',
+      properties: {
+        post_slug: { type: 'string', description: '記事の slug (= URL 末尾)。 thread context から 推測できる場合は 省略可。' },
+        article_title: { type: 'string', description: 'post_slug が無い時、 タイトル の一部一致で 引く。 例: 「写真売却アプリ おすすめ」 → 該当する 記事を 探す。' },
+        instruction: { type: 'string', description: 'ユーザの 修正指示そのまま (= 例: 「3 章の 「機能比較」 を 短くして 表形式に」)' },
+      },
+      required: ['instruction'],
+    },
+  },
 ];
 
 // Lazy: only load these when generate_video first fires. Keeps cold-boot fast.
@@ -17404,6 +17421,84 @@ function _mediaThisMonthCount(agent){
 }
 
 // publish_to_media: メディア未作成なら auto-create してから記事公開
+// ✏️ rewrite_media_article tool 実行 — thread 内 修正依頼から 既存記事を AI で 書き直す
+async function executeRewriteMediaArticleTool(user, agent, input){
+  if(!agent) return { error: 'agent not found' };
+  if(!agent.media || !agent.media.id) return { error: 'メディア未作成 — まず publish_to_media で 1 本書いてください' };
+  const instruction = String((input && input.instruction) || '').trim();
+  if(!instruction) return { error: 'instruction (= 修正指示) を 必ず渡してください' };
+  // 1. post_slug 解決: explicit → article_title fuzzy
+  let postMeta = null;
+  if(input && input.post_slug){
+    const slug = String(input.post_slug).trim();
+    postMeta = (agent.media_posts_idx || []).find(p => p && p.slug === slug);
+  }
+  if(!postMeta && input && input.article_title){
+    const tt = String(input.article_title).toLowerCase().trim();
+    postMeta = (agent.media_posts_idx || []).find(p => p && p.title && p.title.toLowerCase().indexOf(tt.slice(0, 20)) >= 0);
+  }
+  if(!postMeta) return { error: '該当記事が 見つかりません', detail: 'post_slug か article_title を 明示してください、 もしくは 公開済記事の タイトルが 一部一致しない可能性' };
+  // 2. 現 body_html 取得
+  const fullMap = user.media_posts_full || {};
+  const oldBody = (fullMap[postMeta.id] && fullMap[postMeta.id].body_html) || '';
+  if(!oldBody) return { error: 'body_html が DB に 見当たりません', detail: 'media_posts_full[' + postMeta.id + '] が空' };
+  // 3. AI で rewrite
+  if(!ANTHROPIC) return { error: 'AI key not configured' };
+  try {
+    const prompt = [
+      'あなたは SEO 記事ライター。 以下の 既存記事を ユーザの 修正指示通りに 書き直してください。',
+      '',
+      '【修正指示】',
+      instruction,
+      '',
+      '【現本文 (= HTML)】',
+      oldBody.slice(0, 30000),
+      '',
+      '【出力ルール】',
+      '- HTML を 返す (= <h2> <h3> <p> <ul> <table> <mark> 等 OK)。 マークダウンや コードフェンス禁止。',
+      '- 修正指示で 言及されない 箇所は そのまま 保持。 全文を 必ず 返す。',
+      '- 元の HTML 構造 (= h2 章タイトル、 product-card 等の div、 class 名) を 出来るだけ 保つ。',
+      '- 字数は ±20% 以内で。',
+      '【返却】 JSON で:',
+      '{ "body_html": "(修正後の HTML 全文)", "summary": "(何を どう変えたかの 1 文)" }',
+    ].join('\n');
+    const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
+      { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
+      { model: _resolveModelInfo('sonnet').modelId, max_tokens: 16000, messages:[{role:'user', content: prompt}] },
+      { timeout: 180000 });
+    if(r.s !== 200){
+      const ce = _claudeErrorMessage(r);
+      return { error: 'AI 失敗', detail: ce.user_message || 'status ' + r.s };
+    }
+    const rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    let parsed = null;
+    try {
+      const jsonM = rawText.match(/\{[\s\S]*"body_html"[\s\S]*\}/);
+      parsed = JSON.parse(jsonM ? jsonM[0] : rawText);
+    } catch(e){
+      return { error: 'AI 返却 parse 失敗', detail: e.message };
+    }
+    if(!parsed || !parsed.body_html) return { error: 'AI 返却に body_html が ありません' };
+    // 4. DB 更新
+    const now = new Date().toISOString();
+    if(!user.media_posts_full) user.media_posts_full = {};
+    user.media_posts_full[postMeta.id] = { body_html: parsed.body_html, saved_at: now };
+    postMeta.rewritten_at = now;
+    try { _mediaSlugCacheClear(agent.media.slug); } catch(_){}
+    const pubUrl = _mediaPublicUrl(agent.media, postMeta.slug);
+    return {
+      ok: true,
+      url: pubUrl,
+      title: postMeta.title,
+      slug: postMeta.slug,
+      summary: parsed.summary || instruction.slice(0, 80),
+      chars_after: (parsed.body_html || '').length,
+    };
+  } catch(e){
+    return { error: 'rewrite 失敗', detail: e.message };
+  }
+}
+
 async function executePublishToMediaTool(user, agent, input){
   if(!agent) return { error: 'agent not found' };
   if(!agent.site_url) return { error: 'site_url not set on this agent — まず LP URL を登録してください' };
@@ -18736,6 +18831,7 @@ async function _runOneSchedule(user, agent, sched){
           else if(block.name === 'wordpress_publish')   result = await executeWordPressPublishTool(user, agent, block.input||{});
           else if(block.name === 'wordpress_test_connection') result = await executeWordPressTestConnectionTool(user, agent, block.input||{});
           else if(block.name === 'publish_to_media')    result = await executePublishToMediaTool(user, agent, block.input||{});
+          else if(block.name === 'rewrite_media_article') result = await executeRewriteMediaArticleTool(user, agent, block.input||{});
           else if(block.name === 'list_media_posts')    result = await executeListMediaPostsTool(user, agent, block.input||{});
           else if(block.name === 'research_keyword')    result = await executeResearchKeywordTool(user, agent, block.input||{});
           else if(block.name === 'get_site_stats')      result = await executeGetSiteStatsTool(user, agent, block.input||{});
@@ -31367,6 +31463,8 @@ ${orgSummary || '(汎用チーム)'}
               result = await executeWordPressTestConnectionTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'publish_to_media'){
               result = await executePublishToMediaTool(payerUser, (teamMemberAgent || agent), block.input||{});
+            } else if(block.name === 'rewrite_media_article'){
+              result = await executeRewriteMediaArticleTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'list_media_posts'){
               result = await executeListMediaPostsTool(payerUser, (teamMemberAgent || agent), block.input||{});
             } else if(block.name === 'research_keyword'){

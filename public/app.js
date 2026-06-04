@@ -11917,8 +11917,40 @@ window._kwQuickSubmit = async function(siteId, title, mode){
 };
 
 // 共通: 記事生成 + 公開モーダル (= _mediaGenArticleFlow と loader UI 共有)
+// 🚀 単発「✨ 公開」 を batch publish endpoint 経由に統一 (= chat thread が 自動で立つ)
+// 流れ:
+//  1. /keyword-batch-publish に 1 件 投げる → サーバが thread parent message を chat に push、 jobs[0].thread_parent_id 返却
+//  2. 記事一覧 panel を 閉じて chat に切替
+//  3. 該当 site を 開く (= openAgent で 履歴 hydrate)
+//  4. thread drawer を 自動 open → ユーザは 進捗を 見れる + 完了後 修正依頼が thread で 出せる
 window._kwInvokeArticleGen = async function(siteId, title, mode, keywordOpt){
   if(document.getElementById('mediaArtOverlay')) return; // 多重起動防止
+  // panel + 旧 modal を 閉じる
+  try { if(typeof _closeSiteTabModal === 'function') _closeSiteTabModal(); } catch(_){}
+  try {
+    var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/keyword-batch-publish', {
+      items: [{ title: title, keyword: keywordOpt || title, mode: mode || 'seo' }]
+    });
+    if(!r || !r.ok || !Array.isArray(r.jobs) || r.jobs.length === 0){
+      showToast('生成 開始 失敗: ' + (r && r.detail || r && r.error || 'unknown'), 'ng');
+      return;
+    }
+    var threadParentId = r.jobs[0].thread_parent_id;
+    showToast('✨ 生成 開始 (chat に thread が 立ちました)', 'ok');
+    // chat に 切替 + thread 自動 open
+    try { if(typeof openAgent === 'function') await openAgent(siteId); } catch(_){}
+    // openAgent で /history fetch が走るが、 push した parent message も 取れる
+    setTimeout(function(){
+      try { if(typeof _openThread === 'function' && threadParentId) _openThread(threadParentId); } catch(_){}
+    }, 400);
+  } catch(e){
+    showToast('生成 失敗: ' + (e.message||'unknown'), 'ng');
+  }
+};
+
+// 旧 modal 経路 (= 互換用、 直接呼ぶコード残ってる場合の フォールバック)
+window._kwInvokeArticleGen_legacy = async function(siteId, title, mode, keywordOpt){
+  if(document.getElementById('mediaArtOverlay')) return;
   var ov = document.createElement('div');
   ov.id = 'mediaArtOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
@@ -11936,7 +11968,7 @@ window._kwInvokeArticleGen = async function(siteId, title, mode, keywordOpt){
   try {
     var r = await api('POST', '/api/agents/'+encodeURIComponent(siteId)+'/media/articles/generate', {
       keyword: keywordOpt || title,
-      title: title,  // AI に渡す タイトル ヒント (= keyword と別 指定 で 精度 UP)
+      title: title,
       target_chars: 5000, mode: mode,
     });
     // 🚀 async 応答対応 (= サーバが async:true で即時返却、 バックグラウンド処理)

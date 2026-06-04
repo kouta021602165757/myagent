@@ -863,11 +863,11 @@ img{max-width:100%;display:block;}
         <!-- 6-step live pipeline -->
         <div class="sc-pipe" id="scPipe">
           <div class="sc-step" data-step="1"><div class="sc-step-n"><span class="sc-step-n-num">01</span></div><div class="sc-step-ti">URL を貼る</div><div class="sc-step-sub">Paste</div></div>
-          <div class="sc-step" data-step="2"><div class="sc-step-n"><span class="sc-step-n-num">02</span></div><div class="sc-step-ti">Agent 雇用</div><div class="sc-step-sub">Hire</div></div>
-          <div class="sc-step" data-step="3"><div class="sc-step-n"><span class="sc-step-n-num">03</span></div><div class="sc-step-ti">現状分析</div><div class="sc-step-sub">Diagnose</div></div>
-          <div class="sc-step" data-step="4"><div class="sc-step-n"><span class="sc-step-n-num">04</span></div><div class="sc-step-ti">仕事を指示</div><div class="sc-step-sub">Brief</div></div>
-          <div class="sc-step" data-step="5"><div class="sc-step-n"><span class="sc-step-n-num">05</span></div><div class="sc-step-ti">自動運用</div><div class="sc-step-sub">Run</div></div>
-          <div class="sc-step" data-step="6"><div class="sc-step-n"><span class="sc-step-n-num">06</span></div><div class="sc-step-ti">レポート</div><div class="sc-step-sub">Report</div></div>
+          <div class="sc-step" data-step="2"><div class="sc-step-n"><span class="sc-step-n-num">02</span></div><div class="sc-step-ti">AI チーム編成</div><div class="sc-step-sub">Hire</div></div>
+          <div class="sc-step" data-step="3"><div class="sc-step-n"><span class="sc-step-n-num">03</span></div><div class="sc-step-ti">メディア立ち上げ</div><div class="sc-step-sub">Launch</div></div>
+          <div class="sc-step" data-step="4"><div class="sc-step-n"><span class="sc-step-n-num">04</span></div><div class="sc-step-ti">候補から公開</div><div class="sc-step-sub">Publish</div></div>
+          <div class="sc-step" data-step="5"><div class="sc-step-n"><span class="sc-step-n-num">05</span></div><div class="sc-step-ti">修正・改善</div><div class="sc-step-sub">Refine</div></div>
+          <div class="sc-step" data-step="6"><div class="sc-step-n"><span class="sc-step-n-num">06</span></div><div class="sc-step-ti">数字を見る</div><div class="sc-step-sub">Track</div></div>
         </div>
 
         <!-- ═══════ Step-synced scene zone (= step に応じて 6 つの mockup を swap) ═══════ -->
@@ -917,88 +917,83 @@ img{max-width:100%;display:block;}
             </div>
           </div>
 
-          <!-- Scene 3: 現状分析 (= KPI 数字一覧) -->
+          <!-- Scene 3: メディア立ち上げ (= 60 秒 wizard) -->
           <div class="sc-scene sc-scene-diagnose" data-scene="3">
-            <div class="sc-kpi-wrap">
-              <div class="sc-kpi">
-                <div class="sc-kpi-lbl">📈 PV (30日)</div>
-                <div class="sc-kpi-v" data-count="1406">0</div>
-                <div class="sc-kpi-d up">↗ +18.4%</div>
-                <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
-                  <path class="sp-area" d="M0,24 L0,20 L7,18 L14,16 L21,14 L28,15 L35,12 L42,10 L49,11 L56,8 L63,6 L70,7 L77,5 L84,4 L91,3 L100,2 L100,24 Z"/>
-                  <path stroke="#a3e635" d="M0,20 L7,18 L14,16 L21,14 L28,15 L35,12 L42,10 L49,11 L56,8 L63,6 L70,7 L77,5 L84,4 L91,3 L100,2"/>
-                </svg>
+            <div style="background:#fff;border:1px solid #e5e5e5;border-radius:14px;padding:24px 28px;max-width:560px;margin:0 auto;font-family:inherit">
+              <div style="font-size:10.5px;color:#0d4f4a;letter-spacing:.08em;font-weight:800;margin-bottom:6px">STEP 2 / 4 — テンプレート選択</div>
+              <div style="font-size:17px;font-weight:900;color:#0a0a0a;margin-bottom:14px;line-height:1.35">AI 推奨のテンプレートで メディアを立ち上げ</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px">
+                <div style="background:#f7ffe9;border:2px solid #c0ff5c;border-radius:9px;padding:11px 10px;text-align:center"><div style="font-size:20px;margin-bottom:4px">📰</div><div style="font-size:11px;font-weight:800;color:#0a3d39">minimal</div><div style="font-size:9.5px;color:#737373;margin-top:2px">推奨</div></div>
+                <div style="background:#fff;border:1px solid #e5e5e5;border-radius:9px;padding:11px 10px;text-align:center;opacity:.7"><div style="font-size:20px;margin-bottom:4px">📖</div><div style="font-size:11px;font-weight:800;color:#0a0a0a">magazine</div></div>
+                <div style="background:#fff;border:1px solid #e5e5e5;border-radius:9px;padding:11px 10px;text-align:center;opacity:.7"><div style="font-size:20px;margin-bottom:4px">🌿</div><div style="font-size:11px;font-weight:800;color:#0a0a0a">friendly</div></div>
               </div>
-              <div class="sc-kpi">
-                <div class="sc-kpi-lbl">👥 ユーザー</div>
-                <div class="sc-kpi-v" data-count="427">0</div>
-                <div class="sc-kpi-d up">↗ +12.7%</div>
-                <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
-                  <path class="sp-area" d="M0,24 L0,21 L10,20 L20,17 L30,18 L40,14 L50,12 L60,13 L70,10 L80,9 L90,6 L100,5 L100,24 Z"/>
-                  <path stroke="#0d4f4a" d="M0,21 L10,20 L20,17 L30,18 L40,14 L50,12 L60,13 L70,10 L80,9 L90,6 L100,5"/>
-                </svg>
+              <div style="background:#fafaf7;border-radius:8px;padding:11px 13px;font-size:11.5px;color:#525252;line-height:1.6;margin-bottom:14px">
+                ✓ ブランド色 自動抽出 ・ ✓ favicon 自動取得 ・ ✓ Hero 画像 AI 生成<br>
+                ✓ サブドメイン (yourname.myaiagents.agency) ・ ✓ SEO 構造化済
               </div>
-              <div class="sc-kpi">
-                <div class="sc-kpi-lbl">🎯 セッション</div>
-                <div class="sc-kpi-v" data-count="567">0</div>
-                <div class="sc-kpi-d up">↗ +8.2%</div>
-                <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
-                  <path class="sp-area" d="M0,24 L0,18 L11,16 L22,15 L33,13 L44,14 L55,11 L66,10 L77,9 L88,7 L100,8 L100,24 Z"/>
-                  <path stroke="#3b82f6" d="M0,18 L11,16 L22,15 L33,13 L44,14 L55,11 L66,10 L77,9 L88,7 L100,8"/>
-                </svg>
-              </div>
-              <div class="sc-kpi">
-                <div class="sc-kpi-lbl">💰 直帰率</div>
-                <div class="sc-kpi-v" data-count="33" data-suffix="%">0%</div>
-                <div class="sc-kpi-d up">↗ -4.8pt</div>
-                <svg class="sc-spark" viewBox="0 0 100 24" preserveAspectRatio="none">
-                  <path class="sp-area" d="M0,24 L0,8 L12,9 L24,12 L36,14 L48,13 L60,15 L72,16 L84,18 L100,17 L100,24 Z"/>
-                  <path stroke="#f59e0b" d="M0,8 L12,9 L24,12 L36,14 L48,13 L60,15 L72,16 L84,18 L100,17"/>
-                </svg>
-              </div>
+              <button style="background:#0d4f4a;color:#fff;border:0;padding:11px 22px;border-radius:8px;font-size:12.5px;font-weight:800;font-family:inherit;width:100%">次へ → カテゴリを 自動提案</button>
             </div>
           </div>
 
-          <!-- Scene 4: 仕事を指示 (= chat で user が typing) -->
+          <!-- Scene 4: 候補から公開 (= 記事一覧で チェック + 一括公開) -->
           <div class="sc-scene sc-scene-brief" data-scene="4">
-            <div class="sc-chat">
-              <div class="sc-chat-msg">
-                <div class="sc-chat-av lime">📋</div>
-                <div class="sc-chat-bd">
-                  <div class="sc-chat-head"><span class="sc-chat-name">PM</span> <span class="sc-chat-time">23:32</span></div>
-                  <div class="sc-chat-bubble">分析完了です。 <b>記事 / SNS / 競合対策</b> どれから着手しますか？</div>
+            <div style="background:#fff;border:1px solid #e5e5e5;border-radius:14px;padding:18px 22px;max-width:580px;margin:0 auto;font-family:inherit">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                <div style="font-size:14px;font-weight:900;color:#0a0a0a">📄 記事一覧 — 記事生成前</div>
+                <div style="margin-left:auto;background:#0d4f4a;color:#fff;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:800">SEO 候補 6 件</div>
+              </div>
+              <div style="display:grid;gap:7px">
+                <div style="background:#fff;border:1px solid #e5e5e5;border-radius:9px;padding:10px 13px">
+                  <div style="display:flex;align-items:center;gap:9px;font-size:12.5px">
+                    <span style="font-size:13px">▾</span>
+                    <span style="font-weight:800;flex:1;color:#0a0a0a">オーガニック化粧水 おすすめ</span>
+                    <span style="background:#dcfce7;color:#15803d;padding:2px 6px;border-radius:4px;font-size:9.5px;font-weight:800">🏆 78%</span>
+                  </div>
+                  <div style="padding-left:24px;margin-top:7px;display:grid;gap:5px;font-size:11.5px;color:#525252">
+                    <div style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked style="accent-color:#0d4f4a;width:13px;height:13px"><span style="background:#0d4f4a;color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">1</span><span style="flex:1">敏感肌でも安心｜オーガニック化粧水 8 選</span><span style="font-size:9.5px;color:#737373">📚 12k 字</span></div>
+                    <div style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked style="accent-color:#0d4f4a;width:13px;height:13px"><span style="background:#0d4f4a;color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">2</span><span style="flex:1">国内ブランド比較｜オーガニック化粧水 ランキング</span><span style="font-size:9.5px;color:#737373">📚 13k 字</span></div>
+                    <div style="display:flex;align-items:center;gap:8px"><input type="checkbox" style="accent-color:#0d4f4a;width:13px;height:13px"><span style="background:#0d4f4a;color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">3</span><span style="flex:1">30 代 向け｜エイジングケア向けオーガニック化粧水</span></div>
+                  </div>
+                </div>
+                <div style="background:#fff;border:1px solid #e5e5e5;border-radius:9px;padding:10px 13px;display:flex;align-items:center;gap:9px;font-size:12.5px">
+                  <span style="font-size:13px">▸</span>
+                  <span style="font-weight:800;flex:1;color:#0a0a0a">化粧水 成分 比較</span>
+                  <span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:9.5px;font-weight:800">⚖ 62%</span>
                 </div>
               </div>
-              <div class="sc-chat-input">
-                <span class="sc-chat-input-tx">SEO 記事 3 本書いて、 メディアに公開して</span>
-                <span class="sc-chat-send">↗</span>
+              <div style="margin-top:14px;display:flex;align-items:center;gap:12px;padding:10px 13px;background:#0d4f4a;color:#fff;border-radius:9px">
+                <span style="font-size:12px;font-weight:800">2 件 選択中</span>
+                <span style="font-size:10.5px;opacity:.7">並列 3 件 / ¥10/件</span>
+                <button style="margin-left:auto;background:#c0ff5c;color:#0a3d39;border:0;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:900;font-family:inherit">✨ 一括公開 →</button>
               </div>
             </div>
           </div>
 
-          <!-- Scene 5: 自動運用 (= chat で AI が tool 使って動く) -->
+          <!-- Scene 5: 修正・改善 (= thread で AI に「ここ修正して」) -->
           <div class="sc-scene sc-scene-run" data-scene="5">
-            <div class="sc-chat">
-              <div class="sc-chat-msg user">
+            <div style="max-width:560px;margin:0 auto;font-family:inherit">
+              <div style="font-size:11px;font-weight:800;color:#0d4f4a;letter-spacing:.06em;margin-bottom:10px">💬 スレッド ・ 5 件の返信</div>
+              <div style="background:#fff;border:1px solid #e5e5e5;border-radius:11px;padding:13px 16px;margin-bottom:8px;display:flex;gap:11px;align-items:flex-start">
+                <div style="width:38px;height:38px;border-radius:9px;background:#dcfce7;color:#15803d;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;flex-shrink:0">✅</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:9.5px;font-weight:800;color:#15803d;letter-spacing:.06em;margin-bottom:2px">📝 公開済 · 12,400 字</div>
+                  <div style="font-size:13px;font-weight:800;color:#0a0a0a;margin-bottom:4px;line-height:1.4">敏感肌でも安心｜オーガニック化粧水 8 選</div>
+                  <div style="font-size:10.5px;color:#737373;display:flex;gap:5px"><span>🔗</span><span>glow-botanicals.myaiagents.agency</span><span style="margin-left:auto;color:#0d4f4a;font-weight:800">開く →</span></div>
+                </div>
+              </div>
+              <div class="sc-chat-msg user" style="margin-top:10px">
                 <div class="sc-chat-av user">K</div>
                 <div class="sc-chat-bd">
-                  <div class="sc-chat-head"><span class="sc-chat-name">kota</span> <span class="sc-chat-time">23:32</span></div>
-                  <div class="sc-chat-bubble">SEO 記事 3 本書いて、 メディアに公開して</div>
+                  <div class="sc-chat-head"><span class="sc-chat-name">kota</span> <span class="sc-chat-time">23:35</span></div>
+                  <div class="sc-chat-bubble">3 章 「敏感肌の選び方」 を 短くして、 表形式に</div>
                 </div>
               </div>
               <div class="sc-chat-msg">
                 <div class="sc-chat-av pink">✍</div>
                 <div class="sc-chat-bd">
-                  <div class="sc-chat-head"><span class="sc-chat-name">SEO ライター</span> <span class="sc-chat-time">23:33</span></div>
-                  <div class="sc-chat-bubble">了解。 派生記事 <b>3 本</b> 執筆中 → 12 分後にメディアに公開予定。</div>
-                  <div class="sc-tlog"><span>🚀</span> publish_to_media <span class="ok">実行中…</span></div>
-                </div>
-              </div>
-              <div class="sc-chat-msg">
-                <div class="sc-chat-av teal">🐦</div>
-                <div class="sc-chat-bd">
-                  <div class="sc-chat-head"><span class="sc-chat-name">X / SNS</span> <span class="sc-chat-time">23:33</span></div>
-                  <div class="sc-chat-typing"><span></span><span></span><span></span></div>
+                  <div class="sc-chat-head"><span class="sc-chat-name">SEO ライター</span> <span class="sc-chat-time">23:35</span></div>
+                  <div class="sc-chat-bubble">了解、 該当章を 表形式に書き直します。</div>
+                  <div class="sc-tlog"><span>✏️</span> rewrite_media_article <span class="ok">実行中…</span></div>
                 </div>
               </div>
             </div>
@@ -1074,7 +1069,7 @@ img{max-width:100%;display:block;}
       <span class="serif" data-i18n="how.h2b">AI チームが動き出す。</span>
     </h2>
     <p class="sec-sub reveal" data-i18n="how.sub">
-      URL を貼ってから自動運用 → 毎日レポートまで。 <b>あなたが手を動かすのは 4 つだけ</b>。
+      URL を貼ってから 公開 → 改善 → 数字確認まで。 <b>あなたが手を動かすのは 2 つだけ</b> (= 貼る・チェックする)。
     </p>
     <div class="how-grid">
       <div class="how-card reveal">
@@ -1090,7 +1085,7 @@ img{max-width:100%;display:block;}
       </div>
       <div class="how-card reveal">
         <span class="how-num">02 — Hire</span>
-        <h3 class="how-h3">Agent チーム雇用</h3>
+        <h3 class="how-h3">AI チーム編成</h3>
         <p class="how-tx">
           サイトに合わせて <b>18 名超の AI 専門家</b> が自動編成。 リサーチ / 分析 / コンテンツ / SNS の各部門が組成。
         </p>
@@ -1100,48 +1095,47 @@ img{max-width:100%;display:block;}
         </div>
       </div>
       <div class="how-card reveal">
-        <span class="how-num">03 — Diagnose</span>
-        <h3 class="how-h3">現状分析</h3>
+        <span class="how-num">03 — Launch</span>
+        <h3 class="how-h3">メディア立ち上げ</h3>
         <p class="how-tx">
-          GA4 接続 → 直近 30 日の <b>PV / セッション / 流入元 / ファネル漏れ</b> を AI が読み込んで現状把握。
+          <b>60 秒 wizard</b> で メディアを 立ち上げ。 ブランド色 + favicon + Hero 画像 を 自動取得、 サブドメイン (yourname.myaiagents.agency) で 即公開可能。
         </p>
         <div class="how-tags">
-          <span class="how-tag">GA4 連動</span>
-          <span class="how-tag">5 分で診断</span>
+          <span class="how-tag">60 秒</span>
+          <span class="how-tag">SEO 構造化済</span>
         </div>
       </div>
       <div class="how-card reveal">
-        <span class="how-num">04 — Brief</span>
-        <h3 class="how-h3">仕事を指示</h3>
+        <span class="how-num">04 — Publish</span>
+        <h3 class="how-h3">候補から公開</h3>
         <p class="how-tx">
-          チャットで <b>「SEO 記事 3 本書いて」 「競合と差別化する戦略立てて」</b> と頼むだけ。 ペルソナ / 競合は AI が記憶してる。
+          AI が <b>KW + タイトル候補</b> を 自動提示。 ☐ チェック して 「✨ 一括公開」 を 1 click。 <b>並列 3 件</b> で 5 分以内に メディアに 公開。
         </p>
         <div class="how-tags">
-          <span class="how-tag">日本語 OK</span>
-          <span class="how-tag">記憶あり</span>
+          <span class="how-tag">1 click 公開</span>
+          <span class="how-tag">並列 3 件</span>
         </div>
       </div>
       <div class="how-card reveal">
-        <span class="how-num">05 — Run</span>
-        <h3 class="how-h3">Agent が自動運用</h3>
+        <span class="how-num">05 — Refine</span>
+        <h3 class="how-h3">修正・改善</h3>
         <p class="how-tx">
-          記事 / SNS 投稿 / 競合監視 / KPI 分析 を <b>24 時間 365 日</b>。
-          メディア・ X / Threads・ Slack 等に <b>自動公開</b>。
+          公開済記事 を スレッドで <b>「ここ こう修正して」</b> と 自然言語で 指示するだけ。 AI が 該当箇所を 書き直して 再公開。
         </p>
         <div class="how-tags">
-          <span class="how-tag">365 日 稼働</span>
-          <span class="how-tag">WordPress 不要</span>
+          <span class="how-tag">スレッド指示</span>
+          <span class="how-tag">URL 保持</span>
         </div>
       </div>
       <div class="how-card reveal">
-        <span class="how-num">06 — Report</span>
-        <h3 class="how-h3">毎日レポート & 改善</h3>
+        <span class="how-num">06 — Track</span>
+        <h3 class="how-h3">数字を見る</h3>
         <p class="how-tx">
-          毎朝 <b>「昨日やったこと + 今日やる 1 つ」</b> がダッシュボードに届く。 KPI 進捗を見ながら PDCA が回り続ける。
+          GA4 / Search Console と 自動連携。 PV / 順位 / クリック を 一画面で 確認、 毎朝 <b>「昨日の動き + 今日のおすすめ」</b> を AI が レポート。
         </p>
         <div class="how-tags">
-          <span class="how-tag">毎朝届く</span>
-          <span class="how-tag">12 週ロードマップ</span>
+          <span class="how-tag">GA4 / GSC 連動</span>
+          <span class="how-tag">毎朝レポート</span>
         </div>
       </div>
     </div>
@@ -1436,10 +1430,10 @@ function _dispatchTeam(ev, source){
   var TICKERS = [
     'リサーチャーが <b>サイト 23 ページ + 競合 3 社</b> を読み込み中…',
     'PM が <b>AI チーム 18 名</b> を 3 部門に編成中…',
-    'GA4 アナリストが <b>直近 30 日のファネル漏れ</b> を分析中…',
-    'ユーザーが <b>SEO 記事 3 本</b> を AI に依頼中…',
-    'SEO ライター + X / SNS が <b>ドラフト + 起案</b> を並行実行中…',
-    'PM が <b>朝のレポート</b> を生成 → 今日の優先タスク 3 つを提案中…',
+    'デザイナーが <b>テンプレート + ブランド色 + favicon</b> を 自動設定中…',
+    'AI が <b>KW + タイトル候補 12 本</b> を 提案中 → ☐ チェックで 一括公開…',
+    'ユーザーが スレッドで <b>「3 章を 短くして」</b> と修正依頼 → AI が rewrite 中…',
+    'PM が <b>朝のレポート</b> を生成 → 昨日の動き + 今日のおすすめ を 提案中…',
   ];
 
   // KPI count-up (Scene 3 表示時に毎回再生)

@@ -561,7 +561,8 @@ const DB={
   //   使い方:
   //     await DB.saveAgent(user)                            — agents 列だけ touch
   //     await DB.saveAgent(user, { mediaPostsFull: true })  — agents + media_posts_full
-  //     await DB.saveAgent(user, { billing: true })         — agents + billing_history
+  //     await DB.saveAgent(user, { billing: true, balance: true, usage: true }) — chat save 用
+  //     await DB.saveAgent(user, { cols: ['integrations'] })  — 任意列 を 追加 touch
   //
   //   ⚠️ 制約: history_archive / memories を 変更する save では 使わない (= drop されて 消える)。
   //      これら変更時は 従来 DB.save() を 使う。
@@ -579,8 +580,10 @@ const DB={
       });
       const payload = { agents: leanAgents };
       if(opts.mediaPostsFull) payload.media_posts_full = user.media_posts_full || {};
-      if(opts.billing) payload.billing_history = user.billing_history || [];
+      if(opts.billing) payload.billing_history = (user.billing_history || []).slice(-1000);  // 上限 1000 件
       if(opts.balance) payload.balance_jpy = user.balance_jpy || 0;
+      if(opts.usage) payload.usage_count = user.usage_count || 0;
+      if(Array.isArray(opts.cols)) opts.cols.forEach(col => { if(user[col] !== undefined) payload[col] = user[col]; });
       const qs = '?id=eq.'+encodeURIComponent(user.id);
       const r = await sbReq('PATCH','users',qs+'&select=id',payload);
       if(r.s < 400){
@@ -30678,7 +30681,7 @@ ${orgSummary || '(汎用チーム)'}
       if(agent.history.length > 500) agent.history = agent.history.slice(-500);
       const ai = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
       if(ai>=0) payerUser.agents[ai] = agent;
-      await DB.save(payerUser);
+      await DB.saveAgent(payerUser, { billing: true, balance: true, usage: true });
       // Push notification: human-only message (no @AI), notify other members
       notifyGroupMembers(payerUser, agent, {
         sender_user_id: user.id,
@@ -30852,7 +30855,7 @@ ${orgSummary || '(汎用チーム)'}
         if(agent.history.length > 500) agent.history = agent.history.slice(-500);
         const ai = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
         if(ai>=0) payerUser.agents[ai] = agent;
-        await DB.save(payerUser);
+        await DB.saveAgent(payerUser, { billing: true, balance: true, usage: true });
         sse('done', {
           balance_jpy: payerUser.balance_jpy,
           cost: { jpy: cost.jpy, usd: cost.usd },
@@ -31096,7 +31099,7 @@ ${orgSummary || '(汎用チーム)'}
             input_tokens:cost.inputTok, output_tokens:cost.outputTok, cost_usd:cost.usd, cost_jpy:cost.jpy, mode:'plan' });
           const aiIdx = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
           if(aiIdx>=0) payerUser.agents[aiIdx] = agent;
-          await DB.save(payerUser);
+          await DB.saveAgent(payerUser, { billing: true, balance: true, usage: true });
           sse('delta', { text: reply });
           sse('done', { reply, balance_jpy: payerUser.balance_jpy, cost:{jpy:cost.jpy, usd:cost.usd} });
         } catch(e){
@@ -31218,7 +31221,7 @@ ${orgSummary || '(汎用チーム)'}
         if(payerUser.billing_history.length>1000) payerUser.billing_history = payerUser.billing_history.slice(-1000);
         const ai = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
         if(ai>=0) payerUser.agents[ai] = agent;
-        await DB.save(payerUser);
+        await DB.saveAgent(payerUser, { billing: true, balance: true, usage: true });
         // Rolling summary — fire-and-forget so the response isn't blocked.
         // Saves separately if it folded anything.
         _summarizeOldHistory(agent).then(folded => {
@@ -32120,7 +32123,7 @@ ${orgSummary || '(汎用チーム)'}
     if(payerUser.billing_history.length>1000)payerUser.billing_history=payerUser.billing_history.slice(-1000);
     const ai=(payerUser.agents||[]).findIndex(a=>a.id===agent.id);
     if(ai>=0)payerUser.agents[ai]=agent;
-    await DB.save(payerUser);
+    await DB.saveAgent(payerUser, { billing: true, balance: true, usage: true });
     // Rolling summary — fire-and-forget. If it folds, re-save.
     _summarizeOldHistory(agent).then(folded => {
       if(folded){

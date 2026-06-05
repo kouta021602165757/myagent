@@ -21948,7 +21948,27 @@ async function handleAPI(req,res,pathname,method,ip){
     // Quietly tries to generate one short "AI が思い出したように言ってくる"
     // message for a qualifying agent. Capped to 1/day per user.
     _maybeGenerateNudgeForUser(user).catch(()=>{});
-    return jres(res,200,{user:safe(user)});
+    // 🚀 perf (2026-06-05): /api/me の agents を /api/agents と 同じ slim 形式 (= 末尾 1 件 stub)
+    //   元 3.9MB (= history 30 件 × 139 agents) → ~200KB。 互換性: me.agents は 残るので
+    //   既存の refresh パス (= rollback / billing-sync / oauth) で 再代入も 動く。
+    const safeUser = safe(user);
+    safeUser.agents = (safeUser.agents || []).map(ag => {
+      if(!ag || typeof ag !== 'object') return ag;
+      const h = Array.isArray(ag.history) ? ag.history : [];
+      if(h.length === 0) return Object.assign({}, ag, { history: [] });
+      const last = h[h.length - 1] || {};
+      const slimLast = Object.assign({}, last);
+      if(typeof slimLast.content === 'string' && slimLast.content.length > 300){
+        slimLast.content = slimLast.content.slice(0, 300) + '…';
+      }
+      ['tool_use', 'tool_result', 'attachments', 'images', 'thinking', 'partials'].forEach(k => delete slimLast[k]);
+      return Object.assign({}, ag, {
+        history: [slimLast],
+        history_total_count: ag.history_total_count || h.length,
+        history_truncated: (ag.history_total_count || h.length) > 1,
+      });
+    });
+    return jres(res,200,{user:safeUser});
   }
 
   // ── GET /api/agents ────────────────────────────────────────

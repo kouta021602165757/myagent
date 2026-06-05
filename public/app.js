@@ -9841,6 +9841,11 @@ window._artBatchClear = function(){
   _artUpdateBatchBar();
 };
 window._artBatchPublish = function(){
+  // 🐛 連打防止 — 1 回 fire したら 30 秒 ロック
+  if(window._artBatchInFlight){
+    showToast('生成中… (= 連打防止、 chat の pill で 進捗 確認できます)', 'ng');
+    return;
+  }
   // タイトル行の checkbox のみ集計 (KW 行は グループ見出しで アクション無し)
   var titleChecks = Array.prototype.slice.call(document.querySelectorAll('.art-title-cb:checked'));
   if(titleChecks.length === 0) return;
@@ -9872,15 +9877,50 @@ window._artBatchPublish = function(){
   // 一括公開 API 呼ぶ
   var sid = (document.getElementById('siteTabOverlay') || {}).getAttribute && document.getElementById('siteTabOverlay').getAttribute('data-site-id');
   if(!sid){ showToast('siteId 不明', 'ng'); return; }
+  window._artBatchInFlight = true;
+  setTimeout(function(){ window._artBatchInFlight = false; }, 30000);  // 30s 後 自動解除 (= ロック残留防止)
   api('POST', '/api/agents/' + encodeURIComponent(sid) + '/keyword-batch-publish', { items: items })
-    .then(function(r){
-      if(!r || !r.ok){ showToast('公開失敗: ' + (r && r.detail || 'unknown'), 'ng'); return; }
-      showToast('✨ ' + items.length + ' 件 生成開始 (chat に thread 通知)', 'ok');
+    .then(async function(r){
+      if(!r || !r.ok){
+        window._artBatchInFlight = false;  // 失敗時は 即解除
+        showToast('公開失敗: ' + (r && r.detail || 'unknown'), 'ng'); return;
+      }
+      // 🚀 楽観 push: 全 job の start message を LOCAL ag.history に即時追加
+      //   (= reload なしに chat の pill が 即時表示 + button 連打 防止)
+      var ag = (agents||[]).find(function(a){ return a && a.id === sid; });
+      if(ag){
+        if(!Array.isArray(ag.history)) ag.history = [];
+        (r.jobs || []).forEach(function(j){
+          if(!j || !j.thread_parent_id) return;
+          if(ag.history.find(function(m){ return m && m.id === j.thread_parent_id; })) return;
+          ag.history.push({
+            id: j.thread_parent_id,
+            role: 'assistant',
+            content: '📝 記事生成中: 「' + j.title + '」\n⏳ KW: ' + j.keyword + (j.article_category ? ' ・ カテゴリ (推定): ' + j.article_category : '') + ' ・ mode: ' + j.mode,
+            time: new Date().toISOString(),
+            kind: 'system_publish_start',
+            article_title: j.title,
+            article_category: j.article_category || '',
+          });
+        });
+      }
+      showToast('✨ ' + items.length + ' 件 生成開始 → chat で 進捗確認', 'ok');
       _artBatchClear();
-      // panel 再描画 (= 候補リストから 該当 KW を 一旦消す)
-      setTimeout(function(){ try { openArticlesPanel(sid); } catch(_){} }, 600);
+      // panel を 閉じて chat に 切替 → ユーザは pill で 進捗 即確認できる
+      try { if(typeof _closeSiteTabModal === 'function') _closeSiteTabModal(); } catch(_){}
+      try { if(typeof openAgent === 'function') await openAgent(sid); } catch(_){}
+      // 最初の job の thread を 自動 open (= 進捗が一番見やすい)
+      var firstParent = (r.jobs && r.jobs[0] && r.jobs[0].thread_parent_id) || null;
+      if(firstParent){
+        setTimeout(function(){
+          try { if(typeof _openThread === 'function') _openThread(firstParent); } catch(_){}
+        }, 350);
+      }
     })
-    .catch(function(err){ showToast('公開失敗: ' + (err.message || ''), 'ng'); });
+    .catch(function(err){
+      window._artBatchInFlight = false;
+      showToast('公開失敗: ' + (err.message || ''), 'ng');
+    });
 };
 
 // 📝 「書く予定の記事」 セクション (= planned_articles キュー)

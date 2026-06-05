@@ -16471,13 +16471,16 @@ async function _mediaGenerateArticle(agent, params){
       const mid = Math.floor(h2Matches.length / 2);
       const insertAt = h2Matches[mid].end;
       const lpBrandFinal = _mediaExtractLpBrand(agent.media || {});
-      const utmCampaign = (agent.media && agent.media.slug || 'media') + '_inline';
+      const mediaSlug = (agent.media && agent.media.slug) || 'media';
+      // click 計測 redirect 経由
+      const inlineCtaTarget = lpUrl + '?utm_source=media&utm_medium=inline_mid&utm_campaign=' + _mediaEsc(mediaSlug) + '_inline';
+      const inlineCtaHref = '/r/' + _mediaEsc(mediaSlug) + '/inline/inline_mid?to=' + encodeURIComponent(inlineCtaTarget);
       const ctaHtml = '\n<div class="inline-cta" style="margin:32px 0;padding:22px 26px;background:linear-gradient(135deg,#f7ffe9 0%,#fff 100%);border:2px solid #c0ff5c;border-radius:14px;text-align:center">'
         + '<div style="font-size:11px;font-weight:800;color:#0a3d39;letter-spacing:.08em;margin-bottom:7px">▌ ' + _mediaEsc(lpBrandFinal).toUpperCase() + '</div>'
         + '<div style="font-size:14px;color:#1a1a1a;line-height:1.65;margin-bottom:14px;font-weight:600">'
         +   _mediaEsc((agent.media && agent.media.lp_description) || '公式サイトで 詳細を チェックしてください。')
         + '</div>'
-        + '<a href="' + lpUrl + '?utm_source=media&utm_medium=inline_mid&utm_campaign=' + _mediaEsc(utmCampaign) + '" target="_blank" rel="noopener" '
+        + '<a href="' + inlineCtaHref + '" target="_blank" rel="noopener" '
         +   'style="display:inline-flex;align-items:center;gap:8px;background:#0d4f4a;color:#fff;padding:11px 22px;border-radius:9px;text-decoration:none;font-size:13px;font-weight:800">'
         +   '👉 ' + _mediaEsc(lpBrandFinal) + ' を 試してみる <span style="font-size:15px">→</span>'
         + '</a>'
@@ -16947,16 +16950,23 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
   const rt = _mediaReadingTime(body_html);
   const dateLocale = (media.template === 'tech') ? 'mono' : 'ja';
 
-  // 5 CTA configurations (= UTM tracking)
-  const cta = (medium, label, style) => lpUrl
-    ? '<a href="' + lpUrl + '?utm_source=media&utm_medium=' + medium + '&utm_campaign=' + _mediaEsc(media.slug) + '_' + _mediaEsc(post.slug) + '" target="_blank" rel="noopener" style="' + style + '">' + label + '</a>'
-    : '';
+  // 5 CTA configurations (= UTM tracking + click 計測 redirect)
+  //   /r/<media-slug>/<post-slug>/<medium> 経由で click 数を サーバで 即時カウント
+  //   → HERO カードの 「LP 流入数」 に 反映 (= GA4 接続なしでも 動く)
+  const cta = (medium, label, style) => {
+    if(!lpUrl) return '';
+    const targetUrl = lpUrl + '?utm_source=media&utm_medium=' + medium + '&utm_campaign=' + _mediaEsc(media.slug) + '_' + _mediaEsc(post.slug);
+    const redirectUrl = '/r/' + _mediaEsc(media.slug) + '/' + _mediaEsc(post.slug) + '/' + _mediaEsc(medium) + '?to=' + encodeURIComponent(targetUrl);
+    return '<a href="' + redirectUrl + '" target="_blank" rel="noopener" style="' + style + '">' + label + '</a>';
+  };
   const inlineCTA = cta('inline_mid',
     '👉 ' + name + ' のサービスを見る',
     'display:block;background:'+brand+';color:#fff;padding:14px 20px;border-radius:'+s.cardRadius+';text-decoration:none;font-size:14px;font-weight:700;text-align:center;margin:28px 0');
   // endCard: <div class="body"> 内に置くため、 .body h3 / .body p の CSS と
   //   競合しないよう class 経由で 外部 CSS で全上書き (= inline ダブルクォートの破綻防止)
-  const endCardCtaUrl = lpUrl ? lpUrl + '?utm_source=media&utm_medium=end_card&utm_campaign=' + _mediaEsc(media.slug) + '_' + _mediaEsc(post.slug) : '';
+  const endCardCtaUrl = lpUrl
+    ? '/r/' + _mediaEsc(media.slug) + '/' + _mediaEsc(post.slug) + '/end_card?to=' + encodeURIComponent(lpUrl + '?utm_source=media&utm_medium=end_card&utm_campaign=' + _mediaEsc(media.slug) + '_' + _mediaEsc(post.slug))
+    : '';
   // 🎯 LP 紹介文 (= media.lp_description) を最優先、 なければ汎用 fallback
   //   LP の og:description / meta description を 自動取得済 (= media create / settings 時)
   const lpDescText = media.lp_description ? _mediaEsc(media.lp_description) : '公式サイトで 詳細を チェックしてください。';
@@ -25204,6 +25214,49 @@ async function handleAPI(req,res,pathname,method,ip){
     });
   }
 
+  //   GET /api/agents/:id/lp-referrals — メディアから LP へ click された 回数 (= 直近 30 日)
+  //     in-memory counter から 集計 (= /r/<slug>/<post>/<cta> 経由でカウント)
+  const lpRefMatch = pathname.match(/^\/api\/agents\/([^/]+)\/lp-referrals$/);
+  if(lpRefMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === lpRefMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const mediaSlug = ag.media && ag.media.slug;
+    if(!mediaSlug) return jres(res, 200, { total: 0, by_post: {}, by_cta: {}, days: [] });
+    const cnt = global._lpClickCounter || new Map();
+    let total7 = 0, total30 = 0, todayCnt = 0;
+    const byPost = {}, byCta = {};
+    const today = new Date().toISOString().slice(0, 10);
+    const now = Date.now();
+    for(const [k, v] of cnt.entries()){
+      if(!k.startsWith(mediaSlug + ':')) continue;
+      const day = k.split(':')[1];
+      const dayMs = Date.parse(day + 'T00:00:00Z');
+      if(isNaN(dayMs)) continue;
+      const ageDays = (now - dayMs) / 86400000;
+      if(ageDays > 30) continue;
+      total30 += v.total || 0;
+      if(ageDays <= 7) total7 += v.total || 0;
+      if(day === today) todayCnt += v.total || 0;
+      for(const [p, c] of Object.entries(v.by_post || {})) byPost[p] = (byPost[p] || 0) + c;
+      for(const [m, c] of Object.entries(v.by_cta || {})) byCta[m] = (byCta[m] || 0) + c;
+    }
+    // top 3 記事 by click count
+    const topPosts = Object.entries(byPost)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([slug, count]) => {
+        const meta = (ag.media_posts_idx || []).find(p => p && p.slug === slug);
+        return { slug, title: (meta && meta.title) || slug, count };
+      });
+    return jres(res, 200, {
+      today: todayCnt,
+      total_7d: total7,
+      total_30d: total30,
+      top_posts: topPosts,
+      by_cta: byCta,
+    });
+  }
+
   //   POST /api/agents/:id/media/articles/:postSlug/rewrite — 既存記事を GSC データを context にリライト
   //   既存の URL を保持 (= SEO ペナルティ回避)、 body_html のみ差し替え
   const mediaRewriteMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/articles\/([a-z0-9][a-z0-9-]{1,80}[a-z0-9])\/rewrite$/);
@@ -32860,6 +32913,43 @@ const server=http.createServer(async(req,res)=>{
     } else {
       effectivePath = _qPrefix + pathname;
     }
+  }
+
+  // /r/<media-slug>/<post-slug-or-inline>/<cta-medium> → LP click 計測 + redirect
+  //   各記事の LP CTA リンクは この経路で 一度経由 → server で in-memory カウント → LP 302
+  //   GA4 接続なしでも 「メディア → LP 流入数」 を 数えられる
+  const lpRedirRoute = effectivePath.match(/^\/r\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/([a-z0-9][a-z0-9_-]{1,80}[a-z0-9])\/([a-z_]+)\/?$/);
+  if(lpRedirRoute && method === 'GET'){
+    return (async () => {
+      const mediaSlug = lpRedirRoute[1];
+      const postSlug = lpRedirRoute[2];
+      const ctaMedium = lpRedirRoute[3];
+      const qs = url.parse(req.url, true).query || {};
+      const to = String(qs.to || '').trim();
+      // safety: redirect 先は http(s) URL のみ
+      if(!/^https?:\/\//i.test(to)){
+        res.writeHead(400, { 'Content-Type': 'text/plain' });
+        return res.end('invalid redirect target');
+      }
+      // in-memory counter (= per-user, per-day)
+      if(!global._lpClickCounter) global._lpClickCounter = new Map();
+      const today = new Date().toISOString().slice(0, 10);
+      const key = mediaSlug + ':' + today;
+      const cur = global._lpClickCounter.get(key) || { total: 0, by_post: {}, by_cta: {} };
+      cur.total++;
+      cur.by_post[postSlug] = (cur.by_post[postSlug] || 0) + 1;
+      cur.by_cta[ctaMedium] = (cur.by_cta[ctaMedium] || 0) + 1;
+      cur.last_at = Date.now();
+      global._lpClickCounter.set(key, cur);
+      // size guard: 1000 entries (= 用 user/day × 1 年で 365 entry/user × 数 user)
+      if(global._lpClickCounter.size > 1000){
+        const firstKey = global._lpClickCounter.keys().next().value;
+        global._lpClickCounter.delete(firstKey);
+      }
+      // 302 redirect to LP
+      res.writeHead(302, { 'Location': to, 'Cache-Control': 'no-cache' });
+      return res.end();
+    })();
   }
 
   // /media/:slug/about → 編集部 紹介 ページ (= E-E-A-T、 信頼性)

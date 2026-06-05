@@ -9153,6 +9153,11 @@ function _renderHeroCard(ag){
       + '</div>';
   }
 
+  // 🎯 LP 流入数 (= メディアから LP に click された回数)
+  //    取得は async: _lpRefCache に値があれば 即時表示、 なければ fetch して反映
+  var lpRefData = (window._lpRefCache && window._lpRefCache[ag.id]) || null;
+  var lpRefVal = lpRefData ? String(lpRefData.total_30d || 0) : '計測中';
+
   el.innerHTML = ''
     + '<div class="hc-title">🤖 AI チーム<br>累計実績</div>'
     + _cell('📊 月間 PV', pvVal, _delta(deltaPct))
@@ -9161,11 +9166,24 @@ function _renderHeroCard(ag){
     + '<div class="hc-divider"></div>'
     + _cell('📝 公開記事', articleCount + ' 本', '')
     + '<div class="hc-divider"></div>'
+    + _cell('🎯 LP 流入', lpRefVal, lpRefData && lpRefData.total_7d > 0 ? ('週 ' + lpRefData.total_7d) : '')
+    + '<div class="hc-divider"></div>'
     + _cell('📱 X', xConnected ? (x.followers != null ? _fmt(x.followers) : '0') : '未連携', '')
     + '<div class="hc-divider"></div>'
     + _cell('🧵 Threads', threadsConnected ? (threads.followers != null ? _fmt(threads.followers) : '0') : '未連携', '');
 
   el.style.display = 'flex';
+
+  // LP 流入数 を background fetch (= cache 無い 初回のみ)
+  if(!lpRefData && ag.media && ag.media.slug){
+    window._lpRefCache = window._lpRefCache || {};
+    api('GET', '/api/agents/' + encodeURIComponent(ag.id) + '/lp-referrals')
+      .then(function(r){
+        if(!r) return;
+        window._lpRefCache[ag.id] = r;
+        try { _renderHeroCard(ag); } catch(_){}
+      }).catch(function(){});
+  }
 
   // ── Weekly stats bar — HERO の下に「今週の動き」 1 行サマリ ──
   try { _renderWeeklyStatsBar(ag); } catch(e){ console.warn('[weekly-stats]', e); }

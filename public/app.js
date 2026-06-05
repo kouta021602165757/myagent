@@ -15199,18 +15199,17 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       + '</div>'
       + wrapEnd
       + '</div>';
-    // 通常の bubble wrapper で 包む (= avatar + name + time が出るように)
-    const bubbleAv = '<div class="av">' + _avHTML(ag.avatar) + '</div>';
-    const bubbleName = '<div class="msg-name">' + esc(ag.name||'AI') + '</div>';
-    const tStr = time ? '<span class="msg-time">' + esc(time.slice ? time.slice(11,16) : time) + '</span>' : '';
-    return '<div class="msg msg-ai" data-msg-id="' + esc(raw.id||'') + '" data-msg-idx="' + idx + '">'
-      + '<div class="msg-row">'
-      +   bubbleAv
-      +   '<div class="msg-body">'
-      +     '<div class="msg-meta">' + bubbleName + tStr + '</div>'
-      +     card
+    // 通常の bubble wrapper で 包む (= 既存 .m-* class を使用、 通常 AI bubble と 同じ structure)
+    const tStr = time ? esc(time.slice ? time.slice(11,16) : time) : '';
+    return '<div class="m m-ai" data-idx="' + idx + '">'
+      +   '<div class="m-av-wrap"><div class="m-av">' + _avHTML(ag.avatar) + '</div></div>'
+      +   '<div class="m-content">'
+      +     '<div class="m-meta">'
+      +       '<span class="m-name">' + esc(ag.name||'AI') + '</span>'
+      +       '<span class="m-time">' + tStr + '</span>'
+      +     '</div>'
+      +     '<div class="m-body">' + card + '</div>'
       +   '</div>'
-      + '</div>'
       + '</div>';
     }
   const isU = role==='user';

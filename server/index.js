@@ -25195,7 +25195,7 @@ async function handleAPI(req,res,pathname,method,ip){
       queued_at: new Date().toISOString(),
     };
     ag.planned_articles.unshift(planned);
-    try { await DB.save(user); } catch(e){
+    try { await DB.saveAgent(user); } catch(e){
       console.warn('[media-planned-add] save failed:', e.message);
       return jres(res, 500, { error: 'save_failed', detail: e.message });
     }

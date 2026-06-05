@@ -15703,10 +15703,13 @@ async function _findUserByMediaSlug(slug, opts){
     } catch(e){ console.warn('[media-slug-index] lookup failed, fallback:', e.message); }
   }
   // Fallback: 全 lean scan (= migration 未実行 / index 漏れ時)
+  // 🚨 catastrophic path: 全 user × agents 読み込み (= 数 GB 規模)。
+  //   Supabase 負荷時に 30 秒 hang する 主因。 limit を 50 に絞って 即諦め。
+  //   index 漏れ で 本来 ヒットすべきデータが 漏れる可能性あるが、 30 秒 hang よりマシ。
   try {
     let users = [];
     if(USE_SUPA){
-      const r = await sbReq('GET','users','?select=id,agents&limit=500');
+      const r = await sbReq('GET','users','?select=id,agents&limit=50');
       users = Array.isArray(r.d) ? r.d : [];
     } else { users = LDB.data || []; }
     for(const u of users){

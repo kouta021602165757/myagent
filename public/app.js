@@ -9451,13 +9451,162 @@ function _renderTabArticles(site){
   }
 
   return ''
-    + '<div style="display:flex;gap:8px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--wire)">'
-    +   tabBtn('pre',  '📥 記事生成前', preCount,    true)
-    +   tabBtn('pub',  '✅ 公開済',     posts.length, false)
+    + '<div style="display:flex;gap:8px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--wire);flex-wrap:wrap">'
+    +   tabBtn('pre',  '📥 記事生成前',       preCount,    true)
+    +   tabBtn('kp',   '🔍 キーワードプランナー', 0,           false)
+    +   tabBtn('pub',  '✅ 公開済',           posts.length, false)
     + '</div>'
     + '<div id="artTabPre">' + actionsHTML + preHTML + '</div>'
+    + '<div id="artTabKp" style="display:none">' + _renderKwPlannerTab(site) + '</div>'
     + '<div id="artTabPub" style="display:none">' + pubHTML + '</div>';
 }
+
+// 🔍 キーワードプランナータブ — 自由入力 KW で 10 タイトル + SERP top 5 + シグナル
+function _renderKwPlannerTab(site){
+  var siteId = esc(site.id);
+  return ''
+    + '<div style="margin-bottom:18px">'
+    +   '<div style="display:flex;gap:8px;margin-bottom:8px">'
+    +     '<input id="kpInput" type="text" placeholder="調べたい KW を 入力 (例: オーガニック化粧水 おすすめ)" '
+    +       'style="flex:1;background:#fff;border:1px solid var(--wire2);padding:10px 13px;border-radius:8px;font-size:13px;font-family:inherit" '
+    +       'onkeydown="if(event.key===\'Enter\')_kpSearch(\''+siteId+'\')">'
+    +     '<button onclick="_kpSearch(\''+siteId+'\')" style="background:var(--teal);color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔍 検索</button>'
+    +   '</div>'
+    +   '<div style="font-size:10.5px;color:var(--text3);line-height:1.6">💡 AI が 10 タイトル候補 + 競合 / ボリューム / 上位 SERP を 5-10 秒で 提示 (= 数値は AI 推定、 参考値)</div>'
+    + '</div>'
+    + '<div id="kpResult"></div>';
+}
+
+// _kpSearch — keyword-detail + serp-analysis を 並列 fetch → render
+window._kpSearch = function(siteId){
+  var input = document.getElementById('kpInput');
+  var kw = String((input && input.value) || '').trim();
+  if(!kw){ showToast('KW を入力してください', 'ng'); return; }
+  var resBox = document.getElementById('kpResult');
+  if(!resBox) return;
+  resBox.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text3);font-size:12.5px">'
+    + '<div style="display:inline-block;width:18px;height:18px;border:2px solid var(--cream3);border-top-color:var(--teal);border-radius:50%;animation:artSpinner .8s linear infinite;vertical-align:middle;margin-right:8px"></div>'
+    + 'AI が 「' + esc(kw) + '」 を 分析中… (5-10 秒)</div>';
+  Promise.all([
+    api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/keyword-detail?kw=' + encodeURIComponent(kw) + '&mode=seo').catch(function(){ return null; }),
+    api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/serp-analysis?kw=' + encodeURIComponent(kw)).catch(function(){ return null; }),
+  ]).then(function(arr){
+    _kpRender(siteId, kw, arr[0], arr[1]);
+  });
+};
+
+window._kpRender = function(siteId, kw, kwDetail, serpData){
+  var resBox = document.getElementById('kpResult');
+  if(!resBox) return;
+  if(!kwDetail || !Array.isArray(kwDetail.titles) || kwDetail.titles.length === 0){
+    resBox.innerHTML = '<div style="padding:24px;text-align:center;background:#fee2e2;border-radius:11px;color:#9f1239;font-size:12.5px">⚠️ タイトル候補の 取得に失敗しました。 別の KW で 試してください。</div>';
+    return;
+  }
+  var sig = kwDetail.signals || {};
+  // シグナル を ラベル化
+  var compMap = { '緩': '弱', '中': '中', '激': '強' };
+  var compLabel = compMap[sig.competition] || (sig.competition || '中');
+  var compColor = compLabel === '弱' ? '#15803d' : (compLabel === '中' ? '#92400e' : '#9f1239');
+  var compBg = compLabel === '弱' ? '#dcfce7' : (compLabel === '中' ? '#fef3c7' : '#fee2e2');
+  var vol = typeof sig.volume_est === 'number' ? sig.volume_est : 0;
+  var volLabel = vol >= 1000 ? '高' : (vol >= 100 ? '中' : '低');
+  var volColor = volLabel === '高' ? '#15803d' : (volLabel === '中' ? '#92400e' : '#737373');
+  var volBg = volLabel === '高' ? '#dcfce7' : (volLabel === '中' ? '#fef3c7' : '#f3f4f6');
+  // 推定 カテゴリ
+  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+  var cats = (ag && ag.media && ag.media.categories) || [];
+  var predCat = '';
+  var kwLow = kw.toLowerCase();
+  for(var i=0;i<cats.length;i++){
+    var c = cats[i]; if(!c||!c.name) continue;
+    var cn = c.name.toLowerCase();
+    if(kwLow.indexOf(cn) >= 0 || cn.indexOf(kwLow.slice(0,6)) >= 0){ predCat = c.name; break; }
+  }
+  if(!predCat && cats[0]) predCat = cats[0].name;
+
+  // シグナルパネル
+  var signalsHTML = '<div style="background:#fff;border:1px solid var(--wire);border-radius:11px;padding:16px 20px;margin-bottom:18px">'
+    + '<div style="font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;margin-bottom:10px">🎯 「' + esc(kw) + '」 の シグナル</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:11px">'
+    +   '<div style="text-align:center;background:'+volBg+';padding:9px 8px;border-radius:8px"><div style="font-size:9.5px;color:'+volColor+';font-weight:800;letter-spacing:.04em">📈 ボリューム</div><div style="font-size:17px;font-weight:900;color:'+volColor+';margin-top:2px">'+volLabel+'</div>'+(vol?'<div style="font-size:9.5px;color:var(--text3);margin-top:1px">~'+(vol>=1000?Math.round(vol/100)/10+'k':vol)+'/月</div>':'')+'</div>'
+    +   '<div style="text-align:center;background:'+compBg+';padding:9px 8px;border-radius:8px"><div style="font-size:9.5px;color:'+compColor+';font-weight:800;letter-spacing:.04em">🥊 競合</div><div style="font-size:17px;font-weight:900;color:'+compColor+';margin-top:2px">'+compLabel+'</div></div>'
+    +   (predCat ? '<div style="text-align:center;background:#f3e8ff;padding:9px 8px;border-radius:8px"><div style="font-size:9.5px;color:#5b21b6;font-weight:800;letter-spacing:.04em">📂 カテゴリ</div><div style="font-size:13px;font-weight:900;color:#5b21b6;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(predCat)+'</div></div>' : '')
+    +   (sig.estimated_pv ? '<div style="text-align:center;background:#dbeafe;padding:9px 8px;border-radius:8px"><div style="font-size:9.5px;color:#1e40af;font-weight:800;letter-spacing:.04em">🎯 想定 PV</div><div style="font-size:15px;font-weight:900;color:#1e40af;margin-top:2px">'+sig.estimated_pv+'/月</div></div>' : '')
+    +   (sig.immediacy_score ? '<div style="text-align:center;background:#fff7ed;padding:9px 8px;border-radius:8px"><div style="font-size:9.5px;color:#c2410c;font-weight:800;letter-spacing:.04em">⚡ 即効性</div><div style="font-size:15px;font-weight:900;color:#c2410c;margin-top:2px">'+sig.immediacy_score+'/100</div></div>' : '')
+    + '</div></div>';
+
+  // タイトル候補 10 件 (= checkbox + 公開 button)
+  var titlesHTML = '<div style="margin-bottom:18px">'
+    + '<div style="font-size:11px;font-weight:800;color:var(--text2);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">✨ AI 提案 タイトル '+kwDetail.titles.length+' 件</div>'
+    + '<div style="display:grid;gap:7px">'
+    + kwDetail.titles.map(function(t, idx){
+        var titleTxt = String(t.title || '').slice(0, 200);
+        var titleB64 = btoa(unescape(encodeURIComponent(titleTxt)));
+        var chars = (typeof t.chars_target === 'number') ? t.chars_target : null;
+        var h2c = (typeof t.h2_count === 'number') ? t.h2_count : null;
+        var meta = [chars ? '📚 約 '+chars.toLocaleString()+' 字' : null, h2c ? 'h2 '+h2c+' つ' : null].filter(Boolean).join(' · ');
+        var pubMatch = _artFindPublishedMatch(titleTxt, siteId);
+        if(pubMatch){
+          var mediaSlug = (ag && ag.media && ag.media.slug) || '';
+          var openUrl = mediaSlug ? ('https://'+mediaSlug+'.myaiagents.agency/'+pubMatch.slug) : ('/media/'+(mediaSlug||'?')+'/'+pubMatch.slug);
+          return '<div style="background:#f9fafb;border:1px solid var(--wire);border-radius:9px;padding:10px 13px;display:flex;align-items:center;gap:9px;opacity:.6">'
+            + '<div style="width:15px;height:15px;display:flex;align-items:center;justify-content:center;color:#15803d;font-weight:900">✓</div>'
+            + '<div style="width:18px;height:18px;border-radius:50%;background:#dcfce7;color:#15803d;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">'+(idx+1)+'</div>'
+            + '<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;text-decoration:line-through;text-decoration-color:#15803d80">'+esc(titleTxt)+'</div><div style="font-size:10px;color:#15803d;font-weight:800;margin-top:2px">✓ 公開済</div></div>'
+            + '<a href="'+esc(openUrl)+'" target="_blank" rel="noopener" style="background:transparent;border:1px solid var(--wire2);color:#15803d;padding:5px 10px;border-radius:6px;font-size:10.5px;font-weight:800;text-decoration:none">↗ 開く</a>'
+            + '</div>';
+        }
+        return '<div class="art-title-row" data-title="'+esc(titleTxt)+'" data-kw="'+esc(kw)+'" data-mode="seo" style="background:#fff;border:1px solid var(--wire);border-radius:9px;padding:10px 13px;display:flex;align-items:flex-start;gap:9px">'
+          + '<input type="checkbox" class="art-title-cb" onclick="_artUpdateBatchBar()" style="width:15px;height:15px;cursor:pointer;accent-color:#0d4f4a;flex-shrink:0;margin-top:2px">'
+          + '<div style="width:18px;height:18px;border-radius:50%;background:#0d4f4a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;margin-top:1px">'+(idx+1)+'</div>'
+          + '<div style="flex:1;min-width:0;line-height:1.4">'
+          +   '<div style="font-size:12.5px;font-weight:700;color:var(--text);word-break:break-word">'+esc(titleTxt)+'</div>'
+          +   (meta ? '<div style="font-size:10px;color:var(--text3);margin-top:3px">'+esc(meta)+'</div>' : '')
+          +   (t.reason ? '<div style="font-size:10px;color:var(--text3);margin-top:2px">💡 '+esc(t.reason)+'</div>' : '')
+          + '</div>'
+          + '<button onclick="_kwInvokeArticleGenWithTitle(\''+esc(siteId)+'\',\''+titleB64+'\',\''+esc(kw)+'\',\'seo\')" style="background:var(--teal);color:#fff;border:0;padding:6px 11px;border-radius:6px;font-size:10.5px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">✨ 公開</button>'
+          + '</div>';
+      }).join('')
+    + '</div></div>';
+
+  // SERP top 5
+  var serpHTML = '';
+  var serpSites = (serpData && Array.isArray(serpData.top_sites)) ? serpData.top_sites.slice(0, 5) : [];
+  if(serpSites.length > 0){
+    serpHTML = '<div style="margin-bottom:18px">'
+      + '<div style="font-size:11px;font-weight:800;color:var(--text2);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">📊 上位 SERP '+serpSites.length+' 件 (= 競合分析)</div>'
+      + '<div style="display:grid;gap:6px">'
+      + serpSites.map(function(s, idx){
+          var host = '';
+          try { host = new URL(s.url).hostname.replace(/^www\./,''); } catch(_){ host = (s.url||'').slice(0, 40); }
+          var chars = (typeof s.chars === 'number') ? Math.round(s.chars/100)/10 : null;
+          var h2 = (typeof s.h2_count === 'number') ? s.h2_count : null;
+          var meta = [chars ? chars+'k 字' : null, h2 ? 'h2 '+h2 : null].filter(Boolean).join(' · ');
+          return '<a href="'+esc(s.url)+'" target="_blank" rel="noopener" style="background:#fff;border:1px solid var(--wire);border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit">'
+            + '<div style="width:22px;height:22px;border-radius:50%;background:#f3f4f6;color:#525252;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">#'+(idx+1)+'</div>'
+            + '<div style="flex:1;min-width:0">'
+            +   '<div style="font-size:12px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(s.title||host)+'</div>'
+            +   '<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:ui-monospace,monospace">🔗 '+esc(host)+(meta ? ' · '+esc(meta) : '')+'</div>'
+            + '</div>'
+            + '<span style="color:var(--teal);font-size:10px;font-weight:800;flex-shrink:0">↗</span>'
+            + '</a>';
+        }).join('')
+      + '</div></div>';
+  }
+
+  // 共通 h2 ヒント (= 上位サイトが扱ってる トピック)
+  var commonH2 = (serpData && Array.isArray(serpData.common_h2)) ? serpData.common_h2.slice(0, 5) : [];
+  var hintHTML = '';
+  if(commonH2.length > 0){
+    hintHTML = '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:12px 16px;margin-bottom:18px">'
+      + '<div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:6px">💡 上位サイト共通の h2 (= 必ず網羅すべき)</div>'
+      + '<div style="font-size:11.5px;color:var(--text2);line-height:1.65">'
+      + commonH2.map(function(h){ return '・ '+esc(h.slice(0, 60)); }).join('<br>')
+      + '</div></div>';
+  }
+
+  resBox.innerHTML = signalsHTML + titlesHTML + hintHTML + serpHTML;
+};
 
 // 🔄 KW 候補を refresh (= /keyword-suggestions?refresh=1)
 window._artRefreshCandidates = async function(siteId){
@@ -9622,17 +9771,18 @@ window._kwInvokeArticleGenWithTitle = function(siteId, titleB64, keyword, mode){
 };
 
 window._artSwitchTab = function(key){
-  var pre = document.getElementById('artTabPre');
-  var pub = document.getElementById('artTabPub');
-  if(pre) pre.style.display = (key === 'pre' ? '' : 'none');
-  if(pub) pub.style.display = (key === 'pub' ? '' : 'none');
+  ['pre','kp','pub'].forEach(function(k){
+    var el = document.getElementById('artTab' + k.charAt(0).toUpperCase() + k.slice(1));
+    if(el) el.style.display = (k === key ? '' : 'none');
+  });
   document.querySelectorAll('[data-art-tab]').forEach(function(b){
     var isOn = b.getAttribute('data-art-tab') === key;
     b.style.background = isOn ? 'var(--teal)' : 'transparent';
     b.style.color = isOn ? '#fff' : 'var(--text2)';
     b.style.border = isOn ? '0' : '1px solid var(--wire2)';
   });
-  if(window._artBatchBar) document.getElementById('artBatchBar') && document.getElementById('artBatchBar').remove();
+  var bar = document.getElementById('artBatchBar');
+  if(bar) bar.remove();
 };
 
 // 記事一覧 panel 内の checkbox を 集計 → 一括公開 bar

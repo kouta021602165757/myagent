@@ -26170,7 +26170,7 @@ async function handleAPI(req,res,pathname,method,ip){
         } else if(ANTHROPIC){
           const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
             { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
-            { model: info.modelId, max_tokens: 1500, messages:[{ role:'user', content: prompt }] },
+            { model: info.modelId, max_tokens: 3000, messages:[{ role:'user', content: prompt }] },
             { timeout: 25000 });
           if(r.s === 200){
             const txt = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
@@ -26362,10 +26362,10 @@ async function handleAPI(req,res,pathname,method,ip){
         '',
         '【出力】 JSON のみ (コードフェンス禁止):',
         '{',
-        '  "signals": { "trend": "+18%"|"—", "competition": "緩"|"中"|"激", "suggest_count": ' + suggest.length + ', "score": "S"|"A"|"B"|"C" },',
+        '  "signals": { "trend": "+18%"|"—", "competition": "緩"|"中"|"激", "suggest_count": ' + suggest.length + ', "score": "S"|"A"|"B"|"C", "volume_est": 1800, "estimated_pv": 600, "immediacy_score": 65 },',
         '  "titles": [',
         '    { "rank": 1, "title": "(具体タイトル、1万字以上の記事を想定)", "chars_target": 12000, "h2_count": 9, "reason": "なぜ刺さるか 1 文" }',
-        '    // x5',
+        '    // x10 (= 10 件、 異なる角度: How-to / N 選 / vs / why / 初心者向け / プロ向け / 失敗例 / 最新 / 体験談 / FAQ)',
         '  ]',
         '}'
       ].join('\n');
@@ -26394,7 +26394,7 @@ async function handleAPI(req,res,pathname,method,ip){
         '  ],',
         '  "titles": [',
         '    { "rank": 1, "title": "(Q&A 構成、結論先出し、1万字以上)", "chars_target": 13000, "h2_count": 9, "faq_count": 12, "reason": "なぜ AI 引用されやすいか" }',
-        '    // x5',
+        '    // x10 (= 10 件、 異なる質問角度)',
         '  ],',
         '  "schema_jsonld": {',
         '    "@context": "https://schema.org",',
@@ -26419,7 +26419,7 @@ async function handleAPI(req,res,pathname,method,ip){
       } else if(ANTHROPIC){
         const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
           { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
-          { model: info.modelId, max_tokens: 1500, messages:[{ role:'user', content: prompt }] },
+          { model: info.modelId, max_tokens: 3000, messages:[{ role:'user', content: prompt }] },
           { timeout: 30000 });
         if(r.s !== 200){
           const ce = _claudeErrorMessage(r);
@@ -26444,7 +26444,7 @@ async function handleAPI(req,res,pathname,method,ip){
       suggest,
       related,
       signals: parsed.signals || {},
-      titles: (parsed.titles || []).slice(0, 5),
+      titles: (parsed.titles || []).slice(0, 10),
       paa: (parsed.paa || []).slice(0, 8),
       citation_checklist: (parsed.citation_checklist || []).slice(0, 7),
       schema_jsonld: parsed.schema_jsonld || null,

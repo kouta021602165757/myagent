@@ -553,6 +553,49 @@ const DB={
     }
     throw new Error('Supabase save failed after retries');
   },
+
+  // 🚀 軽量 save (= 重い sub-field を drop + 指定カラムだけ touch)
+  //   元 DB.save: user 全カラム PATCH = 7-8MB (= 5-8 秒、 「データベース混雑」 503 主因)
+  //   新 saveAgent: 必要カラムのみ + history_archive / memories drop = 1-2MB (= 300-800ms)
+  //
+  //   使い方:
+  //     await DB.saveAgent(user)                            — agents 列だけ touch
+  //     await DB.saveAgent(user, { mediaPostsFull: true })  — agents + media_posts_full
+  //     await DB.saveAgent(user, { billing: true })         — agents + billing_history
+  //
+  //   ⚠️ 制約: history_archive / memories を 変更する save では 使わない (= drop されて 消える)。
+  //      これら変更時は 従来 DB.save() を 使う。
+  //      [project_db_migration_2026_06] Phase 1a (= 真の 正規化 までの 暫定対応)
+  async saveAgent(user, opts){
+    if(!user) return;
+    if(!USE_SUPA){ return this.save(user); }
+    if(!Array.isArray(user.agents)) return this.save(user);
+    opts = opts || {};
+    try {
+      const leanAgents = user.agents.map(ag => {
+        if(!ag || typeof ag !== 'object') return ag;
+        const { history_archive, memories, ...rest } = ag;
+        return rest;
+      });
+      const payload = { agents: leanAgents };
+      if(opts.mediaPostsFull) payload.media_posts_full = user.media_posts_full || {};
+      if(opts.billing) payload.billing_history = user.billing_history || [];
+      if(opts.balance) payload.balance_jpy = user.balance_jpy || 0;
+      const qs = '?id=eq.'+encodeURIComponent(user.id);
+      const r = await sbReq('PATCH','users',qs+'&select=id',payload);
+      if(r.s < 400){
+        const _sz = JSON.stringify(payload).length;
+        console.log('[DB.saveAgent] lean save id=' + user.id + ' cols=[' + Object.keys(payload).join(',') + '] payload=' + (_sz/1024).toFixed(0) + 'KB');
+        return;
+      }
+      console.warn('[DB.saveAgent] lean failed (HTTP ' + r.s + '), fallback to full save');
+      return await this.save(user);
+    } catch(e){
+      console.warn('[DB.saveAgent] lean threw, fallback to full save:', e.message);
+      return await this.save(user);
+    }
+  },
+
   async remove(id){
     if(!USE_SUPA){LDB.data=(LDB.data||[]).filter(u=>u.id!==id);return true;}
     const r=await sbReq('DELETE','users','?id=eq.'+id);
@@ -25634,7 +25677,8 @@ async function handleAPI(req,res,pathname,method,ip){
         article_category: predCat,
       });
     });
-    try { await DB.save(user); } catch(_){}
+    // 🚀 軽量 save (= agents 列のみ、 start parent message 群)
+    try { await DB.saveAgent(user); } catch(_){}
     jres(res, 200, { ok: true, started_at: now0, jobs });
     // 並列 3 件まで で 順次 処理
     const CONCURRENCY = 3;
@@ -25688,7 +25732,8 @@ async function handleAPI(req,res,pathname,method,ip){
             article_category: article.category_name || '',
             thread_parent_id: j.thread_parent_id || null,
           });
-          await DB.save(user);
+          // 🚀 saveAgent: agents + media_posts_full のみ touch (= history_archive 3MB skip)
+          await DB.saveAgent(user, { mediaPostsFull: true });
           _mediaSlugCacheClear(ag.media.slug);
           console.log('[kw-batch] ✅ ' + j.job_id + ' published: ' + postSlug);
         } catch(e){
@@ -25701,7 +25746,7 @@ async function handleAPI(req,res,pathname,method,ip){
             kind: 'system_publish_fail',
             thread_parent_id: j.thread_parent_id || null,
           });
-          try { await DB.save(user); } catch(_){}
+          try { await DB.saveAgent(user); } catch(_){}
         }
       }
     };
@@ -25772,7 +25817,7 @@ async function handleAPI(req,res,pathname,method,ip){
               return t !== matchTitle && t !== matchKw && k !== matchKw && k !== matchTitle;
             });
           }
-          await DB.save(user);
+          await DB.saveAgent(user, { mediaPostsFull: true });
           _mediaSlugCacheClear(ag.media.slug);
           console.log('[media-art-async] ✅ ' + jobId + ' published: ' + postSlug);
         } catch(e){

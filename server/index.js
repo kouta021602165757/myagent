@@ -17765,8 +17765,13 @@ ${schemaTags}
 //   Pro:  50 (= 中間、 価格 $12.99 → $20 クレジット相当)
 //   Business: 200 → 100 (= 最大プラン、 価格 $32.99)
 //   unlimited: 全 cap bypass (= 開発 / founder 用)
+// 個別 user に 無制限 を 付与する env ベース whitelist (= DB write 不要)。
+// Render env で UNLIMITED_USER_IDS="uuid1,uuid2,..." の カンマ区切り 設定。
+const UNLIMITED_USER_IDS = new Set((process.env.UNLIMITED_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean));
+
 function _mediaPlanArticleCap(user){
   if(user && (user.unlimited || user.is_admin)) return 999999;  // 実質無制限
+  if(user && UNLIMITED_USER_IDS.has(user.id)) return 999999;    // env whitelist
   const plan = (user && user.plan) || 'free';
   if(plan === 'free')     return 20;    // 20 本/月
   if(plan === 'pro')      return 50;    // 50 本/月

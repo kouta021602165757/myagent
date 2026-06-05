@@ -2288,6 +2288,19 @@ document.addEventListener('DOMContentLoaded',async()=>{
   token=localStorage.getItem('token');
   if(!token){ location.href='auth.html'; return; }
   try{
+    // 🚀 楽観 render: 前回の /api/me + /api/agents が localStorage に あれば 即時 sidebar 表示
+    //   その後 fetch 完了で 上書き。 reload 2 回目以降は 「サイト一覧 が 一瞬で 出る」 体験。
+    try {
+      var _cMe = localStorage.getItem('cache_me_v1');
+      var _cAg = localStorage.getItem('cache_agents_v1');
+      if(_cMe && _cAg){
+        me = JSON.parse(_cMe);
+        agents = JSON.parse(_cAg);
+        if(!me.favorites) me.favorites = [];
+        try { if(typeof renderHomeDashboard === 'function') renderHomeDashboard(); } catch(_){}
+        try { if(typeof renderAgList === 'function') renderAgList(); } catch(_){}
+      }
+    } catch(_){}
     // 並列 fetch: /api/me と /api/agents を同時に発行 (= sequential 待ち削減)。
     // どちらも独立。 meData が必要なのは admin check + render なので await は両方の
     // 完了後でいい。 200-400ms 短縮。
@@ -2378,6 +2391,11 @@ document.addEventListener('DOMContentLoaded',async()=>{
     // 既に並列で fetch 済 — 再 fetch は不要
     const ra = raResp || { agents: [] };
     agents=ra.agents||[];
+    // 🚀 fresh データを localStorage に保存 (= 次回 reload の 楽観 render 用)
+    try {
+      localStorage.setItem('cache_me_v1', JSON.stringify(me));
+      localStorage.setItem('cache_agents_v1', JSON.stringify(agents));
+    } catch(_){ /* quota / private mode 等 — silently fail */ }
     // Fetch joined groups (where I'm an invitee, hosted by others)
     try { await fetchJoinedGroups(); } catch(e){ console.warn('[groups] fetch failed:', e.message); }
     // 🚀 keyword_suggestions を 全 media-enabled site で 即時 先読み (= 記事一覧 開いた瞬間 表示用)
@@ -8826,10 +8844,10 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
       + '</div>';
   }
 
-  // ── 7) 戦略インサイト (3 枚) ──
-  // 簡易ルールで「強み / 課題 / 機会」を抽出
-  var insights3 = _buildStrategicInsights(site, ga4Data, allArts, weekly);
+  // ── 7) 戦略インサイト (3 枚) — 🚫 hide (2026-06-05): 戦略機能と一緒に 非表示
   var stratHTML = '';
+  if(false){
+  var insights3 = _buildStrategicInsights(site, ga4Data, allArts, weekly);
   if(insights3.length > 0){
     stratHTML = ''
       + '<div class="rp-card">'
@@ -8845,6 +8863,7 @@ function _renderTabReport(site, events, next, quickActions, weekly, allArts, ins
       +   '</div>'
       + '</div>';
   }
+  }  // end if(false) — 戦略インサイト hide
 
   // ── 8) 今日の優先アクション (3 件) ──
   var top3Actions = (quickActions || []).slice(0, 3);

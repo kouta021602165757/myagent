@@ -9488,7 +9488,7 @@ window._kpSearch = function(siteId){
     + '<div style="display:inline-block;width:18px;height:18px;border:2px solid var(--cream3);border-top-color:var(--teal);border-radius:50%;animation:artSpinner .8s linear infinite;vertical-align:middle;margin-right:8px"></div>'
     + 'AI が 「' + esc(kw) + '」 を 分析中… (5-10 秒)</div>';
   Promise.all([
-    api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/keyword-detail?kw=' + encodeURIComponent(kw) + '&mode=seo').catch(function(){ return null; }),
+    api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/keyword-detail?kw=' + encodeURIComponent(kw) + '&mode=seo').catch(function(err){ return { _error: err && err.message || 'unknown' }; }),
     api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/serp-analysis?kw=' + encodeURIComponent(kw)).catch(function(){ return null; }),
   ]).then(function(arr){
     _kpRender(siteId, kw, arr[0], arr[1]);
@@ -9499,7 +9499,13 @@ window._kpRender = function(siteId, kw, kwDetail, serpData){
   var resBox = document.getElementById('kpResult');
   if(!resBox) return;
   if(!kwDetail || !Array.isArray(kwDetail.titles) || kwDetail.titles.length === 0){
-    resBox.innerHTML = '<div style="padding:24px;text-align:center;background:#fee2e2;border-radius:11px;color:#9f1239;font-size:12.5px">⚠️ タイトル候補の 取得に失敗しました。 別の KW で 試してください。</div>';
+    var errMsg = (kwDetail && (kwDetail._error || kwDetail.detail || kwDetail.message)) || '';
+    resBox.innerHTML = '<div style="padding:18px;background:#fee2e2;border-radius:11px;color:#9f1239;font-size:12.5px;line-height:1.7">'
+      + '<div style="font-weight:800;margin-bottom:6px">⚠️ タイトル候補 取得失敗</div>'
+      + (errMsg ? '<div style="font-size:11px;font-family:ui-monospace,monospace;background:#fff;padding:7px 10px;border-radius:6px;margin-bottom:8px">' + esc(String(errMsg).slice(0, 200)) + '</div>' : '')
+      + '<div>別の KW で 試すか、 30 秒待って 再検索してください (= AI rate limit の可能性)。</div>'
+      + '<button onclick="_kpSearch(\''+esc(siteId)+'\')" style="margin-top:10px;background:#9f1239;color:#fff;border:0;padding:7px 14px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit">🔄 再試行</button>'
+      + '</div>';
     return;
   }
   var sig = kwDetail.signals || {};

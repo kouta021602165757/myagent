@@ -26408,8 +26408,9 @@ async function handleAPI(req,res,pathname,method,ip){
       ].join('\n');
     }
 
-    // Haiku に切り替え (= Sonnet 比 2-3x 速い)、max_tokens 圧縮 (3500 → 1500)
-    const info = _resolveModelInfo('haiku');
+    // 🚀 Sonnet 4.6 で 10 タイトル + signals を 安定出力 (= Haiku は 8K token 制約で 構造化出力崩れがち)
+    //   keyword-detail は user-initiated で 頻度低い → コスト許容 (≈ ¥2-3/回)
+    const info = _resolveModelInfo('sonnet');
     let rawText = '';
     let parsed = null;
     try {
@@ -26419,10 +26420,11 @@ async function handleAPI(req,res,pathname,method,ip){
       } else if(ANTHROPIC){
         const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
           { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
-          { model: info.modelId, max_tokens: 3000, messages:[{ role:'user', content: prompt }] },
-          { timeout: 30000 });
+          { model: info.modelId, max_tokens: 6000, messages:[{ role:'user', content: prompt }] },
+          { timeout: 90000 });
         if(r.s !== 200){
           const ce = _claudeErrorMessage(r);
+          console.warn('[kw-detail] AI 失敗 status=' + r.s + ' err=' + (ce.user_message||'').slice(0,100));
           return jres(res, 502, { error: ce.error, detail: ce.user_message, status: r.s });
         }
         rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
@@ -26432,8 +26434,24 @@ async function handleAPI(req,res,pathname,method,ip){
       const jsonM = rawText.match(/\{[\s\S]*"titles"[\s\S]*\}/);
       parsed = JSON.parse(jsonM ? jsonM[0] : rawText);
     } catch(e){
-      console.warn('[kw-detail] parse failed:', e.message);
-      return jres(res, 502, { error: 'parse_failed', message: e.message, raw: rawText.slice(0, 300) });
+      console.warn('[kw-detail] parse failed:', e.message, '\nraw tail:', rawText.slice(-300));
+      // JSON 修復: control char escape + 末尾 切れの 補完を 試みる
+      try {
+        const repaired = rawText
+          .replace(/[ -]/g, ' ')  // control char をスペース化
+          .match(/\{[\s\S]*?"titles"\s*:\s*\[[\s\S]*?\]/);
+        if(repaired){
+          const fixed = repaired[0] + '}';
+          parsed = JSON.parse(fixed);
+        }
+      } catch(_){}
+      if(!parsed || !Array.isArray(parsed.titles)){
+        return jres(res, 502, { error: 'parse_failed', message: e.message, raw: rawText.slice(0, 300) });
+      }
+      // 修復成功時は signals 等 missing なので フォールバック値
+      parsed.signals = parsed.signals || {};
+      parsed.paa = parsed.paa || [];
+      parsed.citation_checklist = parsed.citation_checklist || [];
     }
 
     const out = {

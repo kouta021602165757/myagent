@@ -429,6 +429,131 @@ async function sbReq(method,table,qs='',body=null){
 // added to the schema, append it here so table-scan endpoints still see it.
 const USER_COLS_LEAN = 'id,name,email,password,plan,balance_jpy,agents,usage_count,billing_history,stripe_customer_id,google_id,verified,verify_token,reset_token,reset_expiry,deleted,created_at,balance_jpy_pending,balance_jpy_available,revenue_history,payout_history,is_verified,favorites,stripe_connect_id,stripe_connect_payouts_enabled,stripe_connect_charges_enabled,stripe_connect_details_submitted,subscription_id,subscription_status,is_admin,google_oauth,extension_device_id,extension_device_token,extension_device_meta,mobile_devices,group_memberships,outgoing_webhooks,handle,is_founder,founder_seat_no,founder_granted_at,business_trial_until,referral_code,referred_by,referral_stats,login_history,role,memories,chat_pinned,reactions,integrations,github_pat,github_login,notes,reminders,purchases,mcp_servers,onboarded_at,last_nudge_global_at,last_stripe_event_at,last_weekly_digest_at,marketing_attribution,lang,google_sheets_connected,mention_email_pref';
 
+// ── Phase 2 dual-write helpers ────────────────────────────────
+// Normalized tables (= agents / chat_messages / media_posts) を 同時に書く 補助関数群。
+// users.agents JSONB が source of truth、 新テーブルは shadow copy (= Phase 5 まで)。
+const _dualWriteLastAt = new Map();  // user.id → last dual-write epoch ms (rate limit)
+
+// Upsert helper (= POST + Prefer: resolution=merge-duplicates header)。
+// sbReq 直接使えない (= return=representation 固定) ので 専用 https request。
+function _sbUpsert(table, rows, conflictCol){
+  return new Promise((resolve) => {
+    if(!Array.isArray(rows) || rows.length === 0){
+      resolve({ s: 200, d: [] }); return;
+    }
+    const pay = JSON.stringify(rows);
+    const qs = '?on_conflict=' + encodeURIComponent(conflictCol);
+    const u = new url.URL(`${SUPA_URL}/rest/v1/${table}${qs}`);
+    const headers = {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates,return=minimal',
+      'Content-Length': Buffer.byteLength(pay),
+    };
+    const req = https.request({
+      hostname: u.hostname, path: u.pathname + u.search, method: 'POST', headers, timeout: 25000,
+    }, r => {
+      r.setEncoding('utf8');
+      let d = '';
+      r.on('data', c => d += c);
+      r.on('end', () => {
+        try { resolve({ s: r.statusCode, d: d ? JSON.parse(d) : null }); }
+        catch { resolve({ s: r.statusCode, d }); }
+      });
+    });
+    req.on('error', e => resolve({ s: 0, d: e.message }));
+    req.on('timeout', () => { try{ req.destroy(); }catch(_){} resolve({ s: 0, d: 'timeout' }); });
+    req.write(pay); req.end();
+  });
+}
+
+// agent → agents テーブル row (= meta だけ抽出)
+function _buildAgentRow(user, ag){
+  if(!ag || !ag.id) return null;
+  const totalCount = (Array.isArray(ag.history) ? ag.history.length : 0)
+    + (Array.isArray(ag.history_archive) ? ag.history_archive.length : 0);
+  return {
+    id: String(ag.id),
+    user_id: String(user.id),
+    name: ag.name || null,
+    avatar: ag.avatar || null,
+    persona: ag.persona || null,
+    site_url: ag.site_url || null,
+    site_vertical: ag.site_vertical || null,
+    is_group: !!ag.is_group,
+    is_team: !!ag.is_team,
+    media: ag.media || null,
+    media_slug: (ag.media && ag.media.slug) || null,
+    org: ag.org || null,
+    strategy: ag.strategy || null,
+    roadmap: ag.roadmap || null,
+    ga4_snapshot: ag.ga4_snapshot || null,
+    history_total_count: totalCount,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+// agent.history → chat_messages rows (= live + archive、 直近 limitN 件)
+function _buildMessageRows(user, ag, limitN){
+  if(!ag || !ag.id) return [];
+  const live = Array.isArray(ag.history) ? ag.history : [];
+  const archive = Array.isArray(ag.history_archive) ? ag.history_archive : [];
+  const all = archive.concat(live);  // archive 古い → live 新しい
+  const startIdx = (Number.isFinite(limitN) && all.length > limitN) ? all.length - limitN : 0;
+  const rows = [];
+  for(let i = startIdx; i < all.length; i++){
+    const m = all[i];
+    if(!m) continue;
+    rows.push({
+      id: String(ag.id) + '_' + i,
+      agent_id: String(ag.id),
+      user_id: String(user.id),
+      role: m.role || 'assistant',
+      content: (typeof m.content === 'string') ? m.content : (m.content == null ? null : JSON.stringify(m.content)),
+      time: m.time || null,
+      kind: m.kind || null,
+      thread_parent_id: m.thread_parent_id || null,
+      article_url: m.article_url || null,
+      article_title: m.article_title || null,
+      article_category: m.article_category || null,
+      cost_jpy: (typeof m.cost_jpy === 'number') ? m.cost_jpy : null,
+      tool_log: Array.isArray(m.tool_log) ? m.tool_log : null,
+      idx: i,
+    });
+  }
+  return rows;
+}
+
+// agent.media_posts_idx → media_posts rows (= body_html は user.media_posts_full から join)
+function _buildMediaPostRows(user, ag){
+  if(!ag || !ag.id || !Array.isArray(ag.media_posts_idx)) return [];
+  const bodies = (user && user.media_posts_full) || {};
+  const rows = [];
+  for(const p of ag.media_posts_idx){
+    if(!p || !p.id) continue;
+    const body = bodies[p.id];
+    rows.push({
+      id: String(p.id),
+      agent_id: String(ag.id),
+      user_id: String(user.id),
+      slug: String(p.slug || p.id),
+      title: String(p.title || '(無題)'),
+      excerpt: p.excerpt || null,
+      body_html: (body && body.body_html) || null,
+      category_name: p.category_name || null,
+      tags: Array.isArray(p.tags) ? p.tags : null,
+      hero_image_url: p.hero_image_url || null,
+      status: p.status || 'published',
+      keyword: p.keyword || null,
+      published_at: p.published_at || null,
+      rewritten_at: p.rewritten_at || null,
+      rewrite_count: (typeof p.rewrite_count === 'number') ? p.rewrite_count : 0,
+    });
+  }
+  return rows;
+}
+
 // ── DB ABSTRACTION ────────────────────────────────────────────
 // 注意: コードと Supabase スキーマは共に snake_case を使用。case 変換は不要。
 const DB={
@@ -590,6 +715,10 @@ const DB={
       if(r.s < 400){
         const _sz = JSON.stringify(payload).length;
         console.log('[DB.saveAgent] lean save id=' + user.id + ' cols=[' + Object.keys(payload).join(',') + '] payload=' + (_sz/1024).toFixed(0) + 'KB');
+        // Phase 2: fire-and-forget dual-write to new normalized tables.
+        // Rate-limited per user (60s) so high-frequency chat saves don't pile up.
+        // Failure here NEVER affects the primary save above.
+        try { DB._dualWriteFireAndForget(user); } catch(e){}
         return;
       }
       console.warn('[DB.saveAgent] lean failed (HTTP ' + r.s + '), fallback to full save');
@@ -598,6 +727,107 @@ const DB={
       console.warn('[DB.saveAgent] lean threw, fallback to full save:', e.message);
       return await this.save(user);
     }
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  // Phase 2: dual-write to normalized tables (agents / chat_messages / media_posts)
+  // ════════════════════════════════════════════════════════════════
+  // 既存 users.agents JSONB は そのまま 保存し続けつつ、 新テーブルにも 同時に書く。
+  // 失敗しても 元の save は 影響 ゼロ (= fire-and-forget + try/catch)。
+  // Phase 5 で 読み切替 する 準備層。 dual-read で 差分 0 を 1 週間 確認 してから 切替。
+  //
+  // Rate limit: 同一 user は 60 秒に 1 回まで dual-write 実行 (= chat 連打 でも DB 過負荷 を 避ける)。
+  // ENV DUALWRITE_ENABLED=0 で 全 dual-write を 無効化 可能 (= 緊急 kill switch)。
+  _dualWriteFireAndForget(user){
+    if(process.env.DUALWRITE_ENABLED === '0') return;
+    if(!user || !user.id || !Array.isArray(user.agents)) return;
+    const now = Date.now();
+    const last = _dualWriteLastAt.get(user.id) || 0;
+    if(now - last < 60000) return; // rate limit: 1/min per user
+    _dualWriteLastAt.set(user.id, now);
+    // 非同期 で 走らせる (= 呼び出し元 を block しない)
+    setImmediate(() => {
+      DB.dualWriteUser(user).catch(e => {
+        console.warn('[dualWrite] failed for user='+user.id+':', e.message);
+      });
+    });
+  },
+
+  // 同期 dual-write (= backfill / 手動実行 用)。 完了まで await できる。
+  async dualWriteUser(user){
+    if(!user || !user.id || !Array.isArray(user.agents)) return { agents:0, messages:0, posts:0 };
+    const stats = { agents: 0, messages: 0, posts: 0, errors: 0 };
+    for(const ag of user.agents){
+      if(!ag || !ag.id) continue;
+      try {
+        // 1. agents row
+        const agRow = _buildAgentRow(user, ag);
+        const r1 = await _sbUpsert('agents', [agRow], 'id');
+        if(r1.s < 400) stats.agents++;
+        else { stats.errors++; console.warn('[dualWrite] agents upsert HTTP '+r1.s+' for '+ag.id, JSON.stringify(r1.d).slice(0,200)); continue; }
+
+        // 2. chat_messages rows (= 直近 50 件 のみ dual-write、 backfill で full sync)
+        const msgRows = _buildMessageRows(user, ag, 50);
+        if(msgRows.length){
+          const r2 = await _sbUpsert('chat_messages', msgRows, 'id');
+          if(r2.s < 400) stats.messages += msgRows.length;
+          else { stats.errors++; console.warn('[dualWrite] chat_messages upsert HTTP '+r2.s+' for '+ag.id, JSON.stringify(r2.d).slice(0,200)); }
+        }
+
+        // 3. media_posts rows
+        const postRows = _buildMediaPostRows(user, ag);
+        if(postRows.length){
+          const r3 = await _sbUpsert('media_posts', postRows, 'id');
+          if(r3.s < 400) stats.posts += postRows.length;
+          else { stats.errors++; console.warn('[dualWrite] media_posts upsert HTTP '+r3.s+' for '+ag.id, JSON.stringify(r3.d).slice(0,200)); }
+        }
+      } catch(e){
+        stats.errors++;
+        console.warn('[dualWrite] agent '+ag.id+' threw:', e.message);
+      }
+    }
+    if(stats.agents || stats.messages || stats.posts){
+      console.log('[dualWrite] user='+user.id+' agents='+stats.agents+' msgs='+stats.messages+' posts='+stats.posts+' errors='+stats.errors);
+    }
+    return stats;
+  },
+
+  // 完全な history 同期 (= backfill 用、 全 history を dual-write)。
+  async dualWriteUserFull(user){
+    if(!user || !user.id || !Array.isArray(user.agents)) return { agents:0, messages:0, posts:0 };
+    const stats = { agents: 0, messages: 0, posts: 0, errors: 0 };
+    for(const ag of user.agents){
+      if(!ag || !ag.id) continue;
+      try {
+        const agRow = _buildAgentRow(user, ag);
+        const r1 = await _sbUpsert('agents', [agRow], 'id');
+        if(r1.s < 400) stats.agents++;
+        else { stats.errors++; continue; }
+
+        // full history (live + archive)
+        const msgRows = _buildMessageRows(user, ag, Infinity);
+        // batch in chunks of 200 to avoid huge payloads
+        for(let i = 0; i < msgRows.length; i += 200){
+          const chunk = msgRows.slice(i, i + 200);
+          const r2 = await _sbUpsert('chat_messages', chunk, 'id');
+          if(r2.s < 400) stats.messages += chunk.length;
+          else { stats.errors++; console.warn('[dualWrite full] chat_messages chunk HTTP '+r2.s, JSON.stringify(r2.d).slice(0,200)); }
+        }
+
+        const postRows = _buildMediaPostRows(user, ag);
+        for(let i = 0; i < postRows.length; i += 50){
+          const chunk = postRows.slice(i, i + 50);
+          const r3 = await _sbUpsert('media_posts', chunk, 'id');
+          if(r3.s < 400) stats.posts += chunk.length;
+          else { stats.errors++; console.warn('[dualWrite full] media_posts chunk HTTP '+r3.s, JSON.stringify(r3.d).slice(0,200)); }
+        }
+      } catch(e){
+        stats.errors++;
+        console.warn('[dualWrite full] agent '+ag.id+' threw:', e.message);
+      }
+    }
+    console.log('[dualWrite full] user='+user.id+' agents='+stats.agents+' msgs='+stats.messages+' posts='+stats.posts+' errors='+stats.errors);
+    return stats;
   },
 
   async remove(id){
@@ -21851,6 +22081,129 @@ async function handleAPI(req,res,pathname,method,ip){
   // /api/ prefix 限定なので、 /media/... は到達しない。
 
   // ── Service-key authenticated admin endpoints (= 認証は X-Service-Key header) ──
+
+  // POST /api/admin/dualwrite-backfill — Phase 3 backfill
+  //   body: { userId?: '<id>', limit?: 5, full?: true }
+  //   userId 指定なし → 全 user 順次処理 (limit=5 まで、 並列なし)
+  //   full=true → live + history_archive 全件 sync (= 重い、 1 user 数十秒)
+  //   header: X-Service-Key: <SUPA_KEY>
+  if(pathname === '/api/admin/dualwrite-backfill' && method === 'POST'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    const body = await readBody(req).catch(() => ({}));
+    const userId = String(body && body.userId || '').trim();
+    const full = !!(body && body.full);
+    const limit = Math.min(50, Math.max(1, parseInt(body && body.limit, 10) || 5));
+    const stats = { processed: 0, agents: 0, messages: 0, posts: 0, errors: 0, users: [] };
+    const writeFn = full ? 'dualWriteUserFull' : 'dualWriteUser';
+    try {
+      if(userId){
+        const u = await DB.findBy('id', userId);
+        if(!u) return jres(res, 404, { error: 'user not found' });
+        const s = await DB[writeFn](u);
+        stats.processed = 1; stats.agents = s.agents; stats.messages = s.messages; stats.posts = s.posts; stats.errors = s.errors;
+        stats.users.push({ id: u.id, ...s });
+        return jres(res, 200, stats);
+      }
+      // 全 user 順次
+      const r = await sbReq('GET', 'users', '?select=id&order=created_at.asc&limit='+limit);
+      const ids = Array.isArray(r.d) ? r.d.map(x => x.id) : [];
+      for(const id of ids){
+        const u = await DB.findBy('id', id).catch(() => null);
+        if(!u) continue;
+        const s = await DB[writeFn](u).catch(e => { console.warn('[backfill] '+id+' threw:', e.message); return { agents:0,messages:0,posts:0,errors:1 }; });
+        stats.processed++; stats.agents += s.agents; stats.messages += s.messages; stats.posts += s.posts; stats.errors += s.errors;
+        stats.users.push({ id, ...s });
+      }
+      return jres(res, 200, stats);
+    } catch(e){
+      return jres(res, 500, { error: 'backfill failed: ' + e.message, stats });
+    }
+  }
+
+  // GET /api/admin/dualwrite-verify?userId=X — Phase 4 dual-read 整合性 検証
+  //   JSONB vs 新テーブル の 差分 を 返す (= 1 user 単位)。 一致率 99.9% 目標。
+  //   diff 種別:
+  //     - agent_count_mismatch: JSONB.agents.length !== agents.count
+  //     - post_count_mismatch: agent.media_posts_idx vs media_posts.count
+  //     - message_count_mismatch: live+archive vs chat_messages.count
+  //   header: X-Service-Key: <SUPA_KEY>
+  if(pathname === '/api/admin/dualwrite-verify' && method === 'GET'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    const _vqs = new url.URL(req.url, APP_URL).searchParams;
+    const userId = String(_vqs.get('userId') || '').trim();
+    if(!userId) return jres(res, 400, { error: 'userId required' });
+    const u = await DB.findBy('id', userId).catch(() => null);
+    if(!u) return jres(res, 404, { error: 'user not found' });
+
+    const out = { user_id: userId, agents: [], diffs: 0, ok: 0 };
+    const jsonbAgents = Array.isArray(u.agents) ? u.agents : [];
+
+    // 1. agents テーブル の row count を 取得
+    const agResp = await sbReq('GET', 'agents', '?select=id&user_id=eq.'+encodeURIComponent(userId)+'&limit=1000');
+    const newAgentIds = new Set(Array.isArray(agResp.d) ? agResp.d.map(x => x.id) : []);
+    out.summary = {
+      jsonb_agents: jsonbAgents.length,
+      new_table_agents: newAgentIds.size,
+      agent_count_match: jsonbAgents.length === newAgentIds.size,
+    };
+    if(jsonbAgents.length !== newAgentIds.size) out.diffs++;
+
+    // 2. 各 agent 単位で post / message count を 確認
+    for(const ag of jsonbAgents){
+      if(!ag || !ag.id) continue;
+      const aid = ag.id;
+      const livePosts = Array.isArray(ag.media_posts_idx) ? ag.media_posts_idx.length : 0;
+      const liveMsgs = (Array.isArray(ag.history) ? ag.history.length : 0)
+        + (Array.isArray(ag.history_archive) ? ag.history_archive.length : 0);
+
+      const [pResp, mResp] = await Promise.all([
+        sbReq('GET', 'media_posts', '?select=id&agent_id=eq.'+encodeURIComponent(aid)+'&limit=500'),
+        sbReq('GET', 'chat_messages', '?select=id&agent_id=eq.'+encodeURIComponent(aid)+'&limit=10000'),
+      ]);
+      const newPosts = Array.isArray(pResp.d) ? pResp.d.length : 0;
+      const newMsgs = Array.isArray(mResp.d) ? mResp.d.length : 0;
+
+      const row = {
+        agent_id: aid,
+        name: ag.name || '',
+        in_new_agents_table: newAgentIds.has(aid),
+        jsonb_posts: livePosts, new_posts: newPosts, posts_match: livePosts === newPosts,
+        jsonb_msgs: liveMsgs, new_msgs: newMsgs, msgs_match: liveMsgs === newMsgs,
+      };
+      if(!row.in_new_agents_table || !row.posts_match || !row.msgs_match) out.diffs++;
+      else out.ok++;
+      out.agents.push(row);
+    }
+    out.match_rate = out.agents.length ? Math.round((out.ok / out.agents.length) * 10000) / 100 : 0;
+    return jres(res, 200, out);
+  }
+
+  // GET /api/admin/dualwrite-status — Phase 2/4 観察用
+  //   新テーブル の row count + rate-limit Map size を 返す
+  if(pathname === '/api/admin/dualwrite-status' && method === 'GET'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    const out = { rate_limited_users: _dualWriteLastAt.size, dualwrite_enabled: process.env.DUALWRITE_ENABLED !== '0' };
+    try {
+      const [a, m, p] = await Promise.all([
+        sbReq('GET', 'agents', '?select=id&limit=1', null),
+        sbReq('GET', 'chat_messages', '?select=id&limit=1', null),
+        sbReq('GET', 'media_posts', '?select=id&limit=1', null),
+      ]);
+      // count via HEAD + Prefer: count=exact would be cleaner, but Range header
+      // workaround: use ?select=id with Range to fetch count from Content-Range.
+      // Here just confirm the tables are reachable.
+      out.agents_reachable = a.s < 400;
+      out.chat_messages_reachable = m.s < 400;
+      out.media_posts_reachable = p.s < 400;
+    } catch(e){
+      out.error = e.message;
+    }
+    return jres(res, 200, out);
+  }
+
   //   POST /api/admin/generate-article — 任意 user の 指定 agent で 新規記事生成 (= async)
   //   body: { userId, agentId, keyword, mode?: 'aeo'|'seo' }
   //   header: X-Service-Key: <SUPA_KEY>

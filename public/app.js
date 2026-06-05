@@ -2321,6 +2321,14 @@ document.addEventListener('DOMContentLoaded',async()=>{
           me.subscription_id = sync.subscription_id;
           me.subscription_status = sync.status;
           console.log('[billing/sync] recovered plan:', sync.plan);
+          // 🐛 fix (2026-06-05): plan 復元後 localStorage cache + UI を 強制再 render
+          try {
+            localStorage.setItem('cache_me_v1', JSON.stringify(me));
+            if(typeof renderHomeDashboard === 'function') renderHomeDashboard();
+          } catch(_){}
+          try { showToast('✓ プランを Stripe から 復元しました: ' + sync.plan, 'ok'); } catch(_){}
+        } else if(sync && sync.synced === false){
+          console.warn('[billing/sync] not synced:', sync.reason);
         }
       }catch(e){ console.warn('[billing/sync] failed:', e.message); }
     }

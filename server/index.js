@@ -17470,12 +17470,16 @@ ${schemaTags}
 // ══════════════════════════════════════════════════════════════════
 
 // プラン別 月間記事公開 cap (= 過剰生成 + コスト保護)
+// 価格据え置き で cap 調整 (2026-06-05):
+//   Free: 5 → 20 (= 「立ち上げてから 20 本まで 試せる」 ICP 体験)
+//   Pro:  50 (= 中間、 価格 $12.99 → $20 クレジット相当)
+//   Business: 200 → 100 (= 最大プラン、 価格 $32.99)
 function _mediaPlanArticleCap(user){
   const plan = (user && user.plan) || 'free';
-  if(plan === 'free')     return 5;     // 5 本/月 (= 試用)
+  if(plan === 'free')     return 20;    // 20 本/月
   if(plan === 'pro')      return 50;    // 50 本/月
-  if(plan === 'business') return 200;   // 200 本/月
-  return 5;
+  if(plan === 'business') return 100;   // 100 本/月 (= 最大)
+  return 20;
 }
 function _mediaThisMonthCount(agent){
   if(!Array.isArray(agent.media_posts_idx)) return 0;
@@ -21939,8 +21943,15 @@ async function handleAPI(req,res,pathname,method,ip){
   if(pathname==='/api/me'&&method==='GET'){
     // Lazy Founder 100 trial expiry: if the 1-month BUSINESS trial elapsed,
     // downgrade back to free (badge + 0% Store fees persist forever).
+    // 🐛 fix (2026-06-05): ただし 実 Stripe 課金 (= subscription_id ある +
+    //   status='active'/'trialing') を持つ場合は downgrade しない。
+    //   元コードは founder の trial 切れ で 毎 /api/me 呼出 毎に plan='free' に上書き
+    //   していた → 実 課金してても free 表示の主因。
+    const _hasActiveSub = !!(user.subscription_id &&
+      ['active','trialing'].includes(user.subscription_status || ''));
     if(user.is_founder && user.business_trial_until && user.plan === 'business'
-       && new Date(user.business_trial_until).getTime() < Date.now()){
+       && new Date(user.business_trial_until).getTime() < Date.now()
+       && !_hasActiveSub){
       user.plan = 'free';
       try { await DB.save(user); } catch(e){ /* noop */ }
     }
@@ -32281,12 +32292,24 @@ ${orgSummary || '(汎用チーム)'}
       let plan = 'free';
       if(priceId === STRIPE_PRO_PRICE) plan = 'pro';
       else if(priceId === STRIPE_BIZ_PRICE) plan = 'business';
+      else {
+        // 🐛 fix (2026-06-05): price_id 不一致 でも 金額から 推定 fallback
+        //   STRIPE_PRO_PRICE / STRIPE_BIZ_PRICE が env で 古い時、 silent free 化を回避
+        const unitAmount = live.items?.data?.[0]?.price?.unit_amount || 0;
+        const currency = (live.items?.data?.[0]?.price?.currency || 'usd').toLowerCase();
+        // 概ね $12-15 → pro、 $30-50 → business
+        if(currency === 'usd' && unitAmount >= 1000 && unitAmount < 2500) plan = 'pro';
+        else if(currency === 'usd' && unitAmount >= 2500) plan = 'business';
+        else if(unitAmount >= 1500 && unitAmount < 3500) plan = 'pro';
+        else if(unitAmount >= 3500) plan = 'business';
+        console.warn('[billing/sync] price_id=' + priceId + ' not in env, inferred plan=' + plan + ' from amount=' + unitAmount + ' ' + currency);
+      }
       user.plan = plan;
       user.subscription_id = live.id;
       user.subscription_status = live.status;
       await DB.save(user);
-      console.log('[billing/sync] user='+user.id+' plan='+plan+' sub='+live.id+' status='+live.status);
-      return jres(res,200,{plan, synced:true, subscription_id: live.id, status: live.status});
+      console.log('[billing/sync] user='+user.id+' plan='+plan+' sub='+live.id+' status='+live.status+' price='+priceId);
+      return jres(res,200,{plan, synced:true, subscription_id: live.id, status: live.status, price_id: priceId});
     }catch(e){
       console.error('[billing/sync]', e.message);
       return jres(res,500,{error:'Stripe sync エラー: '+e.message});
@@ -32415,10 +32438,15 @@ function _logStripeEvent(entry){
 
 // Map a Stripe price_id back to one of our plan tiers. Driven by env so we
 // can flip tiers without redeploying code.
+// 🐛 fix (2026-06-05): null 返却で silent fail していたのを log + 通知。
+//   env var が 変わった or 古い price_id を使ってる subscription が ある時、
+//   plan が free に 落ちる主因に なる。 不一致時 console.warn で 検出可能に。
 function _planFromPriceId(priceId){
   if(!priceId) return null;
   if(priceId === STRIPE_PRO_PRICE) return 'pro';
   if(priceId === STRIPE_BIZ_PRICE) return 'business';
+  console.warn('[stripe] _planFromPriceId: unknown price_id=', priceId,
+    'expected STRIPE_PRO_PRICE=', STRIPE_PRO_PRICE, 'STRIPE_BIZ_PRICE=', STRIPE_BIZ_PRICE);
   return null;
 }
 
@@ -32443,21 +32471,35 @@ async function handleWebhook(req,res){
       const u = await DB.findBy('stripe_customer_id', sub.customer);
       if(u){
         const priceId = sub.items && sub.items.data && sub.items.data[0] && sub.items.data[0].price && sub.items.data[0].price.id || '';
-        const plan = _planFromPriceId(priceId);
+        let plan = _planFromPriceId(priceId);
+        // 🐛 fix (2026-06-05): price_id 不一致でも 金額から 推定 fallback
+        if(!plan){
+          const unitAmount = sub.items?.data?.[0]?.price?.unit_amount || 0;
+          const currency = (sub.items?.data?.[0]?.price?.currency || 'usd').toLowerCase();
+          if(currency === 'usd' && unitAmount >= 1000 && unitAmount < 2500) plan = 'pro';
+          else if(currency === 'usd' && unitAmount >= 2500) plan = 'business';
+          else if(unitAmount >= 1500 && unitAmount < 3500) plan = 'pro';
+          else if(unitAmount >= 3500) plan = 'business';
+          if(plan) console.warn('[stripe webhook] inferred plan=' + plan + ' from amount=' + unitAmount + ' (price_id=' + priceId + ' not in env)');
+        }
         u.subscription_id = sub.id;
         u.subscription_status = sub.status;
         // Only flip plan when the subscription is actually live (paid or
         // trialing). incomplete / incomplete_expired = no plan upgrade.
-        if(plan && ['active','trialing','past_due'].includes(sub.status)){
+        if(plan && ['active','trialing'].includes(sub.status)){
           u.plan = plan;
           u.plan_v2 = true;
         }
+        // 🐛 fix (2026-06-05): past_due は plan 据え置き (= 猶予期間)、
+        //   ただし unpaid / canceled / incomplete_expired は free に明示落とす
         if(['canceled','incomplete_expired','unpaid'].includes(sub.status)){
           u.plan = 'free';
         }
         u.last_stripe_event_at = new Date().toISOString();
         await DB.save(u);
         console.log('[stripe webhook] subscription sync:', u.email, '→ plan=', u.plan, 'status=', sub.status);
+      } else {
+        console.warn('[stripe webhook] customer not found for sub.customer=', sub.customer);
       }
     }
 

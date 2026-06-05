@@ -464,7 +464,7 @@ const DB={
     }
     throw new Error('Supabase create failed after column-drop retries');
   },
-  async save(user){
+  async save(user, opts){
     // ── JSONB row diet — safety net for old / accumulated state ──
     // Even if create/edit paths cap properly going forward, users may already
     // have multi-MB rows from before. Run every save through a compactor so
@@ -523,6 +523,18 @@ const DB={
     delete payload.id; // never update primary key
     _compactArtifacts(payload);  // double-apply on payload for safety
     _sanitizeAgentHistories(payload);
+    // 🚀 [project_db_migration_2026_06] Phase 1a 強化 (2026-06-05):
+    //   DB.save 全 call で history_archive (= 3MB) を デフォルト strip。
+    //   write site は 1 か所 (= _summarizeOldHistory) のみ なので、 そこは opts.preserveHistoryArchive: true。
+    //   payload size 7-8MB → 4-5MB に 全 save が 軽量化。
+    opts = opts || {};
+    if(!opts.preserveHistoryArchive && Array.isArray(payload.agents)){
+      payload.agents = payload.agents.map(ag => {
+        if(!ag || typeof ag !== 'object') return ag;
+        const { history_archive, ...rest } = ag;
+        return rest;
+      });
+    }
     for(let attempt=0; attempt<12; attempt++){
       // select=id → the PATCH echoes back only [{id}] instead of the entire
       // (multi-KB, artifacts+history-laden) row. Halves egress on every save;
@@ -31228,7 +31240,8 @@ ${orgSummary || '(汎用チーム)'}
           if(folded){
             const ai2 = (payerUser.agents||[]).findIndex(a=>a.id===agent.id);
             if(ai2>=0) payerUser.agents[ai2] = agent;
-            DB.save(payerUser).catch(()=>{});
+            // 🔒 history_archive を 書き戻し するので preserveHistoryArchive: true
+            DB.save(payerUser, { preserveHistoryArchive: true }).catch(()=>{});
           }
         }).catch(()=>{});
         // After-turn enrichment: extract memories / task updates / KPI signals

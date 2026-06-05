@@ -22098,7 +22098,8 @@ async function handleAPI(req,res,pathname,method,ip){
     const body = await readBody(req).catch(() => ({}));
     const userId = String(body && body.userId || '').trim();
     const full = !!(body && body.full);
-    const limit = Math.min(50, Math.max(1, parseInt(body && body.limit, 10) || 5));
+    const limit = Math.min(500, Math.max(1, parseInt(body && body.limit, 10) || 5));
+    const offset = Math.max(0, parseInt(body && body.offset, 10) || 0);
     const stats = { processed: 0, agents: 0, messages: 0, posts: 0, errors: 0, users: [] };
     const writeFn = full ? 'dualWriteUserFull' : 'dualWriteUser';
     try {
@@ -22110,8 +22111,8 @@ async function handleAPI(req,res,pathname,method,ip){
         stats.users.push({ id: u.id, ...s });
         return jres(res, 200, stats);
       }
-      // 全 user 順次
-      const r = await sbReq('GET', 'users', '?select=id&order=created_at.asc&limit='+limit);
+      // 全 user 順次 (= offset で ページング 可能)
+      const r = await sbReq('GET', 'users', '?select=id&order=created_at.asc&limit='+limit+'&offset='+offset);
       const ids = Array.isArray(r.d) ? r.d.map(x => x.id) : [];
       for(const id of ids){
         const u = await DB.findBy('id', id).catch(() => null);

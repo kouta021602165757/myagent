@@ -17474,7 +17474,9 @@ ${schemaTags}
 //   Free: 5 → 20 (= 「立ち上げてから 20 本まで 試せる」 ICP 体験)
 //   Pro:  50 (= 中間、 価格 $12.99 → $20 クレジット相当)
 //   Business: 200 → 100 (= 最大プラン、 価格 $32.99)
+//   unlimited: 全 cap bypass (= 開発 / founder 用)
 function _mediaPlanArticleCap(user){
+  if(user && (user.unlimited || user.is_admin)) return 999999;  // 実質無制限
   const plan = (user && user.plan) || 'free';
   if(plan === 'free')     return 20;    // 20 本/月
   if(plan === 'pro')      return 50;    // 50 本/月
@@ -22630,12 +22632,7 @@ async function handleAPI(req,res,pathname,method,ip){
   if(tmplInstall && method==='POST'){
     const t = _findTemplate(tmplInstall[1]);
     if(!t) return jres(res,404,{error:'テンプレートが見つかりません'});
-    const _gf = _isGrandfathered(user);
-    const _planCap = _gf ? 1000 : user.plan==='free' ? 3 : user.plan==='pro' ? 20 : 1000;
-    const _owned = (user.agents||[]).filter(a => !a.is_group).length;
-    if(_owned >= _planCap){
-      return jres(res,402,{error:`Agents は最大 ${_planCap} 体まで。アップグレードしてください。`, upgrade_required: user.plan==='free' ? 'pro' : 'business'});
-    }
+    // 🐛 fix (2026-06-05): agents cap 廃止 (= 「機能してる感わからない」 指摘で 全 plan 無制限)
     const agent = {
       id: 'ag_'+crypto.randomUUID(),
       avatar: t.avatar || '🤖',
@@ -22688,21 +22685,9 @@ async function handleAPI(req,res,pathname,method,ip){
     const{avatar,name,skills,persona,chrome_enabled,sheets_enabled,extension_enabled,model}=await readBody(req);
     if(!name?.trim())return jres(res,400,{error:'名前は必須です'});
     if(!skills?.length)return jres(res,400,{error:'スキルを選んでください'});
-    // Per-plan agent caps. Grandfathered users keep the legacy 1000-cap.
-    const _gf = _isGrandfathered(user);
-    const _planCap = _gf ? 1000
-                   : user.plan==='free' ? 3
-                   : user.plan==='pro'  ? 20
-                   : 1000;
-    const _ownedCount = (user.agents||[]).filter(a => !a.is_group).length;
-    if(_ownedCount >= _planCap){
-      const upgrade = user.plan==='free' ? 'Pro にアップグレード' : 'Business にアップグレード';
-      return jres(res,402,{
-        error: `Agents は最大 ${_planCap} 体までです (現在のプラン: ${user.plan||'free'})。${upgrade} すると上限が増えます。`,
-        upgrade_required: user.plan==='free' ? 'pro' : 'business',
-      });
-    }
-    if((user.agents||[]).length>=1000)return jres(res,400,{error:'エージェントは最大1000個です'});
+    // 🐛 fix (2026-06-05): plan 別 agents cap 廃止 (= 全 plan 無制限)。
+    //   element-level の 1000 hardcap だけ 残す (= 暴走防止、 通常 ユーザ で 到達しない)
+    if((user.agents||[]).length>=1000)return jres(res,400,{error:'エージェントは最大 1000 個です'});
     let _av = String(avatar||'🤖').trim();
     if(_av.startsWith('data:image/')){
       if(_av.length > 500*1024) return jres(res,400,{error:'アバター画像は 500KB 以下にしてください'});
@@ -29106,6 +29091,20 @@ ${orgSummary || '(汎用チーム)'}
     target.is_verified = body && typeof body.is_verified === 'boolean' ? body.is_verified : !target.is_verified;
     await DB.save(target);
     return jres(res,200,{ok:true, user_id: target.id, is_verified: target.is_verified});
+  }
+
+  // ── POST /api/admin/users/:user_id/unlimited ────────────────
+  // X-Service-Key 認証 で unlimited フラグを toggle。 founder / dev 用、 plan cap 全 bypass
+  const umlm = pathname.match(/^\/api\/admin\/users\/([^/]+)\/unlimited$/);
+  if(umlm && method==='POST'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res,401,{error:'invalid service key'});
+    const target = await DB.findBy('id', umlm[1]);
+    if(!target) return jres(res,404,{error:'user not found'});
+    const body = await readBody(req).catch(() => ({}));
+    target.unlimited = body && typeof body.unlimited === 'boolean' ? body.unlimited : !target.unlimited;
+    await DB.save(target);
+    return jres(res,200,{ok:true, user_id: target.id, email: target.email, unlimited: target.unlimited});
   }
 
   // ── POST /api/admin/notify-founders ────────────────────────

@@ -9501,6 +9501,26 @@ window._artManualAdd = async function(siteId){
 };
 
 // 📄 KW 行を 展開 → タイトル候補 5 つを 表示 (= /keyword-detail から fetch)
+// 公開済タイトル と 候補タイトル を 部分一致で 判定 (= AI が microcopy を変えても 拾う)
+//   先頭 20 字 一致 or 後半 80% 一致 を 公開済 と みなす
+window._artFindPublishedMatch = function(candidateTitle, siteId){
+  var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+  if(!ag || !Array.isArray(ag.media_posts_idx)) return null;
+  var ct = String(candidateTitle||'').toLowerCase().trim();
+  if(!ct) return null;
+  var key = ct.slice(0, 20);
+  for(var i=0; i<ag.media_posts_idx.length; i++){
+    var p = ag.media_posts_idx[i];
+    if(!p || !p.title || p.status === 'draft') continue;
+    var pt = String(p.title).toLowerCase().trim();
+    // 完全一致 or 先頭 20 字一致
+    if(pt === ct || pt.indexOf(key) === 0 || ct.indexOf(pt.slice(0, 20)) === 0){
+      return p;
+    }
+  }
+  return null;
+};
+
 window._artToggleTitles = function(kwId, siteId, kwB64, mode, btn){
   var box = document.getElementById(kwId);
   if(!box) return;
@@ -9526,12 +9546,32 @@ window._artToggleTitles = function(kwId, siteId, kwB64, mode, btn){
         box.innerHTML = '<div style="padding:12px 4px;font-size:11.5px;color:var(--text3);text-align:center">⚠️ タイトル候補 が 取れませんでした</div>';
         return;
       }
+      var ag = (agents||[]).find(function(a){return a && a.id === siteId;});
+      var mediaSlug = (ag && ag.media && ag.media.slug) || '';
+      var publicBase = mediaSlug ? ('https://' + mediaSlug + '.myaiagents.agency/') : '';
+      // 5 件中 公開済の カウント を 親 KW row に 反映
+      var publishedCount = 0;
       box.innerHTML = titles.slice(0, 5).map(function(t, i){
         var titleTxt = String(t.title || '').slice(0, 200);
         var chars = (typeof t.chars_target === 'number') ? t.chars_target : null;
         var h2c = (typeof t.h2_count === 'number') ? t.h2_count : null;
         var meta = [chars ? '📚 約 '+chars.toLocaleString()+' 字' : null, h2c ? 'h2 '+h2c+' つ' : null].filter(Boolean).join(' · ');
         var titleB64 = btoa(unescape(encodeURIComponent(titleTxt)));
+        // 公開済 判定
+        var pubMatch = _artFindPublishedMatch(titleTxt, siteId);
+        if(pubMatch){
+          publishedCount++;
+          var openUrl = publicBase ? (publicBase + pubMatch.slug) : ('/media/' + (mediaSlug || '?') + '/' + pubMatch.slug);
+          return '<div class="art-title-row art-title-published" style="display:flex;align-items:center;gap:9px;padding:8px 4px;border-bottom:1px solid var(--wire);font-size:11.5px;opacity:.55">'
+            + '<div style="width:15px;height:15px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#15803d;font-weight:900">✓</div>'
+            + '<div style="width:18px;height:18px;border-radius:50%;background:#dcfce7;color:#15803d;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">'+(i+1)+'</div>'
+            + '<div style="flex:1;min-width:0;line-height:1.4">'
+            +   '<div style="font-weight:700;color:var(--text2);white-space:normal;word-break:break-word;text-decoration:line-through;text-decoration-color:#15803d80">'+esc(titleTxt)+'</div>'
+            +   '<div style="font-size:10px;color:#15803d;margin-top:2px;font-weight:800">✓ 公開済</div>'
+            + '</div>'
+            + '<a href="'+esc(openUrl)+'" target="_blank" rel="noopener" style="background:transparent;border:1px solid var(--wire2);color:#15803d;padding:5px 10px;border-radius:6px;font-size:10.5px;font-weight:800;text-decoration:none;font-family:inherit;flex-shrink:0">↗ 開く</a>'
+            + '</div>';
+        }
         return '<div class="art-title-row" data-title="'+esc(titleTxt)+'" data-kw="'+esc(kw)+'" data-mode="'+esc(mode)+'" style="display:flex;align-items:center;gap:9px;padding:8px 4px;border-bottom:1px solid var(--wire);font-size:11.5px">'
           + '<input type="checkbox" class="art-title-cb" onclick="_artUpdateBatchBar()" style="width:15px;height:15px;cursor:pointer;accent-color:#0d4f4a;flex-shrink:0">'
           + '<div style="width:18px;height:18px;border-radius:50%;background:#0d4f4a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0">'+(i+1)+'</div>'
@@ -9545,6 +9585,29 @@ window._artToggleTitles = function(kwId, siteId, kwB64, mode, btn){
           + '</div>';
       }).join('');
       box.setAttribute('data-loaded', '1');
+      box.setAttribute('data-pub-count', String(publishedCount));
+      // 親 KW row の 右側 hint に 「N/5 公開済」 chip を 追加
+      try {
+        var group = box.closest('.art-cand-group');
+        if(group){
+          var hintEl = group.querySelector('button > span:last-child');
+          if(hintEl){
+            if(publishedCount > 0){
+              hintEl.innerHTML = '✓ ' + publishedCount + '/5 公開済';
+              hintEl.style.color = '#15803d';
+            }
+            if(publishedCount === 5){
+              group.style.opacity = '.65';
+              var firstBtn = group.querySelector('button[data-expanded]');
+              if(firstBtn){
+                var titleEl = firstBtn.querySelector('div > div:first-child');
+                // strike through KW タイトル
+                if(titleEl) titleEl.style.textDecoration = 'line-through';
+              }
+            }
+          }
+        }
+      } catch(_){}
     })
     .catch(function(err){
       box.innerHTML = '<div style="padding:12px 4px;font-size:11.5px;color:#9f1239;text-align:center">⚠️ タイトル候補 取得失敗: '+esc(err.message||'')+'</div>';

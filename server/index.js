@@ -26333,16 +26333,21 @@ async function handleAPI(req,res,pathname,method,ip){
     const mode = (String(qs.mode || 'seo').toLowerCase() === 'aeo') ? 'aeo' : 'seo';
     if(!kw) return jres(res, 400, { error: 'kw required' });
 
-    // 🚀 cache (2026-06-04): タイトル候補生成は ~5-10s かかるので、 同 KW を 2 回目以降は 即時返却。
-    //   size guard: 1 KW = ~3KB、 20 KW までキャッシュ (= 全体 60KB 程度、 Supabase JSONB 安全圏)。
-    //   TTL: 7 日 (= signals/PV 推定が 古びすぎる前に refresh)。 ?refresh=1 で強制再生成。
-    const cacheKey = mode + ':' + kw;
+    // 🚀 cache (2026-06-05): in-memory (= Node process 内 Map) で 即時返却。
+    //   元 agent JSONB cache だと user 行が 重く DB.save timeout → 503 「混雑」 エラー の主因。
+    //   in-memory なら 読み書き 0ms、 Render restart で 消えるが 5 min Anthropic prompt cache も
+    //   別途あるので 同一セッション内は 高速。 multi-instance では cache 共有しないが許容。
+    if(!global._kwDetailMemCache) global._kwDetailMemCache = new Map();
+    const memKey = user.id + ':' + mode + ':' + kw;
     const CACHE_TTL = 7 * 24 * 3600 * 1000;
-    const CACHE_MAX_ENTRIES = 20;
-    if(!ag.keyword_detail_cache || typeof ag.keyword_detail_cache !== 'object') ag.keyword_detail_cache = {};
-    const _hit = ag.keyword_detail_cache[cacheKey];
-    if(!qs.refresh && _hit && _hit.fetched_at && (Date.now() - Date.parse(_hit.fetched_at)) < CACHE_TTL){
-      return jres(res, 200, Object.assign({}, _hit, { cached: true }));
+    const _hit = global._kwDetailMemCache.get(memKey);
+    if(!qs.refresh && _hit && (Date.now() - _hit.t) < CACHE_TTL){
+      return jres(res, 200, Object.assign({}, _hit.data, { cached: true, cache_layer: 'mem' }));
+    }
+    // size guard: max 500 entries 全 user 合計 (= Map LRU 風、 古い 1 件 drop)
+    if(global._kwDetailMemCache.size > 500){
+      const firstKey = global._kwDetailMemCache.keys().next().value;
+      global._kwDetailMemCache.delete(firstKey);
     }
 
     // 並列 fetch: サジェスト + サイトプレビュー (L1 のみで高速化、L2 再帰は廃止)
@@ -26487,18 +26492,10 @@ async function handleAPI(req,res,pathname,method,ip){
       citation_checklist: (parsed.citation_checklist || []).slice(0, 7),
       schema_jsonld: parsed.schema_jsonld || null,
     };
-    // 🚀 cache 保存 (= size guard: 古い entry を 落として 上限 20 件 維持)
+    // 🚀 in-memory cache 保存 (= 0ms、 DB.save なし、 timeout 排除)
     try {
-      ag.keyword_detail_cache[cacheKey] = out;
-      const keys = Object.keys(ag.keyword_detail_cache);
-      if(keys.length > CACHE_MAX_ENTRIES){
-        // fetched_at で sort して 古い順に drop
-        keys.sort((a, b) => String(ag.keyword_detail_cache[a].fetched_at||'').localeCompare(String(ag.keyword_detail_cache[b].fetched_at||'')));
-        const drop = keys.length - CACHE_MAX_ENTRIES;
-        for(let i = 0; i < drop; i++) delete ag.keyword_detail_cache[keys[i]];
-      }
-      await DB.save(user);
-    } catch(e){ console.warn('[kw-detail] cache save failed:', e.message); }
+      global._kwDetailMemCache.set(memKey, { data: out, t: Date.now() });
+    } catch(_){}
     return jres(res, 200, out);
   }
 

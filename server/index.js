@@ -523,18 +523,10 @@ const DB={
     delete payload.id; // never update primary key
     _compactArtifacts(payload);  // double-apply on payload for safety
     _sanitizeAgentHistories(payload);
-    // 🚀 [project_db_migration_2026_06] Phase 1a 強化 (2026-06-05):
-    //   DB.save 全 call で history_archive (= 3MB) を デフォルト strip。
-    //   write site は 1 か所 (= _summarizeOldHistory) のみ なので、 そこは opts.preserveHistoryArchive: true。
-    //   payload size 7-8MB → 4-5MB に 全 save が 軽量化。
+    // 🚫 history_archive strip は データ消失 リスク (= round-trip で 元 history_archive 上書き)
+    //   PostgREST PATCH は カラム全体 上書き なので、 payload から 除外 すると DB の history_archive も 失われる。
+    //   真の jsonb_set 化 は Phase 1b 以降 (= 専用 RPC function 必要)。 現状は payload に 含めて 安全に保存。
     opts = opts || {};
-    if(!opts.preserveHistoryArchive && Array.isArray(payload.agents)){
-      payload.agents = payload.agents.map(ag => {
-        if(!ag || typeof ag !== 'object') return ag;
-        const { history_archive, ...rest } = ag;
-        return rest;
-      });
-    }
     for(let attempt=0; attempt<12; attempt++){
       // select=id → the PATCH echoes back only [{id}] instead of the entire
       // (multi-KB, artifacts+history-laden) row. Halves egress on every save;
@@ -576,23 +568,20 @@ const DB={
   //     await DB.saveAgent(user, { billing: true, balance: true, usage: true }) — chat save 用
   //     await DB.saveAgent(user, { cols: ['integrations'] })  — 任意列 を 追加 touch
   //
-  //   ⚠️ 制約: history_archive / memories を 変更する save では 使わない (= drop されて 消える)。
-  //      これら変更時は 従来 DB.save() を 使う。
-  //      [project_db_migration_2026_06] Phase 1a (= 真の 正規化 までの 暫定対応)
+  //   ⚠️ 重要: agents 列は そのまま 送信 (= history_archive / memories 含む)。
+  //      PostgREST PATCH は カラム全体上書き で、 strip すると 既存 history_archive が DB から消える。
+  //      真の partial update は Phase 1b 以降 (= 新テーブル + RPC function)。
+  //      これだけでも media_posts_full / billing_history / 他カラム を touch しないので 25-40% 軽量化。
   async saveAgent(user, opts){
     if(!user) return;
     if(!USE_SUPA){ return this.save(user); }
     if(!Array.isArray(user.agents)) return this.save(user);
     opts = opts || {};
     try {
-      const leanAgents = user.agents.map(ag => {
-        if(!ag || typeof ag !== 'object') return ag;
-        const { history_archive, memories, ...rest } = ag;
-        return rest;
-      });
-      const payload = { agents: leanAgents };
+      // agents 列は full (= history_archive / memories 維持) で 安全に
+      const payload = { agents: user.agents };
       if(opts.mediaPostsFull) payload.media_posts_full = user.media_posts_full || {};
-      if(opts.billing) payload.billing_history = (user.billing_history || []).slice(-1000);  // 上限 1000 件
+      if(opts.billing) payload.billing_history = (user.billing_history || []).slice(-1000);
       if(opts.balance) payload.balance_jpy = user.balance_jpy || 0;
       if(opts.usage) payload.usage_count = user.usage_count || 0;
       if(Array.isArray(opts.cols)) opts.cols.forEach(col => { if(user[col] !== undefined) payload[col] = user[col]; });

@@ -22186,6 +22186,13 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, out);
   }
 
+  // GET /api/admin/recent-publish-errors — 直近 公開エラー ring buffer (= 50 件)
+  if(pathname === '/api/admin/recent-publish-errors' && method === 'GET'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    return jres(res, 200, { errors: global._recentPublishErrors || [] });
+  }
+
   // GET /api/admin/dualwrite-status — Phase 2/4 観察用
   //   新テーブル の row count + rate-limit Map size を 返す
   if(pathname === '/api/admin/dualwrite-status' && method === 'GET'){
@@ -26100,11 +26107,23 @@ async function handleAPI(req,res,pathname,method,ip){
           _mediaSlugCacheClear(ag.media.slug);
           console.log('[kw-batch] ✅ ' + j.job_id + ' published: ' + postSlug);
         } catch(e){
-          console.error('[kw-batch] ❌ ' + j.job_id + ' failed:', e.message);
+          console.error('[kw-batch] ❌ ' + j.job_id + ' failed:', e.message, e.stack);
+          // 直近 公開エラー を ring buffer に記録 (= /api/admin/recent-publish-errors で 取り出し可能)
+          try {
+            if(!global._recentPublishErrors) global._recentPublishErrors = [];
+            global._recentPublishErrors.unshift({
+              ts: new Date().toISOString(),
+              user_id: user.id, agent_id: ag.id, job_id: j.job_id,
+              title: j.title, keyword: j.keyword, mode: j.mode,
+              error: (e.message || 'unknown').slice(0, 400),
+              stack: (e.stack || '').slice(0, 800),
+            });
+            if(global._recentPublishErrors.length > 50) global._recentPublishErrors.length = 50;
+          } catch(_){}
           ag.history.push({
             id: 'm_' + crypto.randomBytes(5).toString('hex'),
             role: 'assistant',
-            content: '⚠️ 「' + j.title + '」 の 公開に失敗: ' + (e.message || 'unknown').slice(0, 120),
+            content: '⚠️ 「' + j.title + '」 の 公開に失敗: ' + (e.message || 'unknown').slice(0, 200),
             time: new Date().toISOString(),
             kind: 'system_publish_fail',
             thread_parent_id: j.thread_parent_id || null,

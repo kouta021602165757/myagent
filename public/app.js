@@ -2588,6 +2588,20 @@ async function api(method,path,body){
   }
   const data=await res.json();
   if(!res.ok){
+    // 401 = JWT expired / cleared。 UI は localStorage cache で 表示続行 してた状態。
+    // 1 回 だけ 「再ログイン が 必要」 toast を 出して、 localStorage cache を 破棄 + reload。
+    // 連打を防ぐため window._authExpiredShown フラグで 1 セッション 1 回 に 制限。
+    if(res.status === 401 && !window._authExpiredShown){
+      window._authExpiredShown = true;
+      try {
+        localStorage.removeItem('token');
+        localStorage.removeItem('cache_me_v1');
+        localStorage.removeItem('cache_agents_v1');
+      } catch(_){}
+      var msg401 = isJa ? 'セッションが切れました。 再ログインしてください。' : 'Session expired. Please re-login.';
+      try { showToast(msg401, 'ng'); } catch(_){ alert(msg401); }
+      setTimeout(function(){ try { window.location.href = 'auth.html'; } catch(_){ window.location.reload(); } }, 1800);
+    }
     // Prefer the user-facing `detail` (Japanese hint) over the machine `error`
     // code when both are present. Callers can still read both via err.code /
     // err.detail. Without this, toasts displayed cryptic codes like

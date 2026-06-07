@@ -17304,9 +17304,13 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
 
   // 🎯 SEO: TL;DR auto-inject (= Featured Snippet 0 位 + AI Overviews 引用 候補)
   const bodyWithTldr = _mediaInjectTldr(body_html, post);
+  // 🎯 SEO: 内部 リンク 自動 注入 (= 同 メディア 内 の 他 記事 へ、 最大 6 本)
+  const allPostsForLinks = (opts && opts.agent && Array.isArray(opts.agent.media_posts_idx))
+    ? opts.agent.media_posts_idx : [];
+  const bodyWithLinks = _mediaInjectInternalLinks(bodyWithTldr, post, allPostsForLinks, media);
   // TOC + body with anchor ids
-  const bodyWithIds = _mediaAddTocIds(bodyWithTldr);
-  const toc = _mediaExtractToc(bodyWithTldr);
+  const bodyWithIds = _mediaAddTocIds(bodyWithLinks);
+  const toc = _mediaExtractToc(bodyWithLinks);
   const rt = _mediaReadingTime(body_html);
   const dateLocale = (media.template === 'tech') ? 'mono' : 'ja';
 
@@ -18620,6 +18624,82 @@ function _mediaAddTocIds(html){
     idx++;
     return '<h2' + attrs + ' id="' + id + '">';
   });
+}
+
+// 🎯 内部 リンク 自動 注入 — 同 メディア 内 の 他 記事 を 本文 内 で 自動 リンク 化。
+//    効果: PageRank 流通 + 滞在 時間 増 + Google が 「トピカル オーソリティ」 認定。
+//    new→old: 新 記事 公開 直後 から 既存 記事 へ リンク
+//    old→new: 古 記事 を 開く と 最新 記事 が 自動 リンク 化 (= 再 render 時 反映)
+//    安全 策: <a> 内 / <h*> 内 / 既存 リンク 部分 は 触らない。
+function _mediaInjectInternalLinks(html, currentPost, allPosts, media){
+  if(!html || !currentPost || !Array.isArray(allPosts) || allPosts.length < 2) return html;
+  const MAX_LINKS = 6; // 1 記事 あたり 最大 6 本 (= スパム 化 防止)
+  // 自分 以外、 公開 済 のみ、 新しい 順
+  const others = allPosts
+    .filter(p => p && p.status !== 'draft' && p.slug !== currentPost.slug)
+    .slice(0, 30); // 候補 30 本
+  if(others.length === 0) return html;
+  let out = String(html);
+  let linkedCount = 0;
+  const usedSlugs = new Set();
+  for(const op of others){
+    if(linkedCount >= MAX_LINKS) break;
+    if(usedSlugs.has(op.slug)) continue;
+    // リンク アンカー 候補 (= キーワード or タイトル 短 縮)
+    const anchorCandidates = [];
+    if(op.keyword && op.keyword.length >= 3 && op.keyword.length <= 20){
+      anchorCandidates.push(op.keyword);
+    }
+    if(op.title){
+      // タイトル の メイン KW 部分 (= 「｜」 前 までor 「。」 前)
+      const titleHead = String(op.title).split(/[｜\|【】〔〕「」（）()]/)[0].trim();
+      if(titleHead && titleHead.length >= 4 && titleHead.length <= 30){
+        anchorCandidates.push(titleHead);
+      }
+    }
+    if(anchorCandidates.length === 0) continue;
+    // 候補 順 で 最初 にマッチ する もの を リンク
+    let linked = false;
+    for(const anchor of anchorCandidates){
+      // 既に リンク 化 済 の 単語 は 触らない (= <a> 内 を 除外)
+      // 正規 表現: anchor が <a>...</a> や <h*>...</h*> や class="tldr" 内 で 出現 する 場合 は skip
+      // シンプル に: <a> tag の 外 で 出現 する 最初 の 1 箇所 だけ wrap。
+      // 文字 列 ベース 走査 で <a>〜</a> を 除外
+      const escAnchor = anchor.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+      // <a で 始まる ブロック の 外 で マッチ する pattern
+      const skipRangeRe = /<a\b[^>]*>[\s\S]*?<\/a>|<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]>|<div[^>]*class\s*=\s*["'][^"']*\btldr\b[^"']*["'][\s\S]*?<\/div>|<details\b[\s\S]*?<\/details>/gi;
+      // 戦略: 本文 を skip-range で 分割、 各 chunk で マッチ 検索、 最初 の hit を 置換。
+      let parts = [];
+      let lastIdx = 0;
+      let m;
+      while((m = skipRangeRe.exec(out)) !== null){
+        parts.push({ text: out.slice(lastIdx, m.index), safe: true });
+        parts.push({ text: m[0], safe: false });
+        lastIdx = skipRangeRe.lastIndex;
+      }
+      parts.push({ text: out.slice(lastIdx), safe: true });
+      // safe な chunk で 最初 に anchor を 含む もの を 置換
+      let replaced = false;
+      const url = _mediaPublicUrl(media, op.slug);
+      const linkHtml = '<a class="related-inline" href="' + _mediaEsc(url) + '">' + anchor + '</a>';
+      for(const part of parts){
+        if(!part.safe || replaced) continue;
+        const re = new RegExp('(' + escAnchor + ')');
+        if(re.test(part.text)){
+          part.text = part.text.replace(re, linkHtml);
+          replaced = true;
+        }
+      }
+      if(replaced){
+        out = parts.map(p => p.text).join('');
+        usedSlugs.add(op.slug);
+        linkedCount++;
+        linked = true;
+        break;
+      }
+    }
+  }
+  return out;
 }
 
 // 🎯 TL;DR / 結論 先出し 自動 注入 — Featured Snippet 0 位 + AI Overviews 引用 候補。
@@ -33942,6 +34022,157 @@ const server=http.createServer(async(req,res)=>{
       } catch(e){
         console.warn('[robots] failed for', slug, ':', e.message);
         res.writeHead(500); return res.end('500');
+      }
+    })();
+  }
+
+  // 🚀 /media/ — 全 メディア ショーケース ハブ (= 親 ドメイン myaiagents.agency 下 の
+  //    強力 な コンテンツ ハブ、 各 ユーザ メディア へ 内部 リンク を 配布 + 自社 PR 強化)
+  if(effectivePath === '/media' || effectivePath === '/media/'){
+    if(method !== 'GET'){ res.writeHead(405); return res.end('Method not allowed'); }
+    return (async () => {
+      try {
+        // 1h cache
+        if(!global._mediaHubCache) global._mediaHubCache = { ts: 0, html: '' };
+        const HUB_TTL = 3600 * 1000;
+        if(global._mediaHubCache.html && Date.now() - global._mediaHubCache.ts < HUB_TTL){
+          res.writeHead(200, { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'public, max-age=600' });
+          return res.end(global._mediaHubCache.html);
+        }
+        // 全 メディア slug を 取得
+        const r = await sbReq('GET', 'media_slug_index', '?select=slug,user_id,agent_id&limit=200');
+        const indexRows = Array.isArray(r.d) ? r.d : [];
+        // 各 メディア の メタ + 直近 記事 を 取得
+        const medias = [];
+        for(const row of indexRows){
+          try {
+            const found = await _findUserByMediaSlug(row.slug, { includePosts: false });
+            if(!found || !found.agent || !found.agent.media) continue;
+            const ag = found.agent;
+            const posts = (ag.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+            if(posts.length < 3) continue; // 3 本 未満 は 掲載 しない (= 品質 ゲート)
+            medias.push({
+              slug: row.slug,
+              name: ag.media.name || ag.name || row.slug,
+              description: ag.media.description || '',
+              logo: ag.media.logo_url || '',
+              postsCount: posts.length,
+              recentTitle: posts[0] ? posts[0].title : '',
+              recentSlug: posts[0] ? posts[0].slug : '',
+              recentDate: posts[0] ? posts[0].published_at : '',
+              category: posts[0] ? posts[0].category_name : '',
+              url: _mediaPublicUrl(ag.media),
+            });
+          } catch(_){}
+        }
+        // 公開記事 数 順 で ソート
+        medias.sort((a, b) => b.postsCount - a.postsCount);
+        const totalMedias = medias.length;
+        const totalPosts = medias.reduce((s, m) => s + m.postsCount, 0);
+        const escHtml = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        const cardsHtml = medias.slice(0, 100).map(m => `
+          <a href="${escHtml(m.url)}" style="display:block;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:22px 24px;text-decoration:none;color:inherit;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.04)" onmouseover="this.style.borderColor='#0d4f4a';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(13,79,74,.10)'" onmouseout="this.style.borderColor='#e5e7eb';this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,.04)'">
+            <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px">
+              ${m.logo ? '<img src="'+escHtml(m.logo)+'" alt="" loading="lazy" decoding="async" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0">'
+                : '<div style="width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,#0d4f4a,#0a3d39);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0">'+escHtml(m.name.charAt(0).toUpperCase())+'</div>'}
+              <div style="flex:1;min-width:0">
+                <div style="font-size:17px;font-weight:900;line-height:1.3;margin-bottom:5px;color:#0a0a0e">${escHtml(m.name)}</div>
+                <div style="font-size:11px;color:#71717a;display:flex;gap:10px;align-items:center">
+                  <span>📝 ${m.postsCount} 本 公開</span>
+                  ${m.category ? '<span>・ '+escHtml(m.category)+'</span>' : ''}
+                </div>
+              </div>
+            </div>
+            ${m.description ? '<div style="font-size:13px;color:#525252;line-height:1.65;margin-bottom:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+escHtml(m.description)+'</div>' : ''}
+            ${m.recentTitle ? `
+              <div style="background:#fafaf7;border-radius:8px;padding:10px 12px;border-left:3px solid #c0ff5c">
+                <div style="font-size:9.5px;font-weight:800;color:#15803d;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">最新</div>
+                <div style="font-size:12.5px;color:#0a0a0e;font-weight:700;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escHtml(m.recentTitle)}</div>
+              </div>` : ''}
+            <div style="margin-top:14px;text-align:right;color:#0d4f4a;font-size:11.5px;font-weight:800">メディア を 開く →</div>
+          </a>
+        `).join('');
+
+        const html = `<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>メディア ハブ — MY AI Agent で 作られた ${totalMedias} メディア</title>
+<meta name="description" content="MY AI Agent で 公開 された 全 ${totalMedias} メディア ・ ${totalPosts} 記事 の ハブ。 AI チーム が 構築 した 各 業界 の オウンド メディア を 一覧 で 紹介。">
+<link rel="canonical" href="https://myaiagents.agency/media/">
+<meta property="og:title" content="メディア ハブ — MY AI Agent">
+<meta property="og:description" content="${totalMedias} メディア ・ ${totalPosts} 記事 の ハブ">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://myaiagents.agency/media/">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">${JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  'name': 'メディア ハブ — MY AI Agent',
+  'url': 'https://myaiagents.agency/media/',
+  'description': 'MY AI Agent で 公開 された ' + totalMedias + ' メディア ・ ' + totalPosts + ' 記事 の ハブ',
+  'mainEntity': {
+    '@type': 'ItemList',
+    'numberOfItems': medias.length,
+    'itemListElement': medias.slice(0, 30).map((m, i) => ({
+      '@type': 'ListItem',
+      'position': i + 1,
+      'url': m.url,
+      'name': m.name,
+    })),
+  },
+})}</script>
+<style>
+  *{box-sizing:border-box;-webkit-text-size-adjust:100%;margin:0;padding:0}
+  body{font-family:'Noto Sans JP',-apple-system,system-ui,sans-serif;color:#0a0a0e;background:#fafaf7;line-height:1.7}
+  a{color:#0d4f4a}
+  header{background:linear-gradient(135deg,#0d4f4a 0%,#0a3d39 100%);color:#fff;padding:60px 24px 80px;text-align:center}
+  header h1{font-family:'Bebas Neue','Noto Sans JP',sans-serif;font-size:clamp(34px,5vw,52px);letter-spacing:-.01em;line-height:1.1;margin-bottom:18px}
+  header .lead{font-size:15px;color:rgba(255,255,255,.85);max-width:680px;margin:0 auto;line-height:1.8}
+  header .stats{display:flex;justify-content:center;gap:32px;margin-top:32px;flex-wrap:wrap}
+  header .stat-v{font-family:'Bebas Neue';font-size:38px;color:#c0ff5c;line-height:1}
+  header .stat-l{font-size:11px;color:rgba(255,255,255,.7);letter-spacing:.1em;text-transform:uppercase;margin-top:4px}
+  main{max-width:1280px;margin:-40px auto 0;padding:0 24px 80px;position:relative}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+  footer{padding:30px 24px 50px;text-align:center;font-size:11.5px;color:#71717a;background:#fff;border-top:1px solid #e5e7eb}
+  footer a{color:#0d4f4a;margin:0 10px;text-decoration:none}
+  .cta-banner{background:#0a0a0e;color:#fff;padding:40px 24px;text-align:center;margin:40px 0}
+  .cta-banner h2{font-family:'Bebas Neue';font-size:32px;margin-bottom:10px}
+  .cta-banner p{font-size:13.5px;color:rgba(255,255,255,.7);margin-bottom:20px}
+  .cta-btn{display:inline-block;background:#c0ff5c;color:#0a3d39;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:800;font-size:14.5px;box-shadow:0 4px 14px rgba(192,255,92,.32)}
+  @media(max-width:560px){header{padding:40px 18px 60px}header .stats{gap:18px}main{padding:0 14px 50px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>📚 メディア ハブ</h1>
+  <p class="lead">AI チーム が 構築 した 各 業界 の オウンド メディア。<br>気 に なる メディア を タップ で 訪問。</p>
+  <div class="stats">
+    <div><div class="stat-v">${totalMedias}</div><div class="stat-l">メディア</div></div>
+    <div><div class="stat-v">${totalPosts.toLocaleString()}</div><div class="stat-l">公開 記事</div></div>
+  </div>
+</header>
+<main>
+  <div class="grid">${cardsHtml || '<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:#71717a">準備 中…</div>'}</div>
+  <div class="cta-banner">
+    <h2>あなた も AI で メディア を 立ち上げる</h2>
+    <p>30 秒 で 開始 ・ Free プラン あり ・ AI が 全部 自動</p>
+    <a href="https://myaiagents.agency/" class="cta-btn">🚀 無料 で 始める →</a>
+  </div>
+</main>
+<footer>
+  <a href="https://myaiagents.agency/">MY AI Agent</a>
+  <a href="https://myaiagents.agency/media/">メディア ハブ</a>
+  © ${new Date().getFullYear()} MY AI Agent
+</footer>
+</body></html>`;
+        global._mediaHubCache = { ts: Date.now(), html };
+        res.writeHead(200, { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'public, max-age=600' });
+        return res.end(html);
+      } catch(e){
+        console.error('[media-hub] failed:', e.message);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        return res.end('500');
       }
     })();
   }

@@ -17145,15 +17145,13 @@ function _svgHeroForArticle(post, media){
   const tpl = (media && media.template) || 'minimal';
   // 🎨 media.brand_color を SVG palette に反映
   const pal = _svgPaletteFor(tpl, media && media.brand_color);
-  const title = String(post && post.title || '').slice(0, 80);
   const category = String(post && post.category_name || '').slice(0, 14) || '記事';
   const categoryEn = _categoryToEnSubtitle(category);
   const brandJp = String(media && media.name || 'Blog').slice(0, 24);
   const brandEn = brandJp.replace(/[^\x00-\x7F]/g, '').toUpperCase().slice(0, 24) || 'MEDIA';
-  const titleLines = _wrapTitleForSvg(title, 18);
-  const titleStartY = titleLines.length === 1 ? 380 : titleLines.length === 2 ? 340 : 310;
-  const lineSpacing = 80;
-  // Decorative shapes (= 同じレイアウト 大枠、 色だけ palette で変わる)
+  // 🎨 2026-06-07: タイトル baked-in を 廃止 (= カード で h3 と 二重 表示 になる バグ)。
+  //    SVG hero は カテゴリ + ブランド + 装飾 の 抽象 visual に。
+  //    タイトル は HTML 側 で h1 / h3 として 表示。
   const svg = ''
     + `<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" width="1280" height="720">`
     +   `<rect width="1280" height="720" fill="${pal.bg}"/>`
@@ -17169,16 +17167,14 @@ function _svgHeroForArticle(post, media){
     +   `<circle cx="260" cy="540" r="9" fill="${pal.deco}"/>`
     +   `<circle cx="950" cy="200" r="6" fill="${pal.deco}"/>`
     +   `<circle cx="180" cy="600" r="5" fill="${pal.deco}" opacity="0.7"/>`
+    // 大型 カテゴリ ラベル (= 中央、 装飾 として 機能、 タイトル 代わり)
+    +   `<text x="640" y="380" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="120" font-weight="900" fill="${pal.text}" opacity="0.12">${_svgEscape(category)}</text>`
     // カテゴリ pill (= 左上)
     +   `<g>`
     +     `<ellipse cx="200" cy="110" rx="130" ry="26" fill="#ffffff" stroke="${pal.deco}" stroke-width="2"/>`
     +     `<text x="200" y="116" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic','Helvetica Neue',sans-serif" font-size="18" font-weight="700" fill="${pal.accent}">${_svgEscape(category)}</text>`
     +     `<text x="200" y="148" text-anchor="middle" font-family="'Helvetica Neue',sans-serif" font-size="11" letter-spacing="3" fill="${pal.sub}">${_svgEscape(categoryEn)}</text>`
     +   `</g>`
-    // タイトル (= 中央、 最大 3 行)
-    +   titleLines.map((line, i) =>
-          `<text x="640" y="${titleStartY + i * lineSpacing}" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="${titleLines.length === 1 ? 62 : 58}" font-weight="900" fill="${pal.text}">${_svgEscape(line)}</text>`
-        ).join('')
     // ブランドマーク (= 右下)
     +   `<g>`
     +     `<text x="1220" y="680" text-anchor="end" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="17" font-weight="800" fill="${pal.text}">${_svgEscape(brandJp)}</text>`
@@ -19012,11 +19008,11 @@ function _mediaRenderMinimalIndex(media, posts, opts){
 
   // ── 記事 を 役割 別 に 分割 ──
   // hero: 最初 5 本 (= 1 big + 4 small)
-  // trending: 次 10 本 (= 横スクロール)
+  // trending: 次 4 本 (= 横スクロール、 ICP 要望 で 10 → 4)
   // rest: 残り (= grid)
   const heroPosts = posts.slice(0, 5);
-  const trendingPosts = posts.slice(5, 15);
-  const restPosts = posts.slice(15);
+  const trendingPosts = posts.slice(5, 9);
+  const restPosts = posts.slice(9);
 
   // ── カテゴリ chip (= 件数 付き) ──
   const catTabsHTML = (media.categories || []).map(c => {
@@ -19041,9 +19037,7 @@ function _mediaRenderMinimalIndex(media, posts, opts){
       <article style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;display:flex;flex-direction:column;transition:all .2s;cursor:pointer" onmouseover="this.style.borderColor='${accent}';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)'" onmouseout="this.style.borderColor='${s.cardBorder}';this.style.transform='';this.style.boxShadow=''">
         ${p.hero_image_url
           ? '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;text-decoration:none"><img loading="lazy" decoding="async" src="'+_mediaEsc(p.hero_image_url)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:'+imgHeight+';object-fit:cover;display:block"></a>'
-          : '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;height:'+imgHeight+';background:'+heroGrad[idx%heroGrad.length]+';position:relative;text-decoration:none">'
-            + (isBig ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:30px;color:#fff;font-family:'+s.titleFont+';font-size:24px;font-weight:900;text-align:center;line-height:1.3;text-shadow:0 2px 8px rgba(0,0,0,.4)">'+_mediaEsc((p.title||'').slice(0,60))+'</div>' : '')
-            + '</a>'}
+          : '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;height:'+imgHeight+';background:'+heroGrad[idx%heroGrad.length]+';text-decoration:none"></a>'}
         <div style="padding:${isBig ? '20px 22px' : '12px 14px'};flex:1;display:flex;flex-direction:column">
           ${p.category_name ? '<div style="font-size:9.5px;font-weight:800;color:'+accent+';letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;font-family:'+s.brandFont+'">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
           <h3 style="font-family:${s.titleFont};font-size:${titleSize};font-weight:${isBig?'900':'800'};color:${s.textColor};margin:0 0 ${isBig ? '10px' : '6px'};line-height:1.35;letter-spacing:-.005em;display:-webkit-box;-webkit-line-clamp:${titleLineClamp};-webkit-box-orient:vertical;overflow:hidden">

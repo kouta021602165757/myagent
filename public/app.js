@@ -9858,11 +9858,20 @@ window._artUpdateBatchBar = function(){
   if(!bar){
     bar = document.createElement('div');
     bar.id = 'artBatchBar';
-    bar.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#0d4f4a;color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.25);display:flex;align-items:center;gap:14px;z-index:9999;font-family:inherit';
-    bar.innerHTML = '<div style="font-size:13px;font-weight:800"><span id="artBatchCount">0</span> 件 選択中</div>'
-      + '<div style="font-size:11px;color:#cbd5e1">並列 3 件 / 1 件 ~90 秒 ・ 約 ¥10/件</div>'
-      + '<button onclick="_artBatchPublish()" style="background:#c0ff5c;color:#0a3d39;border:0;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:900;cursor:pointer;font-family:inherit">✨ 一括公開 →</button>'
-      + '<button onclick="_artBatchClear()" style="background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 12px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">クリア</button>';
+    var isMobile = window.matchMedia && window.matchMedia('(max-width:700px)').matches;
+    if(isMobile){
+      // スマホ: 画面下 全幅 sticky + safe-area + 大きい タップ域
+      bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#0d4f4a;color:#fff;padding:14px 14px calc(14px + env(safe-area-inset-bottom, 0));box-shadow:0 -8px 28px rgba(0,0,0,.22);display:flex;align-items:center;gap:10px;z-index:9999;font-family:inherit;flex-wrap:wrap';
+      bar.innerHTML = '<div style="font-size:13.5px;font-weight:800;flex:1 1 auto"><span id="artBatchCount">0</span> 件 選択中 <span style="font-size:10.5px;color:#9bd4cf;font-weight:500">・並列 3 件 / 約 ¥10 / 件</span></div>'
+        + '<button onclick="_artBatchClear()" style="background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;padding:12px 14px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;min-height:44px;-webkit-tap-highlight-color:transparent">クリア</button>'
+        + '<button onclick="_artBatchPublish()" style="background:#c0ff5c;color:#0a3d39;border:0;padding:14px 18px;border-radius:10px;font-size:14.5px;font-weight:900;cursor:pointer;font-family:inherit;flex:1 1 100%;min-height:50px;box-shadow:0 4px 14px rgba(192,255,92,.35);-webkit-tap-highlight-color:transparent">✨ 一括 公開 →</button>';
+    } else {
+      bar.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#0d4f4a;color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.25);display:flex;align-items:center;gap:14px;z-index:9999;font-family:inherit';
+      bar.innerHTML = '<div style="font-size:13px;font-weight:800"><span id="artBatchCount">0</span> 件 選択中</div>'
+        + '<div style="font-size:11px;color:#cbd5e1">並列 3 件 / 1 件 ~90 秒 ・ 約 ¥10/件</div>'
+        + '<button onclick="_artBatchPublish()" style="background:#c0ff5c;color:#0a3d39;border:0;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:900;cursor:pointer;font-family:inherit">✨ 一括公開 →</button>'
+        + '<button onclick="_artBatchClear()" style="background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 12px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">クリア</button>';
+    }
     document.body.appendChild(bar);
   }
   var cnt = document.getElementById('artBatchCount');

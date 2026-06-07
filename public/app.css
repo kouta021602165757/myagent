@@ -9201,3 +9201,119 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   .media-hero-card-trust{font-size:10px}
 }
 
+/* ══════════════════════════════════════════════════════════
+   📱 MOBILE PUBLISH-FIRST UX (2026-06-07)
+   コンセプト: 「スマホで タップ するだけ で 記事 公開」
+   - 公開系 ボタン は 全部 44px+ tap target に 拡大
+   - 親指リーチ域 (bottom 25%) を 最優先 (= sticky 公開バー)
+   - iOS safe-area (= home indicator) で 隠れない
+   - 記事行 タップ で 公開 ボタン まで 1 アクション
+   ══════════════════════════════════════════════════════════ */
+@media (max-width:700px){
+  /* ── 公開ボタン を 大きく (= タップしやすく) ─────────── */
+  .pa-row{
+    flex-wrap:wrap;
+    padding:12px 14px;
+    gap:10px;
+  }
+  .pa-row-bd{flex:1 1 100%;min-width:0;}
+  .pa-row-ti{font-size:14px;line-height:1.5;white-space:normal;overflow:visible;text-overflow:unset;}
+  .pa-row-mt{font-size:11.5px;margin-top:4px;}
+  .pa-row-pub{
+    flex:1 1 100%;
+    padding:14px 18px !important;
+    font-size:14.5px !important;
+    border-radius:10px;
+    min-height:48px;
+    font-weight:900;
+    letter-spacing:.01em;
+    box-shadow:0 2px 8px rgba(13,79,74,.18);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .pa-row-pub:active{transform:scale(.97);box-shadow:0 1px 4px rgba(13,79,74,.12);}
+  .pa-row-del{width:40px;height:40px;font-size:18px;}
+
+  /* ── キーワードプランナー の 「✨ 公開」 ボタン (= タイトル候補ごと) ── */
+  /* セレクタ pattern: kpRender が inline style で 出してる button → クラス追加できない
+     ので、 button[onclick*="_kwInvokeArticleGenWithTitle"] と
+     button[onclick*="_publishPlannedArticle"] を 直接 targeting */
+  button[onclick*="_kwInvokeArticleGenWithTitle"],
+  button[onclick*="_publishPlannedArticle"]{
+    padding:12px 16px !important;
+    font-size:13.5px !important;
+    min-height:44px !important;
+    border-radius:9px !important;
+    font-weight:900 !important;
+    -webkit-tap-highlight-color:transparent;
+  }
+  button[onclick*="_kwInvokeArticleGenWithTitle"]:active,
+  button[onclick*="_publishPlannedArticle"]:active{transform:scale(.97);}
+
+  /* ── 一括公開 バー: 画面下に sticky (= 親指リーチ域) ── */
+  /* 既存 element に .stick-bottom-batch クラスがあれば固定 (= JS で付与) */
+  .stick-bottom-batch{
+    position:sticky;
+    bottom:env(safe-area-inset-bottom, 0);
+    z-index:20;
+    background:linear-gradient(to top, var(--ink2) 70%, rgba(250,250,247,0));
+    padding:12px 12px calc(12px + env(safe-area-inset-bottom, 0));
+    margin:0 -12px -8px;
+    border-top:1px solid var(--wire);
+  }
+  .stick-bottom-batch button{
+    width:100%;
+    padding:15px 18px !important;
+    font-size:15px !important;
+    min-height:52px !important;
+    border-radius:12px !important;
+    font-weight:900 !important;
+    box-shadow:0 4px 14px rgba(192,255,92,.32);
+  }
+
+  /* ── 記事一覧 タブ: 横スクロール 可 + タップ域 ── */
+  /* タブ container セレクタ: stab-btn は app.css 既存 class */
+  .stab-btn{
+    padding:14px 12px !important;
+    font-size:13px !important;
+    min-height:44px;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* ── キーワード 検索 入力 ── */
+  #kpInput, input[type="text"][onkeydown*="_kpSearch"]{
+    font-size:16px !important;  /* iOS: 16px 未満は ズーム発火 */
+    padding:13px 14px !important;
+    min-height:48px;
+    border-radius:10px;
+  }
+
+  /* ── チャット 入力 (= ci textarea) iOS ズーム 防止 ── */
+  #ci{
+    font-size:16px !important;
+    line-height:1.55 !important;
+  }
+
+  /* ── HERO カード (= ダッシュボード 上部) スマホで コンパクト ── */
+  .media-hero-card{padding:14px 16px !important;}
+  .media-hero-card .media-hero-card-cells{
+    grid-template-columns:repeat(2, 1fr) !important;
+    gap:10px !important;
+  }
+
+  /* ── 公開系 confirm dialog (= 画面下 から sheet 風) は alert() native なので 触らず ── */
+
+  /* ── タップ ハイライト 全般 OFF (= -webkit-tap-highlight-color) ── */
+  button, a{-webkit-tap-highlight-color:rgba(192,255,92,.18);}
+
+  /* ── iOS safe-area: チャット 入力域 を 下端 から 持ち上げ ── */
+  .chat-foot{padding-bottom:calc(12px + env(safe-area-inset-bottom, 0)) !important;}
+}
+
+/* ── 小型スマホ (≤390px = iPhone SE / mini) ── */
+@media (max-width:390px){
+  .pa-row{padding:10px 12px;}
+  .pa-row-pub{font-size:13.5px !important;padding:12px 14px !important;}
+  .media-hero-card{padding:12px 14px !important;}
+  .stab-btn{padding:12px 8px !important;font-size:12px !important;}
+}
+

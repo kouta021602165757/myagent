@@ -16052,6 +16052,79 @@ function _mediaPublicUrl(media, sub){
   return 'https://' + (media.domain || MEDIA_BASE_DOMAIN) + '/media/' + slug + tail;
 }
 
+// 🚀 IndexNow API: Bing / Yandex / Naver / DuckDuckGo に 即時 インデックス 申請。
+// Google は IndexNow 非対応 だが sitemap 経由 で 自動 crawl される (= 別途 GSC submit)。
+//
+// 使い方: _indexNowPing(['url1', 'url2', ...]) を 公開 / 更新 直後 に 呼ぶ。
+// API 仕様: https://www.indexnow.org/documentation
+// - key (= 8-128 文字 英数字) を ホスト の /<key>.txt に 配置 して 所有 認証
+// - POST {host, key, keyLocation, urlList} を api.indexnow.org/IndexNow に
+//
+// ここ では env INDEXNOW_KEY を 使う (= 1 つ の key で 全 サブ ドメイン カバー)。
+const INDEXNOW_KEY = process.env.INDEXNOW_KEY || '';
+const INDEXNOW_HOST = MEDIA_BASE_DOMAIN; // 例: myaiagents.agency
+
+function _indexNowPing(urls){
+  return new Promise((resolve) => {
+    if(!INDEXNOW_KEY){
+      console.warn('[indexnow] INDEXNOW_KEY env 未設定、 ping スキップ');
+      resolve({ ok: false, reason: 'no key' }); return;
+    }
+    const urlArr = (Array.isArray(urls) ? urls : [urls]).filter(u => typeof u === 'string' && u.startsWith('http'));
+    if(urlArr.length === 0){ resolve({ ok: false, reason: 'no urls' }); return; }
+    // IndexNow は 1 リクエスト 10,000 URL まで OK だが、 1000 単位で 区切る
+    const chunk = urlArr.slice(0, 10000);
+    const payload = {
+      host: INDEXNOW_HOST,
+      key: INDEXNOW_KEY,
+      keyLocation: 'https://' + INDEXNOW_HOST + '/' + INDEXNOW_KEY + '.txt',
+      urlList: chunk,
+    };
+    const body = JSON.stringify(payload);
+    const req = https.request({
+      hostname: 'api.indexnow.org',
+      path: '/IndexNow',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Length': Buffer.byteLength(body),
+      },
+      timeout: 15000,
+    }, r => {
+      let d = '';
+      r.setEncoding('utf8');
+      r.on('data', c => d += c);
+      r.on('end', () => {
+        const s = r.statusCode;
+        // 200 = 即 受 入れ、 202 = キュー 入り、 どちらも 成功
+        if(s === 200 || s === 202){
+          console.log('[indexnow] ✅ ping ' + chunk.length + ' URL, HTTP ' + s);
+          resolve({ ok: true, status: s, count: chunk.length });
+        } else {
+          console.warn('[indexnow] HTTP ' + s + ': ' + d.slice(0, 200));
+          resolve({ ok: false, status: s, error: d.slice(0, 200) });
+        }
+      });
+    });
+    req.on('error', e => {
+      console.warn('[indexnow] error:', e.message);
+      resolve({ ok: false, error: e.message });
+    });
+    req.on('timeout', () => {
+      try { req.destroy(); } catch(_){}
+      resolve({ ok: false, error: 'timeout' });
+    });
+    req.write(body); req.end();
+  });
+}
+
+// Fire-and-forget 版 (= 公開 path で 呼ぶ、 失敗 し ても block し ない)
+function _indexNowPingFAF(urls){
+  setImmediate(() => {
+    _indexNowPing(urls).catch(e => console.warn('[indexnow FAF]', e.message));
+  });
+}
+
 // http:// / https:// のみ許可
 function _isHttpUrl(s){
   if(!s) return false;
@@ -17954,6 +18027,8 @@ async function executePublishToMediaTool(user, agent, input){
   _mediaSlugCacheClear(agent.media.slug);
 
   const publicUrl = _mediaPublicUrl(agent.media, postSlug);
+  // 🚀 SEO: IndexNow ping (= 新 記事 + ホーム + sitemap)
+  _indexNowPingFAF([publicUrl, _mediaPublicUrl(agent.media), _mediaPublicUrl(agent.media, 'sitemap.xml')]);
 
   // 🚀 Day 4: SNS 自動シェア (= 公開瞬間に Buffer / X に投稿)
   //   失敗しても publish は成功扱い (= silent best-effort)
@@ -22186,6 +22261,57 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, out);
   }
 
+  // POST /api/admin/seo-bulk-reindex — 全 ユーザ or 指定 user の 既存 記事 を 全部 IndexNow に 再 ping
+  //   body: { userId?: '<id>' }  userId 指定 なし → 全 user
+  //   header: X-Service-Key
+  //   ※ Bing / Yandex / Naver / DuckDuckGo に 即時 申請 (= Google は sitemap 経由 で 自動 crawl)
+  if(pathname === '/api/admin/seo-bulk-reindex' && method === 'POST'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    if(!INDEXNOW_KEY) return jres(res, 503, { error: 'INDEXNOW_KEY env not set' });
+    const body = await readBody(req).catch(() => ({}));
+    const userId = String(body && body.userId || '').trim();
+    const stats = { users: 0, urls: 0, pings: 0, failed: 0 };
+    try {
+      const targets = [];
+      if(userId){
+        const u = await DB.findBy('id', userId);
+        if(u) targets.push(u);
+      } else {
+        // 全 user の id を 取得 (= まず id list だけ、 1 user ずつ full fetch)
+        const r = await sbReq('GET', 'users', '?select=id&order=created_at.asc&limit=500');
+        const ids = Array.isArray(r.d) ? r.d.map(x => x.id) : [];
+        for(const id of ids){
+          const u = await DB.findBy('id', id).catch(() => null);
+          if(u && Array.isArray(u.agents) && u.agents.some(a => a && a.media && a.media.id)){
+            targets.push(u);
+          }
+        }
+      }
+      for(const u of targets){
+        stats.users++;
+        for(const ag of u.agents || []){
+          if(!ag || !ag.media || !ag.media.id || !Array.isArray(ag.media_posts_idx)) continue;
+          const posts = ag.media_posts_idx.filter(p => p && p.status !== 'draft');
+          if(posts.length === 0) continue;
+          const urls = posts.map(p => _mediaPublicUrl(ag.media, p.slug));
+          // メディア ホーム + sitemap も 同時 に
+          urls.push(_mediaPublicUrl(ag.media));
+          urls.push(_mediaPublicUrl(ag.media, 'sitemap.xml'));
+          // IndexNow に ping (= 同期 = 完了 待ち)
+          const r = await _indexNowPing(urls);
+          if(r.ok){ stats.pings++; stats.urls += urls.length; }
+          else { stats.failed++; console.warn('[seo-bulk-reindex] failed for media', ag.media.slug, r); }
+          // 連 投 防止 で 500ms wait
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+      return jres(res, 200, { ok: true, ...stats });
+    } catch(e){
+      return jres(res, 500, { error: 'bulk reindex failed: ' + e.message, stats });
+    }
+  }
+
   // GET /api/admin/recent-publish-errors — 直近 公開エラー ring buffer (= 50 件)
   if(pathname === '/api/admin/recent-publish-errors' && method === 'GET'){
     const provided = req.headers['x-service-key'] || '';
@@ -22264,6 +22390,7 @@ async function handleAPI(req,res,pathname,method,ip){
         adminUser.balance_jpy = Math.round(((adminUser.balance_jpy || 0) - estJpy) * 1000) / 1000;
         await DB.save(adminUser);
         _mediaSlugCacheClear(ag.media.slug);
+        _indexNowPingFAF([_mediaPublicUrl(ag.media, postSlug), _mediaPublicUrl(ag.media), _mediaPublicUrl(ag.media, 'sitemap.xml')]);
         console.log('[admin-generate] ✅ ' + jobId + ' published: ' + postSlug);
       } catch(e){
         console.error('[admin-generate] ❌ ' + jobId + ' failed:', e.message);
@@ -26105,6 +26232,8 @@ async function handleAPI(req,res,pathname,method,ip){
           // 🚀 saveAgent: agents + media_posts_full のみ touch (= history_archive 3MB skip)
           await DB.saveAgent(user, { mediaPostsFull: true });
           _mediaSlugCacheClear(ag.media.slug);
+          // 🚀 SEO: IndexNow ping (= 新 記事 + sitemap + ホーム) を fire-and-forget で
+          _indexNowPingFAF([pubUrl, _mediaPublicUrl(ag.media), _mediaPublicUrl(ag.media, 'sitemap.xml')]);
           console.log('[kw-batch] ✅ ' + j.job_id + ' published: ' + postSlug);
         } catch(e){
           console.error('[kw-batch] ❌ ' + j.job_id + ' failed:', e.message, e.stack);
@@ -26201,6 +26330,7 @@ async function handleAPI(req,res,pathname,method,ip){
           }
           await DB.saveAgent(user, { mediaPostsFull: true });
           _mediaSlugCacheClear(ag.media.slug);
+          _indexNowPingFAF([_mediaPublicUrl(ag.media, postSlug), _mediaPublicUrl(ag.media), _mediaPublicUrl(ag.media, 'sitemap.xml')]);
           console.log('[media-art-async] ✅ ' + jobId + ' published: ' + postSlug);
         } catch(e){
           console.error('[media-art-async] ❌ ' + jobId + ' failed:', e.message);
@@ -26262,6 +26392,7 @@ async function handleAPI(req,res,pathname,method,ip){
       return jres(res, 500, { error: 'save_failed', detail: e.message });
     }
     _mediaSlugCacheClear(ag.media.slug);
+    _indexNowPingFAF([_mediaPublicUrl(ag.media, postSlug), _mediaPublicUrl(ag.media), _mediaPublicUrl(ag.media, 'sitemap.xml')]);
     return jres(res, 200, {
       ok: true,
       post: postMeta,
@@ -33377,6 +33508,109 @@ const server=http.createServer(async(req,res)=>{
       // 302 redirect to LP
       res.writeHead(302, { 'Location': to, 'Cache-Control': 'no-cache' });
       return res.end();
+    })();
+  }
+
+  // 🚀 IndexNow key file: /<INDEXNOW_KEY>.txt を 配信 (= IndexNow ホスト 認証 用)
+  //    全 サブ ドメイン で 同じ key で 認証 (= sub.myaiagents.agency でも 親 と 同じ key を 配信)
+  const indexNowKeyMatch = effectivePath.match(/^\/([a-zA-Z0-9-]{8,128})\.txt$/);
+  if(indexNowKeyMatch && method === 'GET' && INDEXNOW_KEY && indexNowKeyMatch[1] === INDEXNOW_KEY){
+    res.writeHead(200, {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'public, max-age=86400',
+    });
+    return res.end(INDEXNOW_KEY);
+  }
+
+  // 🚀 /media/:slug/sitemap.xml → SEO: 各 メディア の sitemap
+  //    Google / Bing が crawl して 全 記事 を 発見 する 入口。
+  //    24h cache、 公開 済 記事 のみ、 lastmod は published_at / rewritten_at で 更新。
+  const mediaSitemapRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/sitemap\.xml$/);
+  if(mediaSitemapRoute && method === 'GET'){
+    return (async () => {
+      const slug = mediaSitemapRoute[1];
+      try {
+        const found = await _findUserByMediaSlug(slug, { includePosts: false });
+        if(!found){
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          return res.end('Media not found');
+        }
+        const { agent } = found;
+        const media = agent.media;
+        const base = _mediaPublicUrl(media); // 末尾 / なし
+        const posts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+        const cats = (media.categories || []).filter(c => c && c.slug);
+        const escXml = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+
+        const urls = [];
+        // ルート (= 記事 一覧)
+        urls.push({ loc: base + '/', priority: '1.0', changefreq: 'daily' });
+        // about ページ
+        urls.push({ loc: base + '/about', priority: '0.6', changefreq: 'monthly' });
+        // カテゴリ
+        for(const c of cats){
+          urls.push({ loc: base + '/cat/' + c.slug, priority: '0.7', changefreq: 'weekly' });
+        }
+        // 全 記事
+        for(const p of posts){
+          const lastmod = p.rewritten_at || p.published_at || '';
+          const lmDate = lastmod ? new Date(lastmod).toISOString().slice(0,10) : '';
+          // 公開 30 日 以内 = 1.0 / 90 日 以内 = 0.8 / それ以上 = 0.6
+          const pubMs = Date.parse(p.published_at || 0) || 0;
+          const ageDays = pubMs ? (Date.now() - pubMs) / 86400000 : 999;
+          const pri = ageDays <= 30 ? '0.9' : (ageDays <= 90 ? '0.7' : '0.5');
+          urls.push({ loc: base + '/' + p.slug, lastmod: lmDate, priority: pri, changefreq: 'monthly' });
+        }
+
+        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+        xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+        for(const u of urls){
+          xml += '  <url>\n';
+          xml += '    <loc>' + escXml(u.loc) + '</loc>\n';
+          if(u.lastmod) xml += '    <lastmod>' + u.lastmod + '</lastmod>\n';
+          if(u.changefreq) xml += '    <changefreq>' + u.changefreq + '</changefreq>\n';
+          if(u.priority) xml += '    <priority>' + u.priority + '</priority>\n';
+          xml += '  </url>\n';
+        }
+        xml += '</urlset>\n';
+
+        res.writeHead(200, {
+          'Content-Type': 'application/xml; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600', // 1h cache
+          'X-Robots-Tag': 'noindex', // sitemap 自体は noindex (= crawl は 普通 通り)
+        });
+        return res.end(xml);
+      } catch(e){
+        console.warn('[sitemap] failed for', slug, ':', e.message);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        return res.end('500');
+      }
+    })();
+  }
+
+  // 🚀 /media/:slug/robots.txt → SEO: 各 メディア の robots.txt
+  //    sitemap.xml の 場所 を 明示、 全 ページ 許可 (= /admin/ 等 ない の で simple)
+  const mediaRobotsRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/robots\.txt$/);
+  if(mediaRobotsRoute && method === 'GET'){
+    return (async () => {
+      const slug = mediaRobotsRoute[1];
+      try {
+        const found = await _findUserByMediaSlug(slug, { includePosts: false });
+        if(!found){
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          return res.end('Media not found');
+        }
+        const base = _mediaPublicUrl(found.agent.media);
+        const body = 'User-agent: *\nAllow: /\n\nSitemap: ' + base + '/sitemap.xml\n';
+        res.writeHead(200, {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'public, max-age=86400',
+        });
+        return res.end(body);
+      } catch(e){
+        console.warn('[robots] failed for', slug, ':', e.message);
+        res.writeHead(500); return res.end('500');
+      }
     })();
   }
 

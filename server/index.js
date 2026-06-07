@@ -22604,6 +22604,104 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, out);
   }
 
+  // 🚀 GET /api/admin/seo-sitemap-urls — 全 サイト マップ URL 一覧 を 返す
+  //    (= GSC / Bing Webmaster に 手動 登録 する 際 に コピペ で 使える)
+  if(pathname === '/api/admin/seo-sitemap-urls' && method === 'GET'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    try {
+      const r = await sbReq('GET', 'media_slug_index', '?select=slug&limit=500');
+      const slugs = Array.isArray(r.d) ? r.d.map(x => x.slug).filter(Boolean) : [];
+      const sitemapUrls = [];
+      const robotsUrls = [];
+      const llmsUrls = [];
+      for(const slug of slugs){
+        const base = USE_MEDIA_SUBDOMAIN
+          ? ('https://' + slug + '.' + MEDIA_BASE_DOMAIN)
+          : ('https://' + MEDIA_BASE_DOMAIN + '/media/' + slug);
+        sitemapUrls.push(base + '/sitemap.xml');
+        robotsUrls.push(base + '/robots.txt');
+        llmsUrls.push(base + '/llms.txt');
+      }
+      return jres(res, 200, {
+        count: slugs.length,
+        sitemaps: sitemapUrls,
+        robots: robotsUrls,
+        llms: llmsUrls,
+        gsc_submit_hint: 'Each sitemap URL must be added to its own GSC property (= URL prefix property). After adding the property and verifying ownership, submit the sitemap URL.',
+      });
+    } catch(e){
+      return jres(res, 500, { error: 'fetch failed: ' + e.message });
+    }
+  }
+
+  // 🚀 POST /api/admin/seo-refresh-old — 古 記事 (= 90 日 以上 公開 + 未 リフレッシュ) を
+  //    AI に 自動 リフレッシュ させ る。 body: { userId, limit?:10, ageDays?:90 }
+  //    実 実 行 は 既存 _rewriteMediaArticle を 流用。 順次 (= 並列 1) で credit 暴走 防止。
+  if(pathname === '/api/admin/seo-refresh-old' && method === 'POST'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    const body = await readBody(req).catch(() => ({}));
+    const userId = String(body && body.userId || '').trim();
+    if(!userId) return jres(res, 400, { error: 'userId required' });
+    const limit = Math.min(20, Math.max(1, parseInt(body && body.limit, 10) || 5));
+    const ageDays = Math.max(30, parseInt(body && body.ageDays, 10) || 90);
+    const cutoffMs = Date.now() - ageDays * 86400000;
+    const stats = { candidates: 0, refreshed: 0, failed: 0, details: [] };
+    try {
+      const user = await DB.findBy('id', userId);
+      if(!user) return jres(res, 404, { error: 'user not found' });
+      // 即時 応答 = 重い 処理 を background で
+      jres(res, 200, { ok: true, status: 'started', message: 'バックグラウンド で 古 記事 リフレッシュ 開始。 ログ で 進捗 確認。' });
+      (async () => {
+        for(const ag of user.agents || []){
+          if(!ag || !ag.media || !ag.media.id || !Array.isArray(ag.media_posts_idx)) continue;
+          // 90 日 以上 + 未 リフレッシュ の 記事 を 古い 順
+          const candidates = ag.media_posts_idx
+            .filter(p => p && p.status !== 'draft')
+            .filter(p => !p.rewritten_at || Date.parse(p.rewritten_at) < cutoffMs)
+            .filter(p => Date.parse(p.published_at || 0) < cutoffMs)
+            .sort((a, b) => (Date.parse(a.published_at || 0) || 0) - (Date.parse(b.published_at || 0) || 0))
+            .slice(0, limit);
+          stats.candidates += candidates.length;
+          for(const post of candidates){
+            try {
+              // 既存 rewrite ロジック を 流用 する 簡易 版: post の body_html を AI で 改稿
+              const oldBody = (user.media_posts_full && user.media_posts_full[post.id] && user.media_posts_full[post.id].body_html) || '';
+              if(!oldBody) continue;
+              const sys = 'あなた は SEO 編集者。 与えられた 既存 記事 を 「2026 年 最新 版」 に リフレッシュ する。 構造 と トーン を 維持 し、 古い 数値 / 用語 / リンク を 最新 化、 新しい セクション を 1-2 個 追加 して 内容 を 強化。 元 の HTML タグ 構造 を 保つ。';
+              const prompt = '【元 タイトル】 ' + (post.title || '') + '\n【KW】 ' + (post.keyword || '') + '\n\n【元 本文 HTML】\n' + oldBody.slice(0, 50000) + '\n\n上記 を 2026 年 最新 版 に リフレッシュ して、 HTML 本文 のみ を 返す (=  説明 文 不要)。';
+              const r = await callAIStream([{ role:'user', content: prompt }], sys, () => {}, 'haiku');
+              const newHtml = (r && (r.text || r.content || '')).trim();
+              if(newHtml.length < 500){ stats.failed++; continue; }
+              const cleaned = _sanitizeArticleHtml(newHtml);
+              if(!user.media_posts_full) user.media_posts_full = {};
+              user.media_posts_full[post.id] = { body_html: cleaned, saved_at: new Date().toISOString() };
+              post.rewritten_at = new Date().toISOString();
+              post.rewrite_count = (post.rewrite_count || 0) + 1;
+              await DB.saveAgent(user, { mediaPostsFull: true });
+              _mediaSlugCacheClear(ag.media.slug);
+              _indexNowPingFAF([_mediaPublicUrl(ag.media, post.slug), _mediaPublicUrl(ag.media, 'sitemap.xml')]);
+              stats.refreshed++;
+              stats.details.push({ slug: post.slug, title: post.title });
+              console.log('[seo-refresh] ✅ refreshed:', post.slug);
+              // 1 件 ごと に 60 秒 wait (= API rate 配慮)
+              await new Promise(r => setTimeout(r, 60000));
+            } catch(e){
+              stats.failed++;
+              console.warn('[seo-refresh] failed for', post.slug, ':', e.message);
+            }
+          }
+        }
+        console.log('[seo-refresh] FINISHED user=' + userId + ' candidates=' + stats.candidates + ' refreshed=' + stats.refreshed + ' failed=' + stats.failed);
+      })().catch(e => console.error('[seo-refresh] fatal:', e.message));
+      return;
+    } catch(e){
+      console.error('[seo-refresh] outer error:', e.message);
+      return; // 既に jres 済
+    }
+  }
+
   // POST /api/admin/seo-bulk-reindex — 全 ユーザ or 指定 user の 既存 記事 を 全部 IndexNow に 再 ping
   //   body: { userId?: '<id>' }  userId 指定 なし → 全 user
   //   header: X-Service-Key

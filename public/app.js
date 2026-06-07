@@ -9216,25 +9216,23 @@ function _renderHeroCard(ag){
   var lpRefData = (window._lpRefCache && window._lpRefCache[ag.id]) || null;
   var lpRefVal = lpRefData ? String(lpRefData.total_30d || 0) : '計測中';
 
-  // Desktop (= flex 1 row 全部表示) + Mobile (= 案 B: 主要 1 + 横スクロール 2 段) の 両対応 HTML。
-  // Mobile CSS で:
-  //   - .hc-title は section header に
-  //   - .hc-primary を 全幅 大型 hero に
-  //   - .hc-secondary-row / .hc-sns-row を 横スクロール carousel に
-  //   - .hc-divider は 非表示
-  // Desktop は 既存 flex layout で 1 行 並び (= CSS 無変更で 動く)。
+  // Desktop: 1 行 flex で 全セル 横並び (= 既存)
+  // Mobile: タイトル 上、 全 6 セル を 1 つ の 横スクロール 列 に 統一
+  // 仕組み: .hc-cells wrapper が desktop で display:contents (= 透過)、
+  //         mobile で display:flex + overflow-x:auto に 変わる。
   el.innerHTML = ''
     + '<div class="hc-title">🤖 AI チーム<br>累計実績</div>'
-    + _cell('📊 月間 PV', pvVal, _delta(deltaPct), 'hc-primary')
-    + '<div class="hc-divider"></div>'
-    + '<div class="hc-secondary-row">'
+    + '<div class="hc-cells">'
+    +   _cell('📊 月間 PV', pvVal, _delta(deltaPct))
+    +   '<div class="hc-divider"></div>'
     +   _cell('👥 月間ユーザー', userVal, '')
+    +   '<div class="hc-divider"></div>'
     +   _cell('📝 公開記事', articleCount + ' 本', '')
+    +   '<div class="hc-divider"></div>'
     +   _cell('🎯 LP 流入', lpRefVal, lpRefData && lpRefData.total_7d > 0 ? ('週 ' + lpRefData.total_7d) : '')
-    + '</div>'
-    + '<div class="hc-divider"></div>'
-    + '<div class="hc-sns-row">'
+    +   '<div class="hc-divider"></div>'
     +   _cell('📱 X', xConnected ? (x.followers != null ? _fmt(x.followers) : '0') : '未連携', '')
+    +   '<div class="hc-divider"></div>'
     +   _cell('🧵 Threads', threadsConnected ? (threads.followers != null ? _fmt(threads.followers) : '0') : '未連携', '')
     + '</div>';
 

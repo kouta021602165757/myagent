@@ -18967,64 +18967,211 @@ function _mediaRenderMinimalIndex(media, posts, opts){
     return '<a href="' + _mediaPublicUrl(media, 'cat/' + c.slug) + '" style="color:' + (isActive ? '#fff' : s.subColor) + ';text-decoration:none;padding:6px 12px;border:1px solid ' + (isActive ? accent : s.cardBorder) + ';border-radius:' + chipRadius + ';font-size:12.5px;font-weight:700;background:' + (isActive ? accent : s.cardBg) + ';white-space:nowrap">' + _mediaEsc(c.name) + '</a>';
   }).join('');
 
-  // Featured + grid
-  const featured = (posts && posts.length) ? posts[0] : null;
-  const restPosts = (posts && posts.length > 1) ? posts.slice(1) : [];
+  // ── 統計 thin bar (= ホーム のみ、 「生きてる メディア」 感) ──
+
+  // 🎨 動 き ある マガジン レイアウト (= 2026-06-07)
+  //    Home (= !categoryFilter): hero asym + carousel + cat tabs + grid + archive
+  //    Category: 既存 シンプル grid (= 同カテゴリ 記事 一覧)
   const heroGrad = [
     'linear-gradient(135deg,#1e293b,#0d4f4a)',
     'linear-gradient(135deg,#7c2d12,#dc2626)',
     'linear-gradient(135deg,#1e3a8a,#0f172a)',
     'linear-gradient(135deg,#14532d,#15803d)',
     'linear-gradient(135deg,#581c87,#dc2626)',
+    'linear-gradient(135deg,#831843,#be185d)',
+    'linear-gradient(135deg,#0c4a6e,#0891b2)',
+    'linear-gradient(135deg,#3f3f46,#71717a)',
   ];
 
-  const featuredHTML = featured ? `
-    <section style="padding:32px 24px 24px;border-bottom:2px solid ${isDark?'#334155':'#0a0a0a'};display:grid;grid-template-columns:1.3fr 1fr;gap:28px;align-items:center;max-width:1100px;margin:0 auto">
-      ${featured.hero_image_url
-        ? '<img src="'+_mediaEsc(featured.hero_image_url)+'" alt="'+_mediaEsc(featured.title)+'" style="width:100%;height:280px;object-fit:cover;border-radius:'+s.cardRadius+'">'
-        : '<div style="width:100%;height:280px;background:'+heroGrad[0]+';border-radius:'+s.cardRadius+'"></div>'}
-      <div>
-        <div style="font-size:10.5px;font-weight:800;letter-spacing:.1em;color:${accent};text-transform:uppercase;margin-bottom:9px;font-family:${s.brandFont}">▌ 特集${featured.category_name?' · '+_mediaEsc(featured.category_name):''}</div>
-        <h2 style="font-family:${s.titleFont};font-size:${s.heroTitleSize};font-weight:${s.titleWeight};line-height:1.18;margin:0 0 12px;letter-spacing:-.015em;color:${s.textColor}">
-          <a href="${_mediaPublicUrl(media, featured.slug)}" style="color:${s.textColor};text-decoration:none">${_mediaEsc(featured.title)}</a>
-        </h2>
-        ${featured.excerpt ? '<p style="font-size:14px;color:'+s.subColor+';line-height:1.65;margin:0 0 12px">'+_mediaEsc((featured.excerpt||'').slice(0,160))+'</p>' : ''}
-        <div style="display:flex;align-items:center;gap:9px;font-size:11.5px;color:${s.subColor}">
-          <div style="width:28px;height:28px;border-radius:50%;background:${brand};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800">${name.charAt(0).toUpperCase()}</div>
-          <span><b style="color:${s.textColor};font-weight:700">${authorName}</b> · ${_mediaEsc(_mediaFmtDate(featured.published_at))} · ${_mediaReadingTime(featured.excerpt||'').minutes>1?_mediaReadingTime(featured.excerpt||'').minutes:5} 分</span>
+  // ── 統計 算出 ──
+  const recent7d = posts.filter(p => {
+    const t = Date.parse(p.published_at || 0) || 0;
+    return t && (Date.now() - t) < 7 * 86400000;
+  }).length;
+  const recent30d = posts.filter(p => {
+    const t = Date.parse(p.published_at || 0) || 0;
+    return t && (Date.now() - t) < 30 * 86400000;
+  }).length;
+
+  // ── カテゴリ 別 件数 算出 ──
+  const catCounts = {};
+  for(const p of posts){
+    const k = p.category_name || 'その他';
+    catCounts[k] = (catCounts[k] || 0) + 1;
+  }
+
+  // ── 月別 アーカイブ 算出 ──
+  const monthCounts = {};
+  for(const p of posts){
+    const t = p.published_at;
+    if(!t) continue;
+    const ym = String(t).slice(0, 7); // YYYY-MM
+    monthCounts[ym] = (monthCounts[ym] || 0) + 1;
+  }
+  const monthList = Object.keys(monthCounts).sort().reverse().slice(0, 12);
+
+  // ── 記事 を 役割 別 に 分割 ──
+  // hero: 最初 5 本 (= 1 big + 4 small)
+  // trending: 次 10 本 (= 横スクロール)
+  // rest: 残り (= grid)
+  const heroPosts = posts.slice(0, 5);
+  const trendingPosts = posts.slice(5, 15);
+  const restPosts = posts.slice(15);
+
+  // ── カテゴリ chip (= 件数 付き) ──
+  const catTabsHTML = (media.categories || []).map(c => {
+    const cnt = catCounts[c.name] || 0;
+    const isActive = categoryFilter === c.name;
+    return '<a href="' + _mediaPublicUrl(media, 'cat/' + c.slug) + '" style="display:inline-flex;align-items:center;gap:6px;color:' + (isActive ? '#fff' : s.subColor) + ';text-decoration:none;padding:8px 14px;border:1px solid ' + (isActive ? accent : s.cardBorder) + ';border-radius:99px;font-size:12.5px;font-weight:700;background:' + (isActive ? accent : s.cardBg) + ';white-space:nowrap;transition:.15s">'
+      + '<span>' + _mediaEsc(c.name) + '</span>'
+      + '<span style="background:' + (isActive ? 'rgba(255,255,255,.25)' : (isDark ? '#1e293b' : s.headerBg)) + ';color:' + (isActive ? '#fff' : s.mutedColor) + ';font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:99px;letter-spacing:.02em">' + cnt + '</span>'
+      + '</a>';
+  }).join('');
+
+  // ── HERO セクション (= 1 大 + 4 小、 5 本 の asymmetric grid) ──
+  const heroPostCard = (p, opts2) => {
+    const sz = opts2 && opts2.size || 'small';
+    const isBig = sz === 'big';
+    const imgHeight = isBig ? '380px' : '120px';
+    const titleSize = isBig ? '26px' : '14px';
+    const titleLineClamp = isBig ? '3' : '2';
+    const excerptShow = isBig && p.excerpt;
+    const idx = opts2 && opts2.idx || 0;
+    return `
+      <article style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;display:flex;flex-direction:column;transition:all .2s;cursor:pointer" onmouseover="this.style.borderColor='${accent}';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)'" onmouseout="this.style.borderColor='${s.cardBorder}';this.style.transform='';this.style.boxShadow=''">
+        ${p.hero_image_url
+          ? '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;text-decoration:none"><img loading="lazy" decoding="async" src="'+_mediaEsc(p.hero_image_url)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:'+imgHeight+';object-fit:cover;display:block"></a>'
+          : '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;height:'+imgHeight+';background:'+heroGrad[idx%heroGrad.length]+';position:relative;text-decoration:none">'
+            + (isBig ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:30px;color:#fff;font-family:'+s.titleFont+';font-size:24px;font-weight:900;text-align:center;line-height:1.3;text-shadow:0 2px 8px rgba(0,0,0,.4)">'+_mediaEsc((p.title||'').slice(0,60))+'</div>' : '')
+            + '</a>'}
+        <div style="padding:${isBig ? '20px 22px' : '12px 14px'};flex:1;display:flex;flex-direction:column">
+          ${p.category_name ? '<div style="font-size:9.5px;font-weight:800;color:'+accent+';letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;font-family:'+s.brandFont+'">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
+          <h3 style="font-family:${s.titleFont};font-size:${titleSize};font-weight:${isBig?'900':'800'};color:${s.textColor};margin:0 0 ${isBig ? '10px' : '6px'};line-height:1.35;letter-spacing:-.005em;display:-webkit-box;-webkit-line-clamp:${titleLineClamp};-webkit-box-orient:vertical;overflow:hidden">
+            <a href="${_mediaPublicUrl(media, p.slug)}" style="color:${s.textColor};text-decoration:none">${_mediaEsc(p.title)}</a>
+          </h3>
+          ${excerptShow ? '<p style="font-size:13px;color:'+s.subColor+';line-height:1.65;margin:0 0 12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+_mediaEsc((p.excerpt||'').slice(0,140))+'</p>' : ''}
+          <div style="font-size:${isBig ? '11.5px' : '10px'};color:${s.mutedColor};margin-top:auto;font-family:${s.brandFont}">${_mediaEsc(_mediaFmtDate(p.published_at))}</div>
+        </div>
+      </article>`;
+  };
+
+  const heroSectionHTML = heroPosts.length > 0 ? `
+    <section style="padding:36px 24px 28px;max-width:1100px;margin:0 auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div style="font-family:${s.brandFont};font-size:11.5px;font-weight:800;color:${accent};letter-spacing:.12em;text-transform:uppercase">▌ 編 集 部 厳 選</div>
+        <div style="font-size:10.5px;color:${s.mutedColor}">${posts.length} 記事 公開 中</div>
+      </div>
+      ${heroPosts.length >= 5 ? `
+        <div style="display:grid;grid-template-columns:1.6fr 1fr;grid-template-rows:1fr 1fr;gap:18px;height:660px" class="hero-grid">
+          <div style="grid-row:1/3">${heroPostCard(heroPosts[0], { size:'big', idx:0 })}</div>
+          ${heroPostCard(heroPosts[1], { size:'small', idx:1 })}
+          ${heroPostCard(heroPosts[2], { size:'small', idx:2 })}
+          ${heroPostCard(heroPosts[3], { size:'small', idx:3 })}
+          ${heroPostCard(heroPosts[4], { size:'small', idx:4 })}
+        </div>
+      ` : `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px">
+          ${heroPosts.map((p, i) => heroPostCard(p, { size:'small', idx:i })).join('')}
+        </div>
+      `}
+    </section>` : '';
+
+  // ── 横スクロール カルーセル (= 「今 週 の 注目」) ──
+  const trendingHTML = trendingPosts.length > 0 ? `
+    <section style="padding:28px 0 24px;background:${isDark?'#0a1322':'#fafaf7'};border-top:1px solid ${s.cardBorder};border-bottom:1px solid ${s.cardBorder}">
+      <div style="max-width:1100px;margin:0 auto;padding:0 24px 14px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-family:${s.brandFont};font-size:13px;font-weight:800;color:${s.textColor};letter-spacing:.04em">🔥 今 週 の 注目</div>
+        <div style="font-size:10.5px;color:${s.mutedColor}">${recent7d > 0 ? '直近 7 日 で ' + recent7d + ' 本 公開' : trendingPosts.length + ' 本'}</div>
+      </div>
+      <div class="carousel" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scrollbar-width:none;padding:0 24px 12px">
+        <div style="display:inline-flex;gap:14px;padding-right:24px">
+          ${trendingPosts.map((p, i) => `
+            <a href="${_mediaPublicUrl(media, p.slug)}" style="flex:0 0 240px;scroll-snap-align:start;background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;text-decoration:none;color:inherit;transition:all .15s;display:flex;flex-direction:column" onmouseover="this.style.borderColor='${accent}'" onmouseout="this.style.borderColor='${s.cardBorder}'">
+              ${p.hero_image_url
+                ? '<img loading="lazy" decoding="async" src="'+_mediaEsc(p.hero_image_url)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:130px;object-fit:cover">'
+                : '<div style="height:130px;background:'+heroGrad[(i+5)%heroGrad.length]+'"></div>'}
+              <div style="padding:13px 14px;flex:1;display:flex;flex-direction:column">
+                ${p.category_name ? '<div style="font-size:9.5px;font-weight:800;color:'+accent+';letter-spacing:.06em;margin-bottom:5px">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
+                <div style="font-family:${s.titleFont};font-size:13.5px;font-weight:800;color:${s.textColor};line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:8px">${_mediaEsc(p.title)}</div>
+                <div style="font-size:10px;color:${s.mutedColor};margin-top:auto">${_mediaEsc(_mediaFmtDate(p.published_at))}</div>
+              </div>
+            </a>
+          `).join('')}
         </div>
       </div>
     </section>` : '';
 
+  // ── 全 記事 grid (= 「もっと 読む」 区画) ──
   const cardsHTML = (restPosts.length > 0) ? restPosts.map((p, i) => `
-      <article style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;display:flex;flex-direction:column">
+      <article style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;display:flex;flex-direction:column;transition:all .15s" onmouseover="this.style.borderColor='${accent}'" onmouseout="this.style.borderColor='${s.cardBorder}'">
         ${p.hero_image_url
-          ? '<img src="'+_mediaEsc(p.hero_image_url)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:150px;object-fit:cover">'
-          : '<div style="height:150px;background:'+heroGrad[(i+1)%heroGrad.length]+'"></div>'}
+          ? '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block"><img loading="lazy" decoding="async" src="'+_mediaEsc(p.hero_image_url)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:150px;object-fit:cover"></a>'
+          : '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;height:150px;background:'+heroGrad[(i+15)%heroGrad.length]+'"></a>'}
         <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column">
           ${p.category_name ? '<div style="font-size:9.5px;font-weight:800;color:'+accent+';letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;font-family:'+s.brandFont+'">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
           <h3 style="font-family:${s.titleFont};font-size:15px;font-weight:800;color:${s.textColor};margin:0 0 7px;line-height:1.35;letter-spacing:-.005em">
             <a href="${_mediaPublicUrl(media, p.slug)}" style="color:${s.textColor};text-decoration:none">${_mediaEsc(p.title)}</a>
           </h3>
           ${p.excerpt ? '<p style="font-size:12px;color:'+s.subColor+';line-height:1.55;margin:0 0 10px;flex:1">'+_mediaEsc((p.excerpt||'').slice(0,100))+'</p>' : ''}
-          <div style="font-size:10.5px;color:${s.mutedColor};margin-top:auto">${_mediaEsc(authorName)} · ${_mediaEsc(_mediaFmtDate(p.published_at))}</div>
+          <div style="font-size:10.5px;color:${s.mutedColor};margin-top:auto">${_mediaEsc(_mediaFmtDate(p.published_at))}</div>
         </div>
       </article>`).join('') : '';
 
-  const postsSection = featured ? `
-    ${featuredHTML}
+  // ── アーカイブ 月別 list ──
+  const archiveHTML = monthList.length > 1 ? `
+    <section style="padding:24px;max-width:1100px;margin:0 auto;border-top:1px solid ${s.cardBorder}">
+      <div style="font-family:${s.brandFont};font-size:11px;font-weight:800;color:${s.subColor};letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px">📅 アーカイブ</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;font-size:11.5px">
+        ${monthList.map(ym => {
+          const [y, m] = ym.split('-');
+          return '<span style="padding:5px 11px;background:'+s.cardBg+';border:1px solid '+s.cardBorder+';border-radius:99px;color:'+s.subColor+'">' + y + ' 年 ' + parseInt(m, 10) + ' 月 <b style="color:'+s.textColor+'">(' + monthCounts[ym] + ')</b></span>';
+        }).join('')}
+      </div>
+    </section>` : '';
+
+  // ── ホーム vs カテゴリ ページ で 構成 切替 ──
+  const postsSection = (categoryFilter || posts.length === 0) ? (
+    // カテゴリ ページ or 空 メディア: 既存 シンプル grid
+    posts.length > 0 ? `
+      <section style="padding:24px;max-width:1100px;margin:0 auto">
+        <div style="font-family:${s.brandFont};font-size:11px;color:${s.subColor};letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid ${s.cardBorder}">▌ 同カテゴリの記事</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px">
+          ${posts.map((p, i) => `
+            <article style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;display:flex;flex-direction:column">
+              ${p.hero_image_url
+                ? '<a href="'+_mediaPublicUrl(media, p.slug)+'"><img loading="lazy" decoding="async" src="'+_mediaEsc(p.hero_image_url)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:150px;object-fit:cover;display:block"></a>'
+                : '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;height:150px;background:'+heroGrad[i%heroGrad.length]+'"></a>'}
+              <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column">
+                ${p.category_name ? '<div style="font-size:9.5px;font-weight:800;color:'+accent+';letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
+                <h3 style="font-family:${s.titleFont};font-size:15px;font-weight:800;color:${s.textColor};margin:0 0 7px;line-height:1.35"><a href="${_mediaPublicUrl(media, p.slug)}" style="color:${s.textColor};text-decoration:none">${_mediaEsc(p.title)}</a></h3>
+                ${p.excerpt ? '<p style="font-size:12px;color:'+s.subColor+';line-height:1.55;margin:0 0 10px;flex:1">'+_mediaEsc((p.excerpt||'').slice(0,100))+'</p>' : ''}
+                <div style="font-size:10.5px;color:${s.mutedColor};margin-top:auto">${_mediaEsc(_mediaFmtDate(p.published_at))}</div>
+              </div>
+            </article>`).join('')}
+        </div>
+      </section>
+    ` : `
+      <section style="padding:60px 24px;text-align:center;max-width:660px;margin:0 auto">
+        <div style="font-size:42px;margin-bottom:14px;opacity:.6">📝</div>
+        <h2 style="font-family:${s.titleFont};font-size:22px;font-weight:800;color:${s.textColor};margin:0 0 10px">記事準備中</h2>
+        <p style="font-size:13.5px;color:${s.subColor};line-height:1.7;margin:0">編集部が記事を準備中です。 もう少しお待ちください。</p>
+      </section>
+    `
+  ) : (
+    // ホーム: 新 マガジン レイアウト
+    `${heroSectionHTML}
+    ${trendingHTML}
     ${cardsHTML ? `
-    <section style="padding:24px;max-width:1100px;margin:0 auto">
-      <div style="font-family:${s.brandFont};font-size:11px;color:${s.subColor};letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid ${s.cardBorder}">▌ ${categoryFilter ? '同カテゴリの記事' : '最新記事'}</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px">${cardsHTML}</div>
-    </section>` : ''}
-  ` : `
-    <section style="padding:60px 24px;text-align:center;max-width:660px;margin:0 auto">
-      <div style="font-size:42px;margin-bottom:14px;opacity:.6">📝</div>
-      <h2 style="font-family:${s.titleFont};font-size:22px;font-weight:800;color:${s.textColor};margin:0 0 10px">記事準備中</h2>
-      <p style="font-size:13.5px;color:${s.subColor};line-height:1.7;margin:0">編集部が記事を準備中です。 もう少しお待ちください。</p>
-    </section>
-  `;
+      <section style="padding:34px 24px 28px;max-width:1100px;margin:0 auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div style="font-family:${s.brandFont};font-size:13px;font-weight:800;color:${s.textColor};letter-spacing:.04em">📚 もっと 読む</div>
+          <div style="font-size:10.5px;color:${s.mutedColor}">${restPosts.length} 本</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px">${cardsHTML}</div>
+      </section>
+    ` : ''}
+    ${archiveHTML}`
+  );
 
   // About snippet (= E-E-A-T 強化、 編集部紹介)
   const aboutHTML = `
@@ -19076,6 +19223,14 @@ ${schemaTags}
   .b-nav .sub{background:${brand};color:#fff;padding:7px 14px;border-radius:${s.chipStyle==='pill'?'18px':(s.chipStyle==='square'?'0':'6px')};font-size:11.5px;font-weight:800;text-decoration:none}
   footer.site-foot{padding:20px 24px;background:${s.headerBg};font-size:11px;color:${s.mutedColor};border-top:1px solid ${s.cardBorder};max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
   footer.site-foot a{color:${s.subColor};text-decoration:none;margin-right:14px}
+  /* 🎨 横スクロール スクロールバー 非表示 (= iOS Safari でも) */
+  .carousel::-webkit-scrollbar{display:none}
+  .cat-tabs::-webkit-scrollbar{display:none}
+  @media (max-width:760px){
+    /* HERO grid: 1 列 縦 stack に (= モバイル) */
+    .hero-grid{grid-template-columns:1fr !important;grid-template-rows:auto !important;height:auto !important;gap:14px !important}
+    .hero-grid > div:first-child{grid-row:auto !important}
+  }
   @media (max-width:640px){
     section[style*="grid-template-columns:1.3fr 1fr"]{grid-template-columns:1fr !important}
     section[style*="grid-template-columns:auto 1fr"]{grid-template-columns:1fr !important;text-align:center}
@@ -19109,7 +19264,28 @@ ${categoryFilter ? `
   </section>
 ` : ''}
 
-${categoriesHTML ? `<div style="padding:14px 24px;background:${s.headerBg};display:flex;gap:7px;overflow-x:auto;border-bottom:1px solid ${s.cardBorder};max-width:1100px;margin:0 auto;width:100%">${categoriesHTML}</div>` : ''}
+${!categoryFilter && posts.length > 0 ? `
+<div style="background:${isDark?'#0a1322':'#fafaf7'};border-bottom:1px solid ${s.cardBorder}">
+  <div style="max-width:1100px;margin:0 auto;padding:9px 24px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:11.5px;color:${s.subColor};font-family:${s.brandFont}">
+    <span>📊 <b style="color:${s.textColor}">${posts.length}</b> 記事 公開</span>
+    ${recent30d > 0 ? '<span style="color:'+s.mutedColor+'">·</span><span>🆕 直近 30 日 で <b style="color:'+s.textColor+'">' + recent30d + '</b> 本</span>' : ''}
+    ${recent7d > 0 ? '<span style="color:'+s.mutedColor+'">·</span><span style="color:#15803d;font-weight:700">⚡ 今 週 ' + recent7d + ' 本 公開</span>' : ''}
+  </div>
+</div>
+` : ''}
+
+${(media.categories || []).length > 0 ? `
+<div style="background:${s.headerBg};border-bottom:1px solid ${s.cardBorder}">
+  <div style="max-width:1100px;margin:0 auto;padding:14px 24px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none" class="cat-tabs">
+    <a href="${_mediaPublicUrl(media)}" style="display:inline-flex;align-items:center;gap:6px;color:${!categoryFilter ? '#fff' : s.subColor};text-decoration:none;padding:8px 14px;border:1px solid ${!categoryFilter ? accent : s.cardBorder};border-radius:99px;font-size:12.5px;font-weight:700;background:${!categoryFilter ? accent : s.cardBg};white-space:nowrap;transition:.15s">
+      <span>すべて</span>
+      <span style="background:${!categoryFilter ? 'rgba(255,255,255,.25)' : (isDark ? '#1e293b' : '#fff')};color:${!categoryFilter ? '#fff' : s.mutedColor};font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:99px">${posts.length}</span>
+    </a>
+    ${catTabsHTML}
+  </div>
+</div>
+<style>.cat-tabs::-webkit-scrollbar{display:none}</style>
+` : ''}
 
 <main>
   ${postsSection}

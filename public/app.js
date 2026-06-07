@@ -9581,10 +9581,68 @@ function _renderKwPlannerTab(site){
     +       'onkeydown="if(event.key===\'Enter\')_kpSearch(\''+siteId+'\')">'
     +     '<button onclick="_kpSearch(\''+siteId+'\')" style="background:var(--teal);color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">🔍 検索</button>'
     +   '</div>'
+    +   '<div id="kpHistory" style="margin-bottom:8px"></div>'
     +   '<div style="font-size:10.5px;color:var(--text3);line-height:1.6">💡 AI が 10 タイトル候補 + 競合 / ボリューム / 上位 SERP を 5-10 秒で 提示 (= 数値は AI 推定、 参考値)</div>'
     + '</div>'
-    + '<div id="kpResult"></div>';
+    + '<div id="kpResult"></div>'
+    + '<script>setTimeout(function(){if(typeof _kpRenderHistory==="function")_kpRenderHistory("'+siteId+'");},50);<\/script>';
 }
+
+// 🕘 KW 検索 履歴 — localStorage に site 別 で 直近 20 件 保存。
+//    タブ 開いた 時 + 検索 直後 に 表示 更新。
+window._kpHistoryKey = function(siteId){ return 'kp_history_v1_' + siteId; };
+window._kpHistoryGet = function(siteId){
+  try {
+    var raw = localStorage.getItem(_kpHistoryKey(siteId));
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch(_){ return []; }
+};
+window._kpHistoryAdd = function(siteId, kw){
+  if(!kw) return;
+  var arr = _kpHistoryGet(siteId);
+  // 同じ KW を 前 から 除去 して 先頭 に 追加 (= 最新 順)
+  arr = arr.filter(function(x){ return x.kw !== kw; });
+  arr.unshift({ kw: kw, at: new Date().toISOString() });
+  arr = arr.slice(0, 20);
+  try { localStorage.setItem(_kpHistoryKey(siteId), JSON.stringify(arr)); } catch(_){}
+  _kpRenderHistory(siteId);
+};
+window._kpHistoryClear = function(siteId){
+  if(!confirm('キーワード 履歴 を 全削除 しますか?')) return;
+  try { localStorage.removeItem(_kpHistoryKey(siteId)); } catch(_){}
+  _kpRenderHistory(siteId);
+};
+window._kpHistoryRemove = function(siteId, kw){
+  var arr = _kpHistoryGet(siteId).filter(function(x){ return x.kw !== kw; });
+  try { localStorage.setItem(_kpHistoryKey(siteId), JSON.stringify(arr)); } catch(_){}
+  _kpRenderHistory(siteId);
+};
+window._kpHistoryPick = function(siteId, kw){
+  var input = document.getElementById('kpInput');
+  if(input){ input.value = kw; }
+  _kpSearch(siteId);
+};
+window._kpRenderHistory = function(siteId){
+  var box = document.getElementById('kpHistory');
+  if(!box) return;
+  var arr = _kpHistoryGet(siteId);
+  if(arr.length === 0){ box.innerHTML = ''; return; }
+  var chips = arr.slice(0, 20).map(function(x){
+    var kwSafe = esc(x.kw);
+    var kwAttr = String(x.kw).replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+    return '<span style="display:inline-flex;align-items:center;gap:5px;background:var(--cream);border:1px solid var(--wire2);border-radius:99px;padding:5px 10px 5px 12px;font-size:11.5px;font-family:inherit;cursor:pointer;transition:.15s" onmouseover="this.style.borderColor=\'var(--teal)\';this.style.background=\'var(--teal-soft)\'" onmouseout="this.style.borderColor=\'var(--wire2)\';this.style.background=\'var(--cream)\'">'
+      + '<span onclick="_kpHistoryPick(\''+siteId+'\',\''+kwAttr+'\')" style="color:var(--text);font-weight:700">'+kwSafe+'</span>'
+      + '<button onclick="event.stopPropagation();_kpHistoryRemove(\''+siteId+'\',\''+kwAttr+'\')" style="background:none;border:0;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 2px;font-family:inherit" title="削除">×</button>'
+      + '</span>';
+  }).join(' ');
+  box.innerHTML = ''
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+    +   '<div style="font-size:10.5px;color:var(--text3);font-weight:700;letter-spacing:.04em">🕘 履歴 ('+arr.length+')</div>'
+    +   '<button onclick="_kpHistoryClear(\''+siteId+'\')" style="background:none;border:0;color:var(--text3);cursor:pointer;font-size:10.5px;font-family:inherit;text-decoration:underline;padding:0">全 削除</button>'
+    + '</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px">' + chips + '</div>';
+};
 
 // _kpSearch — keyword-detail + serp-analysis を 並列 fetch → render
 window._kpSearch = function(siteId){
@@ -9601,6 +9659,8 @@ window._kpSearch = function(siteId){
     api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/serp-analysis?kw=' + encodeURIComponent(kw)).catch(function(){ return null; }),
   ]).then(function(arr){
     _kpRender(siteId, kw, arr[0], arr[1]);
+    // 🕘 履歴 に 追加 (= 成功 / 失敗 関係 なく 検索 した kw を 残す)
+    try { _kpHistoryAdd(siteId, kw); } catch(_){}
   });
 };
 

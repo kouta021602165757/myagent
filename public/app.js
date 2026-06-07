@@ -15565,10 +15565,26 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     const charsLbl = chars ? chars[1] + ' 字' : '';
     const wrapStart = url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:block">' : '<div>';
     const wrapEnd = url ? '</a>' : '</div>';
+    // ✏️ 修正 button (= success card のみ、 thread parent id ある場合)
+    // workflow: タップ で thread drawer 開き、 composer に 修正 prompt template が pre-fill。
+    var threadParentId = (raw && raw.thread_parent_id) || (raw && raw.id) || '';
+    var canEdit = !isStart && !isFail && threadParentId;
+    var editBtnHtml = '';
+    if(canEdit){
+      var titleSafeAttr = esc((title || '').replace(/"/g, '&quot;').slice(0, 80));
+      editBtnHtml = ''
+        + '<div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--wire2)">'
+        +   '<button onclick="event.preventDefault();event.stopPropagation();_openEditThread(\''+esc(threadParentId)+'\',\''+titleSafeAttr+'\')" '
+        +   'style="flex:1;background:#0d4f4a;color:#fff;border:0;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;-webkit-tap-highlight-color:transparent;min-height:42px">'
+        +     '<span>✏️</span><span>ここ を 修正</span>'
+        +   '</button>'
+        + '</div>';
+    }
     const card = '<div class="article-card" style="margin:8px 0;max-width:520px">'
       + wrapStart
-      + '<div style="background:#fff;border:1px solid var(--wire);border-radius:11px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;' + (url ? 'cursor:pointer;transition:all .15s' : '') + '" '
+      + '<div style="background:#fff;border:1px solid var(--wire);border-radius:11px;padding:14px 16px;' + (url ? 'cursor:pointer;transition:all .15s' : '') + '" '
       +   (url ? 'onmouseover="this.style.borderColor=\'#0d4f4a\';this.style.boxShadow=\'0 4px 12px rgba(0,0,0,.06)\'" onmouseout="this.style.borderColor=\'var(--wire)\';this.style.boxShadow=\'\'"' : '') + '>'
+      + '<div style="display:flex;gap:12px;align-items:flex-start">'
       +   '<div style="width:42px;height:42px;border-radius:9px;background:' + statusBg + ';color:' + statusColor + ';display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0">' + icon + '</div>'
       +   '<div style="flex:1;min-width:0">'
       +     '<div style="font-size:10px;font-weight:800;color:' + statusColor + ';letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase">📝 ' + statusLbl + (charsLbl ? ' · ' + esc(charsLbl) : '') + '</div>'
@@ -15576,6 +15592,8 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
       +     (catName ? '<div style="margin-bottom:6px">' + catChip + '</div>' : '')
       +     (domain ? '<div style="font-size:11px;color:var(--text3);font-family:ui-monospace,monospace;display:flex;align-items:center;gap:5px"><span style="opacity:.7">🔗</span>' + esc(domain) + '<span style="margin-left:auto;color:var(--teal);font-weight:800">開く →</span></div>' : '')
       +   '</div>'
+      + '</div>'
+      + editBtnHtml
       + '</div>'
       + wrapEnd
       + '</div>';
@@ -23709,6 +23727,33 @@ async function _promoteToGroupFromEdit(){
 // with the parent message + all replies + a composer that posts thread
 // replies (server tags them with thread_parent_id; they're hidden from
 // the main timeline).
+// 📝 「✏️ ここ を 修正」 button から 呼ばれる: thread を 開いて composer に template 投入。
+// パラメータ: parentId = thread 親メッセージ id, title = 修正対象 記事 タイトル (= 文脈 用)。
+window._openEditThread = function(parentId, title){
+  try {
+    _openThread(parentId);
+  } catch(e){
+    console.warn('[_openEditThread] _openThread threw:', e && e.message);
+    return;
+  }
+  // thread drawer の composer (#tci) に prompt template を pre-fill。
+  // 開いた 直後 は drawer が まだ render 中 の 可能性 ある ので 軽く delay 後 に focus + insert。
+  setTimeout(function(){
+    var ci = document.getElementById('tci');
+    if(!ci) return;
+    var template = '「' + (title || 'この記事') + '」 の ';
+    // 既に 何か 入力 中 なら 上書き しない
+    if(!ci.value || ci.value.trim() === ''){
+      ci.value = template;
+    }
+    try { ci.focus(); } catch(_){}
+    // cursor を 末尾 に
+    try { ci.selectionStart = ci.selectionEnd = ci.value.length; } catch(_){}
+    // 高さ 調整 (= textarea が 1 行 で 始まる 場合)
+    try { if(typeof exTA === 'function') exTA(ci); } catch(_){}
+  }, 250);
+};
+
 function _openThread(parentId){
   // Visible debug — show a toast immediately so the user knows their click
   // was received. If the drawer fails to open they'll see WHY (the toast

@@ -16033,6 +16033,14 @@ function _sanitizeArticleHtml(html){
   out = out.replace(/(href|action|formaction)\s*=\s*(["']?)\s*data\s*:/gi, '$1=$2#');
   // srcdoc は iframe で使うが既にタグ削除済み、念のため
   out = out.replace(/\ssrcdoc\s*=/gi, ' data-srcdoc-removed=');
+  // 🚀 SEO: 画像 lazy load + decoding async を 全画像 に 強制注入 (= LCP/CLS 改善)
+  //    既に loading 属性 ある なら 触らない、 無い なら 追加。
+  out = out.replace(/<img\b([^>]*)>/gi, (full, attrs) => {
+    if(/\bloading\s*=/i.test(attrs)) return full; // 既存 を 尊重
+    return '<img' + attrs + ' loading="lazy" decoding="async">';
+  });
+  // 🚀 SEO: alt 無い 画像 に 空 alt を 補完 (= a11y / Lighthouse 違反 回避)
+  out = out.replace(/<img\b((?:(?!\balt\s*=)[^>])*)>/gi, '<img$1 alt="">');
   return out;
 }
 
@@ -17294,9 +17302,11 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
   const authorName = _mediaEsc(post.author_name || _mediaInferAuthorName(media, opts && opts.agent || {}));
   const authorBio = _mediaEsc(_mediaInferAuthorBio(media, opts && opts.agent || {}));
 
+  // 🎯 SEO: TL;DR auto-inject (= Featured Snippet 0 位 + AI Overviews 引用 候補)
+  const bodyWithTldr = _mediaInjectTldr(body_html, post);
   // TOC + body with anchor ids
-  const bodyWithIds = _mediaAddTocIds(body_html);
-  const toc = _mediaExtractToc(body_html);
+  const bodyWithIds = _mediaAddTocIds(bodyWithTldr);
+  const toc = _mediaExtractToc(bodyWithTldr);
   const rt = _mediaReadingTime(body_html);
   const dateLocale = (media.template === 'tech') ? 'mono' : 'ja';
 
@@ -17436,16 +17446,17 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
       </div>
     </section>` : '';
 
-  // JSON-LD schema 全網羅 (Article / BreadcrumbList / Organization / FAQPage / HowTo / Speakable)
+  // JSON-LD schema 全網羅 (Article / BreadcrumbList / Organization / Person / FAQPage / HowTo / Speakable)
   const articleSchema = _mediaArticleSchema(media, post, body_html, host);
   const breadcrumbSchema = _mediaBreadcrumbSchema(media, post, host);
   const orgSchema = _mediaOrgSchema(media, host);
+  const personSchema = _mediaPersonSchema(media, opts && opts.agent);  // 著者 単体 Person
   const faqSchema = _mediaFaqSchema(body_html);            // FAQ あれば
   const howtoSchema = _mediaHowToSchema(post, body_html);  // 手順あれば
   const speakableSchema = _mediaSpeakableSchema();         // 音声検索
   // article schema に speakable を inline
   articleSchema.speakable = speakableSchema;
-  const allSchemas = [articleSchema, breadcrumbSchema, orgSchema, faqSchema, howtoSchema].filter(Boolean);
+  const allSchemas = [articleSchema, breadcrumbSchema, orgSchema, personSchema, faqSchema, howtoSchema].filter(Boolean);
   const schemaTags = _mediaSchemaInject(...allSchemas);
 
   const publicUrl = _mediaPublicUrl(media, post.slug);
@@ -17721,6 +17732,182 @@ ${footerBanner}
 // ──────────────────────────────────────────────────────────────────
 // 📖 公開メディア ABOUT ページ SSR (= 編集部紹介、 E-E-A-T 最大の核)
 // ──────────────────────────────────────────────────────────────────
+// 🎯 E-E-A-T 必須 ページ 自動 生成 (= contact / privacy / 特商法 / author)
+//    Google が 「信頼 できる サイト」 と 判定 する 最低 条件。 全 メディア で
+//    同じ ヘッダー / フッター / 構造 で 内容 だけ 差し替え。
+function _mediaRenderInfoPage(media, opts){
+  const kind = (opts && opts.kind) || 'contact'; // contact | privacy | tokushoho | author
+  const s = _mediaTemplateStyle(media.template);
+  const isDark = s.dark;
+  const name = _mediaEsc(media.name || 'Blog');
+  const brand = _mediaEsc(media.brand_color || s.accent || '#0d4f4a');
+  const accent = _mediaEsc(s.accent || brand);
+  const today = new Date().toISOString().slice(0, 10);
+  const lastUpdated = today; // 月次 更新 想定
+  const operator = _mediaEsc((media.operator_name) || _mediaInferAuthorName(media, opts && opts.agent || {}));
+  const operatorBio = _mediaEsc(_mediaInferAuthorBio(media, opts && opts.agent || {}));
+  const contactEmail = _mediaEsc(media.contact_email || 'contact@myaiagents.agency');
+  const lpUrl = _mediaEsc(media.lp_url || '');
+  const publicUrl = _mediaPublicUrl(media, kind === 'author' ? ('author/' + (opts && opts.authorSlug || '')) : kind);
+
+  // ページ 別 content
+  const titles = {
+    contact: 'お問い合わせ',
+    privacy: 'プライバシー ポリシー',
+    tokushoho: '特定 商取引 法 に 基づく 表記',
+    author: '著者 プロフィール',
+  };
+  const pageTitle = titles[kind] || 'ページ';
+
+  let bodyContent = '';
+  if(kind === 'contact'){
+    bodyContent = `
+      <p class="lead">${name} へ の お問い合わせ は 下記 の メール アドレス まで お送り ください。 通常 1-3 営業 日 以内 に 返信 いたします。</p>
+      <h2>お問い合わせ 方法</h2>
+      <p>📧 <strong>メール</strong>: <a href="mailto:${contactEmail}">${contactEmail}</a></p>
+      <p>件名 に 「お問い合わせ 内容」 を 明記 して 頂け ます と、 スムーズ に 対応 できます。</p>
+      <h2>受付 可能 な お問い合わせ</h2>
+      <ul>
+        <li>記事 内容 に 関する ご質問</li>
+        <li>取材 / 寄稿 の ご依頼</li>
+        <li>広告 / コラボ レーション の ご相談</li>
+        <li>その 他 ご感想 / ご要望</li>
+      </ul>
+      <h2>お問い合わせ 前 に</h2>
+      <p>お問い合わせ の 前 に、 <a href="${_mediaEsc(_mediaPublicUrl(media))}">記事 一覧</a> や <a href="${_mediaEsc(_mediaPublicUrl(media, 'about'))}">編集 部 について</a> も ご確認 ください。 該当 内容 が 見つかる 場合 が ございます。</p>`;
+  } else if(kind === 'privacy'){
+    bodyContent = `
+      <p class="lead">${name} (以下、 「当 サイト」 という。) は、 当 サイト の 提供 する サービス に おける、 ユーザー の 個人 情報 の 取扱い に ついて、 以下 の とおり プライバシー ポリシー を 定めます。</p>
+      <h2>第 1 条 (個人 情報)</h2>
+      <p>「個人 情報」 と は、 個人 情報 保護 法 に いう 「個人 情報」 を 指し、 生存 する 個人 に 関する 情報 で あって、 当該 情報 に 含まれる 氏名、 生年月日、 住所、 電話 番号、 連絡 先 その 他 の 記述 等 に より 特定 の 個人 を 識別 できる 情報 を いいます。</p>
+      <h2>第 2 条 (個人 情報 の 収集 方法)</h2>
+      <p>当 サイト は、 ユーザー が 利用 登録 を する 際 に 氏名、 生年月日、 住所、 電話 番号、 メール アドレス 等 の 個人 情報 を お尋ね する こと が あります。</p>
+      <h2>第 3 条 (個人 情報 を 収集 ・ 利用 する 目的)</h2>
+      <p>当 サイト が 個人 情報 を 収集 ・ 利用 する 目的 は、 以下 の とおり です。</p>
+      <ul>
+        <li>当 サイト の サービス の 提供 ・ 運営 の ため</li>
+        <li>ユーザー から の お問い合わせ に 回答 する ため</li>
+        <li>メンテナンス、 重要 な お知らせ など 必要 に 応じた ご連絡 の ため</li>
+      </ul>
+      <h2>第 4 条 (Cookie の 使用 に ついて)</h2>
+      <p>当 サイト で は、 ユーザー の 利便 性 向上 の ため に Cookie を 使用 する こと が あります。 Cookie の 受信 を 拒否 したい 場合 は、 ブラウザ の 設定 から 変更 が 可能 です。</p>
+      <h2>第 5 条 (アクセス 解析 ツール に ついて)</h2>
+      <p>当 サイト で は、 サイト の 分析 と 改善 の ため に Google Analytics、 Google Search Console 等 を 利用 する こと が あります。 これら は データ を 匿名 で 収集 し、 個人 を 特定 する もの で は ありません。</p>
+      <h2>第 6 条 (プライバシー ポリシー の 変更)</h2>
+      <p>本 ポリシー の 内容 は、 法令 その 他 本 ポリシー に 別段 の 定め の ある 事項 を 除いて、 ユーザー に 通知 する こと なく、 変更 する こと が できる もの と します。</p>
+      <p style="margin-top:32px;font-size:12px;color:${s.mutedColor}">最終 更新: ${lastUpdated}</p>`;
+  } else if(kind === 'tokushoho'){
+    bodyContent = `
+      <p class="lead">特定 商取引 法 に 基づく 表記 です。</p>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
+        <tbody>
+          <tr><th style="text-align:left;padding:12px 14px;background:${s.cardBg};border:1px solid ${s.cardBorder};width:30%;vertical-align:top">サイト 運営 者</th><td style="padding:12px 14px;border:1px solid ${s.cardBorder}">${operator}</td></tr>
+          <tr><th style="text-align:left;padding:12px 14px;background:${s.cardBg};border:1px solid ${s.cardBorder};vertical-align:top">所在 地</th><td style="padding:12px 14px;border:1px solid ${s.cardBorder}">お問い合わせ 頂いた 方 に 個別 に お知らせ します</td></tr>
+          <tr><th style="text-align:left;padding:12px 14px;background:${s.cardBg};border:1px solid ${s.cardBorder};vertical-align:top">連絡 先</th><td style="padding:12px 14px;border:1px solid ${s.cardBorder}">${contactEmail}</td></tr>
+          <tr><th style="text-align:left;padding:12px 14px;background:${s.cardBg};border:1px solid ${s.cardBorder};vertical-align:top">サイト 名</th><td style="padding:12px 14px;border:1px solid ${s.cardBorder}">${name}</td></tr>
+          <tr><th style="text-align:left;padding:12px 14px;background:${s.cardBg};border:1px solid ${s.cardBorder};vertical-align:top">サイト URL</th><td style="padding:12px 14px;border:1px solid ${s.cardBorder}"><a href="${_mediaEsc(_mediaPublicUrl(media))}">${_mediaEsc(_mediaPublicUrl(media)).replace(/^https?:\/\//,'')}</a></td></tr>
+          <tr><th style="text-align:left;padding:12px 14px;background:${s.cardBg};border:1px solid ${s.cardBorder};vertical-align:top">提供 内容</th><td style="padding:12px 14px;border:1px solid ${s.cardBorder}">情報 提供 を 目的 と した オウンド メディア の 運営</td></tr>
+          <tr><th style="text-align:left;padding:12px 14px;background:${s.cardBg};border:1px solid ${s.cardBorder};vertical-align:top">利用 料金</th><td style="padding:12px 14px;border:1px solid ${s.cardBorder}">無料 (= 閲覧 のみ)</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:32px;font-size:12px;color:${s.mutedColor}">最終 更新: ${lastUpdated}</p>`;
+  } else if(kind === 'author'){
+    const authorSlug = (opts && opts.authorSlug) || _mediaSlugify(operator);
+    const posts = (opts && Array.isArray(opts.posts)) ? opts.posts : [];
+    const authorAvatarUrl = media.author_avatar_url || '';
+    const avatarHtml = authorAvatarUrl
+      ? '<img src="' + _mediaEsc(authorAvatarUrl) + '" alt="' + operator + '" style="width:90px;height:90px;border-radius:50%;object-fit:cover">'
+      : '<div style="width:90px;height:90px;border-radius:50%;background:' + brand + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;font-family:' + s.titleFont + '">' + (operator.charAt(0).toUpperCase() || '?') + '</div>';
+    bodyContent = `
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;margin-bottom:32px;padding:24px;background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:12px">
+        ${avatarHtml}
+        <div>
+          <div style="font-family:${s.brandFont};font-size:11px;font-weight:800;color:${accent};letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px">著者</div>
+          <h1 style="margin:0 0 8px;font-size:26px">${operator}</h1>
+          <div style="font-size:13px;color:${s.subColor};line-height:1.7">${operatorBio || (operator + ' が 専門 領域 に ついて 発信 しています。')}</div>
+        </div>
+      </div>
+      <h2>${operator} が 執筆 した 記事 (${posts.length} 本)</h2>
+      ${posts.length === 0
+        ? '<p>まだ 記事 が ありません。</p>'
+        : ('<div style="display:grid;gap:11px">' + posts.slice(0, 30).map(p => `
+            <a href="${_mediaEsc(_mediaPublicUrl(media, p.slug))}" style="display:block;padding:14px 16px;background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:9px;text-decoration:none;color:${s.textColor}">
+              ${p.category_name ? '<div style="font-size:9.5px;color:'+accent+';font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
+              <div style="font-weight:800;font-size:14.5px;line-height:1.4;margin-bottom:4px">${_mediaEsc(p.title)}</div>
+              <div style="font-size:10.5px;color:${s.mutedColor}">${_mediaEsc(_mediaFmtDate(p.published_at, 'ja'))}</div>
+            </a>`).join('') + '</div>')}
+    `;
+  }
+
+  // schema
+  const orgSchema = _mediaOrgSchema(media, _mediaEsc(media.domain || 'myaiagents.agency'));
+  const personSchema = kind === 'author' ? _mediaPersonSchema(media, opts && opts.agent) : null;
+  const allSchemas = [orgSchema, personSchema].filter(Boolean);
+  const schemaTags = _mediaSchemaInject(...allSchemas);
+
+  const logoImg = media.logo_url
+    ? '<img src="' + _mediaEsc(media.logo_url) + '" alt="" loading="lazy" decoding="async" style="width:32px;height:32px;border-radius:'+(s.chipStyle==='pill'?'50%':'6px')+';object-fit:cover">'
+    : '<div style="width:32px;height:32px;border-radius:'+(s.chipStyle==='pill'?'50%':'6px')+';background:'+brand+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:900">' + name.charAt(0).toUpperCase() + '</div>';
+
+  return `<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${pageTitle} | ${name}</title>
+<meta name="description" content="${name} の ${pageTitle} ページ">
+<link rel="canonical" href="${publicUrl}">
+${media.favicon_url ? '<link rel="icon" href="' + _mediaEsc(media.favicon_url) + '">' : (media.logo_url ? '<link rel="icon" href="' + _mediaEsc(media.logo_url) + '">' : '<link rel="icon" href="/favicon.ico">')}
+<meta property="og:title" content="${pageTitle} | ${name}">
+<meta property="og:url" content="${publicUrl}">
+<meta property="og:type" content="${kind === 'author' ? 'profile' : 'website'}">
+${schemaTags}
+<style>
+  *{box-sizing:border-box;-webkit-text-size-adjust:100%}
+  body{margin:0;font-family:${s.bodyFont};color:${s.textColor};background:${s.bg};line-height:1.7}
+  a{color:${accent}}
+  header.brand-bar{background:${s.headerBg};border-bottom:1px solid ${s.cardBorder};padding:14px 24px;display:flex;align-items:center;gap:12px;max-width:1100px;margin:0 auto}
+  .b-name{font-family:${s.brandFont};font-weight:900;font-size:16px;color:${s.textColor};line-height:1.1}
+  .b-nav{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:11px;font-weight:700;color:${s.subColor}}
+  .b-nav a{color:${s.subColor};text-decoration:none}
+  .b-nav .sub{background:${brand};color:#fff;padding:7px 14px;border-radius:${s.chipStyle==='pill'?'18px':(s.chipStyle==='square'?'0':'6px')};font-size:11.5px;font-weight:800;text-decoration:none}
+  main{max-width:760px;margin:0 auto;padding:40px 24px 60px}
+  h1{font-family:${s.titleFont};font-size:30px;font-weight:${s.titleWeight};margin:0 0 16px;letter-spacing:-.015em;color:${s.textColor}}
+  .lead{font-size:15.5px;color:${s.subColor};line-height:1.8;margin:0 0 32px}
+  h2{font-family:${s.titleFont};font-size:19px;font-weight:900;margin:32px 0 12px;color:${s.textColor}}
+  p{margin:0 0 16px;color:${s.textColor};font-size:14.5px;line-height:1.85}
+  ul{margin:0 0 16px;padding-left:24px}
+  ul li{margin-bottom:6px}
+  table th{font-weight:700;color:${s.textColor}}
+  footer{padding:30px 24px 50px;border-top:1px solid ${s.cardBorder};text-align:center;font-size:11px;color:${s.mutedColor};margin-top:60px}
+  footer a{color:${s.subColor};margin:0 8px;text-decoration:none}
+</style>
+</head>
+<body>
+<header class="brand-bar">
+  <a href="${_mediaEsc(_mediaPublicUrl(media))}" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+    ${logoImg}<div class="b-name">${name}</div>
+  </a>
+  <div class="b-nav">
+    <a href="${_mediaEsc(_mediaPublicUrl(media))}">記事 一覧</a>
+    <a href="${_mediaEsc(_mediaPublicUrl(media, 'about'))}">編集 部</a>
+    ${lpUrl ? '<a class="sub" href="' + lpUrl + '" target="_blank" rel="noopener">サービス →</a>' : ''}
+  </div>
+</header>
+<main>
+  ${kind === 'author' ? '' : '<h1>' + pageTitle + '</h1>'}
+  ${bodyContent}
+</main>
+<footer>
+  <a href="${_mediaEsc(_mediaPublicUrl(media))}">ホーム</a>
+  <a href="${_mediaEsc(_mediaPublicUrl(media, 'about'))}">編集 部 について</a>
+  <a href="${_mediaEsc(_mediaPublicUrl(media, 'contact'))}">お問い合わせ</a>
+  <a href="${_mediaEsc(_mediaPublicUrl(media, 'privacy'))}">プライバシー ポリシー</a>
+  <a href="${_mediaEsc(_mediaPublicUrl(media, 'tokushoho'))}">特定 商取引 法</a>
+  <div style="margin-top:16px">© ${new Date().getFullYear()} ${name}</div>
+</footer>
+</body></html>`;
+}
+
 function _mediaRenderAbout(media, opts){
   const s = _mediaTemplateStyle(media.template);
   const isDark = s.dark;
@@ -18435,12 +18622,64 @@ function _mediaAddTocIds(html){
   });
 }
 
+// 🎯 TL;DR / 結論 先出し 自動 注入 — Featured Snippet 0 位 + AI Overviews 引用 候補。
+//    記事 冒頭 (= 最初 の H2 の 直前) に 「結論 ボックス」 を 自動 配置。
+//    既存 記事 にも 効く (= レンダー 時 注入 ので DB 触らない)。
+//    既に TL;DR らしき もの (= "結論:" を 含む callout) が あれば 重複 配置 しない。
+function _mediaInjectTldr(html, post){
+  if(!html || !post) return html || '';
+  let out = String(html);
+  // 既に TL;DR ある か 検出 (= class="tldr" or "結論:" callout)
+  if(/class\s*=\s*["'][^"']*\btldr\b/i.test(out)) return out;
+  if(/<(p|div|blockquote)[^>]*>[\s\S]{0,40}(?:結論|TL;?DR|要約)\s*[:：]/i.test(out.slice(0, 1200))) return out;
+  // 結論 として 使える 文 = excerpt → 無ければ 本文 最初 段落 から
+  let conclusion = String(post.excerpt || '').trim();
+  if(!conclusion){
+    const m = out.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+    if(m) conclusion = String(m[1]).replace(/<[^>]+>/g, '').trim();
+  }
+  if(!conclusion) return out;
+  // 80 字 以内 に トリム (= 視認 性、 Featured Snippet スイート スポット)
+  if(conclusion.length > 80){
+    // 句点 で 切れる なら そこ で
+    const cut = conclusion.slice(0, 80);
+    const lastDot = Math.max(cut.lastIndexOf('。'), cut.lastIndexOf('！'), cut.lastIndexOf('!'));
+    conclusion = (lastDot > 30) ? cut.slice(0, lastDot + 1) : (cut + '…');
+  }
+  // 安全 escape (= sanitize 済 だが 二重 防御)
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const tldrHtml = ''
+    + '<div class="tldr" style="background:linear-gradient(135deg,#fef9c3,#fef3c7);border-left:5px solid #d97706;border-radius:0 10px 10px 0;padding:18px 22px;margin:0 0 28px;font-size:15px;line-height:1.75;color:#451a03;box-shadow:0 2px 8px rgba(217,119,6,.08)">'
+    +   '<div style="font-size:10.5px;font-weight:900;color:#92400e;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">🎯 結論 (TL;DR)</div>'
+    +   '<div style="font-weight:700">' + esc(conclusion) + '</div>'
+    + '</div>';
+  // 最初 の H2 直前 に 挿入 (= H2 無い 場合 は 本文 先頭)
+  const h2Idx = out.search(/<h2\b/i);
+  if(h2Idx >= 0){
+    out = out.slice(0, h2Idx) + tldrHtml + out.slice(h2Idx);
+  } else {
+    out = tldrHtml + out;
+  }
+  return out;
+}
+
 // ──────────────────────────────────────────────────────────────────
 // 📐 JSON-LD schema (Article / BreadcrumbList / Organization)
 // ──────────────────────────────────────────────────────────────────
 function _mediaArticleSchema(media, post, body_html, host){
   const url = _mediaPublicUrl(media, post.slug);
   const rt = _mediaReadingTime(body_html);
+  const authorName = post.author_name || _mediaInferAuthorName(media, {});
+  const authorUrl = _mediaPublicUrl(media, 'author/' + _mediaSlugify(authorName));
+  // E-E-A-T: author を Person に (= Organization より E-E-A-T シグナル 強い)
+  const authorPerson = {
+    '@type': 'Person',
+    'name': authorName,
+    'url': authorUrl,
+  };
+  // bio あれば description に
+  const authorBio = (media && media.author_bio) || _mediaInferAuthorBio(media, {});
+  if(authorBio) authorPerson.description = String(authorBio).slice(0, 280);
   const out = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -18448,21 +18687,45 @@ function _mediaArticleSchema(media, post, body_html, host){
     'description': post.excerpt || '',
     'datePublished': post.published_at || '',
     'dateModified': post.rewritten_at || post.published_at || '',
-    'author': { '@type': 'Organization', 'name': post.author_name || _mediaInferAuthorName(media, {}) },
+    'author': authorPerson,
     'publisher': {
       '@type': 'Organization',
       'name': media.name || '',
+      'url': _mediaPublicUrl(media),
     },
     'wordCount': rt.chars,
     'timeRequired': 'PT' + rt.minutes + 'M',
     'mainEntityOfPage': { '@type': 'WebPage', '@id': url },
     'url': url,
+    'inLanguage': 'ja',
   };
   if(post.hero_image_url) out.image = post.hero_image_url;
-  if(post.category_name) out.articleSection = post.category_name;
+  if(post.category_name){
+    out.articleSection = post.category_name;
+    out.keywords = [post.category_name, post.keyword].filter(Boolean).join(', ');
+  }
   if(media.logo_url){
     out.publisher.logo = { '@type': 'ImageObject', 'url': media.logo_url };
   }
+  return out;
+}
+
+// Person schema (= 著者) - 単体 で 追加 (Article の author Person と 別 graph)
+function _mediaPersonSchema(media, agent){
+  if(!media) return null;
+  const name = _mediaInferAuthorName(media, agent || {});
+  if(!name) return null;
+  const out = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    'name': name,
+    'url': _mediaPublicUrl(media, 'author/' + _mediaSlugify(name)),
+  };
+  const bio = (media && media.author_bio) || _mediaInferAuthorBio(media, agent || {});
+  if(bio) out.description = String(bio).slice(0, 500);
+  if(media.author_avatar_url) out.image = media.author_avatar_url;
+  // affiliated organization
+  out.worksFor = { '@type': 'Organization', 'name': media.name || '', 'url': _mediaPublicUrl(media) };
   return out;
 }
 function _mediaBreadcrumbSchema(media, post, host){
@@ -33545,8 +33808,16 @@ const server=http.createServer(async(req,res)=>{
         const urls = [];
         // ルート (= 記事 一覧)
         urls.push({ loc: base + '/', priority: '1.0', changefreq: 'daily' });
-        // about ページ
+        // E-E-A-T 必須 ページ
         urls.push({ loc: base + '/about', priority: '0.6', changefreq: 'monthly' });
+        urls.push({ loc: base + '/contact', priority: '0.4', changefreq: 'yearly' });
+        urls.push({ loc: base + '/privacy', priority: '0.3', changefreq: 'yearly' });
+        urls.push({ loc: base + '/tokushoho', priority: '0.3', changefreq: 'yearly' });
+        // 著者 ページ
+        const authorName = (media.operator_name) || _mediaInferAuthorName(media, agent || {});
+        if(authorName){
+          urls.push({ loc: base + '/author/' + _mediaSlugify(authorName), priority: '0.6', changefreq: 'weekly' });
+        }
         // カテゴリ
         for(const c of cats){
           urls.push({ loc: base + '/cat/' + c.slug, priority: '0.7', changefreq: 'weekly' });
@@ -33588,6 +33859,58 @@ const server=http.createServer(async(req,res)=>{
     })();
   }
 
+  // 🚀 /media/:slug/llms.txt → AI 検索 (= ChatGPT / Perplexity / Claude) 用 hint ファイル
+  //    LLM クローラ が 優先 読込 する 形式 = サイト 概要 + 主要ページ + 推奨 chunk 順序。
+  //    https://llmstxt.org/ の 仕様 準拠。 競合 ほぼ 未実装 の 隙間 領域。
+  const mediaLlmsRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/llms\.txt$/);
+  if(mediaLlmsRoute && method === 'GET'){
+    return (async () => {
+      const slug = mediaLlmsRoute[1];
+      try {
+        const found = await _findUserByMediaSlug(slug, { includePosts: false });
+        if(!found){ res.writeHead(404, { 'Content-Type': 'text/plain' }); return res.end('Media not found'); }
+        const { agent } = found;
+        const media = agent.media;
+        const base = _mediaPublicUrl(media);
+        const posts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+        const cats = (media.categories || []).filter(c => c && c.slug);
+        // 直近 公開 30 本 を 主要 記事 と して 提示
+        const top = posts.slice(0, 30);
+        let body = '# ' + (media.name || 'Blog') + '\n\n';
+        body += '> ' + (media.description || media.name + ' のオウンドメディア') + '\n\n';
+        body += '## サイト 情報\n\n';
+        body += '- URL: ' + base + '/\n';
+        body += '- 編集 部: ' + base + '/about\n';
+        body += '- サイトマップ: ' + base + '/sitemap.xml\n';
+        body += '- 公開 記事 数: ' + posts.length + '\n\n';
+        if(cats.length){
+          body += '## カテゴリ\n\n';
+          for(const c of cats){
+            body += '- [' + c.name + '](' + base + '/cat/' + c.slug + ')\n';
+          }
+          body += '\n';
+        }
+        body += '## 最近 公開 記事 (= AI 検索 向け 推奨 引用 元)\n\n';
+        for(const p of top){
+          body += '- [' + p.title + '](' + base + '/' + p.slug + ')';
+          if(p.excerpt) body += ': ' + String(p.excerpt).slice(0, 140);
+          body += '\n';
+        }
+        body += '\n## 更新 頻度\n\n';
+        body += '日次 で 新 記事 公開、 古 記事 は 月次 で 内容 更新 する 場合 あり。\n';
+        body += '`dateModified` が 更新 されたら 内容 再取得 推奨。\n';
+        res.writeHead(200, {
+          'Content-Type': 'text/markdown; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600',
+        });
+        return res.end(body);
+      } catch(e){
+        console.warn('[llms.txt] failed for', slug, ':', e.message);
+        res.writeHead(500); return res.end('500');
+      }
+    })();
+  }
+
   // 🚀 /media/:slug/robots.txt → SEO: 各 メディア の robots.txt
   //    sitemap.xml の 場所 を 明示、 全 ページ 許可 (= /admin/ 等 ない の で simple)
   const mediaRobotsRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/robots\.txt$/);
@@ -33601,7 +33924,16 @@ const server=http.createServer(async(req,res)=>{
           return res.end('Media not found');
         }
         const base = _mediaPublicUrl(found.agent.media);
-        const body = 'User-agent: *\nAllow: /\n\nSitemap: ' + base + '/sitemap.xml\n';
+        // LLM クロー ラ も Allow 明示 + llms.txt 場所 を コメント で 明示
+        const body = ''
+          + 'User-agent: *\n'
+          + 'Allow: /\n\n'
+          + '# AI / LLM クローラ も 歓迎 (= GPTBot / ClaudeBot / PerplexityBot)\n'
+          + 'User-agent: GPTBot\nAllow: /\n\n'
+          + 'User-agent: ClaudeBot\nAllow: /\n\n'
+          + 'User-agent: PerplexityBot\nAllow: /\n\n'
+          + 'Sitemap: ' + base + '/sitemap.xml\n'
+          + '# LLM 向け hint: ' + base + '/llms.txt\n';
         res.writeHead(200, {
           'Content-Type': 'text/plain; charset=utf-8',
           'Cache-Control': 'public, max-age=86400',
@@ -33609,6 +33941,64 @@ const server=http.createServer(async(req,res)=>{
         return res.end(body);
       } catch(e){
         console.warn('[robots] failed for', slug, ':', e.message);
+        res.writeHead(500); return res.end('500');
+      }
+    })();
+  }
+
+  // 🎯 E-E-A-T: /media/:slug/(contact|privacy|tokushoho) — Google が 要求 する 信頼 シグナル
+  const mediaInfoRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/(contact|privacy|tokushoho)\/?$/);
+  if(mediaInfoRoute && method === 'GET'){
+    return (async () => {
+      const slug = mediaInfoRoute[1];
+      const kind = mediaInfoRoute[2];
+      try {
+        const found = await _findUserByMediaSlug(slug, { includePosts: false });
+        if(!found){
+          res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
+          return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center"><h1>404</h1></body></html>');
+        }
+        const { agent } = found;
+        const html = _mediaRenderInfoPage(agent.media, { kind, agent });
+        res.writeHead(200, {
+          'Content-Type': 'text/html;charset=utf-8',
+          'Cache-Control': 'public, max-age=3600',
+          'X-Frame-Options': 'SAMEORIGIN',
+          'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
+        });
+        return res.end(html);
+      } catch(e){
+        console.warn('[media-info]', kind, 'failed:', e.message);
+        res.writeHead(500); return res.end('500');
+      }
+    })();
+  }
+
+  // 🎯 E-E-A-T: /media/:slug/author/:authorSlug — 著者 プロフィール + 全 記事 一覧
+  const mediaAuthorRoute = effectivePath.match(/^\/media\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/author\/([a-z0-9][a-z0-9-]{0,80}[a-z0-9])\/?$/);
+  if(mediaAuthorRoute && method === 'GET'){
+    return (async () => {
+      const slug = mediaAuthorRoute[1];
+      const authorSlug = mediaAuthorRoute[2];
+      try {
+        const found = await _findUserByMediaSlug(slug, { includePosts: false });
+        if(!found){
+          res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
+          return res.end('<!doctype html><html><body style="font-family:system-ui;padding:60px;text-align:center"><h1>404</h1></body></html>');
+        }
+        const { agent } = found;
+        const allPosts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+        // 現状 1 メディア = 1 著者 想定 (= author slug 不一致 でも 全 記事 表示 = SEO 評価 統合)
+        const html = _mediaRenderInfoPage(agent.media, { kind: 'author', agent, authorSlug, posts: allPosts });
+        res.writeHead(200, {
+          'Content-Type': 'text/html;charset=utf-8',
+          'Cache-Control': 'public, max-age=900',
+          'X-Frame-Options': 'SAMEORIGIN',
+          'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
+        });
+        return res.end(html);
+      } catch(e){
+        console.warn('[media-author] failed:', e.message);
         res.writeHead(500); return res.end('500');
       }
     })();

@@ -2256,6 +2256,43 @@ window._markUiScale = function(pct){
   });
 };
 document.addEventListener('DOMContentLoaded',async()=>{
+  // 📱 Touch device: title 属性 long-press の 黒帯 ツールチップ を 全面 抑止。
+  //   sys-pill / ct-act / pill 等 で hover-meant tooltip が スマホ long-press で 出てしまう。
+  //   ナビゲーション labels (= aria-label) は そのまま 残す。
+  try {
+    var _isTouchDev = ('ontouchstart' in window) ||
+      (window.matchMedia && window.matchMedia('(hover:none) and (pointer:coarse)').matches);
+    if(_isTouchDev){
+      var _stripTitles = function(root){
+        try {
+          var nodes = (root || document).querySelectorAll('[title]');
+          for(var i=0;i<nodes.length;i++){
+            var el = nodes[i];
+            // aria-label が ない なら title → aria-label に 変換 (= accessibility 保持)
+            if(!el.getAttribute('aria-label')) el.setAttribute('aria-label', el.getAttribute('title'));
+            el.removeAttribute('title');
+          }
+        } catch(_){}
+      };
+      _stripTitles(document);
+      // 動的 insert された 要素 にも 対応 (= MutationObserver で 監視)
+      try {
+        var _mo = new MutationObserver(function(muts){
+          for(var i=0;i<muts.length;i++){
+            var m = muts[i];
+            if(m.addedNodes && m.addedNodes.length){
+              for(var j=0;j<m.addedNodes.length;j++){
+                var n = m.addedNodes[j];
+                if(n && n.nodeType === 1) _stripTitles(n);
+              }
+            }
+          }
+        });
+        _mo.observe(document.body, { childList:true, subtree:true });
+      } catch(_){}
+    }
+  } catch(_){}
+
   // i18n apply
   const _applyI18n=()=>{
     [['i18n-teamTitle',T.teamTitle],['i18n-teamSub',T.teamSub],['i18n-teamBtn',T.teamBtn],
@@ -2588,19 +2625,26 @@ async function api(method,path,body){
   }
   const data=await res.json();
   if(!res.ok){
-    // 401 = JWT expired / cleared。 UI は localStorage cache で 表示続行 してた状態。
-    // 1 回 だけ 「再ログイン が 必要」 toast を 出して、 localStorage cache を 破棄 + reload。
-    // 連打を防ぐため window._authExpiredShown フラグで 1 セッション 1 回 に 制限。
-    if(res.status === 401 && !window._authExpiredShown){
-      window._authExpiredShown = true;
-      try {
-        localStorage.removeItem('token');
-        localStorage.removeItem('cache_me_v1');
-        localStorage.removeItem('cache_agents_v1');
-      } catch(_){}
-      var msg401 = isJa ? 'セッションが切れました。 再ログインしてください。' : 'Session expired. Please re-login.';
-      try { showToast(msg401, 'ng'); } catch(_){ alert(msg401); }
-      setTimeout(function(){ try { window.location.href = 'auth.html'; } catch(_){ window.location.reload(); } }, 1800);
+    // 401 = JWT expired / cleared。 ただし 全 401 で redirect すると 3DS / 一部 API の 一時 401 で
+    // 誤爆 する (= ログイン してるのに 飛ばされる)。 サーバ JWT gate が 出す 特定文字列 にだけ 反応。
+    // さらに 単発 401 では redirect せず 3 回以上 連続 で 認証エラー が 出た 時のみ 発動 (= 真の 期限切れ 判定)。
+    var jwtErrMsg = (data && (data.error === '認証が必要です' || data.error === 'ユーザーが見つかりません'));
+    if(res.status === 401 && jwtErrMsg && !window._authExpiredShown){
+      window._auth401Count = (window._auth401Count || 0) + 1;
+      if(window._auth401Count >= 3){
+        window._authExpiredShown = true;
+        try {
+          localStorage.removeItem('token');
+          localStorage.removeItem('cache_me_v1');
+          localStorage.removeItem('cache_agents_v1');
+        } catch(_){}
+        var msg401 = isJa ? 'セッションが切れました。 再ログインしてください。' : 'Session expired. Please re-login.';
+        try { showToast(msg401, 'ng'); } catch(_){ alert(msg401); }
+        setTimeout(function(){ try { window.location.href = 'auth.html'; } catch(_){ window.location.reload(); } }, 1800);
+      }
+    } else if(res.status !== 401){
+      // 401 以外 が 1 つでも 通れば auth カウンタ リセット (= 単発 401 を 無視)
+      window._auth401Count = 0;
     }
     // Prefer the user-facing `detail` (Japanese hint) over the machine `error`
     // code when both are present. Callers can still read both via err.code /
@@ -14058,9 +14102,12 @@ async function openAgent(id){
     '<div class="ct-icon" '+_iconAttrs+'>'+_avHTML(ag.avatar)+'</div>'+
     '<div class="ct-titles">'+
       '<div class="ct-name" '+_nameAttrs+'><span class="live-status"></span><span class="ct-name-text">'+esc(ag.name)+'</span></div>'+
-      '<div class="ct-pills">'+topPills+' '+modelPill+' '+tasksPill+' '+connPill+' '+intelPill+' '+ctxPill+'</div>'+
+      '<div class="ct-pills ct-pills-inline">'+topPills+' '+modelPill+' '+tasksPill+' '+connPill+' '+intelPill+' '+ctxPill+'</div>'+
     '</div>'+
-    '<div class="ct-actions">'+ actsHTML +'</div>';
+    '<div class="ct-actions">'+ actsHTML +'</div>'+
+    // Mobile only: pills を chat-top 直下 にも 1 copy (= 2 段 layout 用)。
+    // CSS で desktop 時は ct-pills-mobile を 完全 hide、 mobile 時 は ct-pills-inline を hide。
+    '<div class="ct-pills ct-pills-mobile">'+topPills+' '+modelPill+' '+tasksPill+' '+connPill+' '+intelPill+' '+ctxPill+'</div>';
   // Hide share card whenever agent changes
   var sc=document.getElementById('shareCard'); if(sc) sc.style.display='none';
   // Reflect Chrome tool button state in composer
@@ -15501,7 +15548,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     // メイン timeline での start は 小さい pill (= 開いて中で 確認)
     if(isStart && !_renderingInThread){
       const parentId = raw.id || '';
-      return '<div class="sys-row" style="margin:6px 0"><span class="sys-pill" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;cursor:pointer" onclick="if(typeof _openThread===\'function\')_openThread(\''+esc(parentId)+'\')" title="スレッドを開く">⏳ 生成中: ' + esc((title||'').slice(0, 50)) + (catName ? ' · 📂 ' + esc(catName) : '') + ' · 💬 スレッドを開く</span></div>';
+      return '<div class="sys-row" style="margin:6px 0"><span class="sys-pill" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;cursor:pointer" onclick="if(typeof _openThread===\'function\')_openThread(\''+esc(parentId)+'\')">⏳ 生成中: ' + esc((title||'').slice(0, 50)) + (catName ? ' · 📂 ' + esc(catName) : '') + ' · 💬 スレッドを開く</span></div>';
     }
     const icon = isStart ? '⏳' : (isFail ? '⚠️' : '✅');
     const statusColor = isStart ? '#f59e0b' : (isFail ? '#dc2626' : '#15803d');

@@ -9317,3 +9317,89 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   .stab-btn{padding:12px 8px !important;font-size:12px !important;}
 }
 
+/* ══════════════════════════════════════════════════════════
+   📱 MOBILE CHAT-TOP CLEANUP (2026-06-07 round 2)
+   問題: ヘッダー が ☰ + 🔧 + pill 群 + 3 ボタン で 密集 / サイト名 浮き / wrap 崩れ
+   解決: row 1 = ☰ + icon + 名前 + actions、 row 2 = pills (横スクロール)
+   ══════════════════════════════════════════════════════════ */
+/* Desktop: mobile 専用 pills を 隠す */
+.ct-pills-mobile{display:none !important;}
+
+@media (max-width:700px){
+  .chat-top{
+    flex-wrap:wrap !important;
+    gap:8px !important;
+    padding:10px 12px !important;
+    row-gap:6px !important;
+  }
+  /* Row 1: hamburger + icon + name (flex 1) + actions(右端) */
+  .chat-top .mobile-hamburger{order:1;}
+  .chat-top .ct-icon{
+    order:2;
+    width:34px !important;height:34px !important;
+    border-radius:9px !important;font-size:16px !important;
+    box-shadow:0 1px 4px rgba(192,255,92,.18) !important;
+  }
+  .chat-top .ct-titles{order:3;flex:1 1 0 !important;min-width:0;}
+  .chat-top .ct-actions{order:4;margin-left:auto !important;}
+  /* ct-name: 1 行 で truncate */
+  .ct-name{font-size:14px !important;gap:6px !important;}
+  /* ct-titles 内 の inline pills は スマホで 非表示 (= 別 row に分離) */
+  .ct-titles .ct-pills-inline{display:none !important;}
+  /* Row 2: ct-pills-mobile を 表示 + 全幅 横スクロール */
+  .ct-pills-mobile{
+    display:flex !important;
+    order:5 !important;
+    flex-basis:100% !important;
+    flex-wrap:nowrap !important;
+    overflow-x:auto !important;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    margin-top:0 !important;
+    padding:2px 0;
+    gap:5px;
+    align-items:center;
+  }
+  .ct-pills-mobile::-webkit-scrollbar{display:none;}
+  .ct-pills-mobile > *{flex-shrink:0;}
+  /* ct-actions: ボタン 数 を 制限 (= 3 個 + ⋯ メニュー が 既存)
+     ボタン サイズ を 微縮 ・ 隙間 詰め で 4 個 まで 入れる */
+  .ct-actions{gap:4px !important;}
+  .ct-act{width:36px !important;height:36px !important;border-radius:9px !important;font-size:14px !important;-webkit-tap-highlight-color:transparent;}
+  .ct-act.wide{padding:0 9px !important;}
+}
+
+/* ══════════════════════════════════════════════════════════
+   📱 MOBILE COMPOSER TOOLBAR (2026-06-07)
+   問題: 📎 🔗 🎤 <> 📁 🌐 ... の ツールバー が 横 overflow
+   解決: composer-tools を 横スクロール 化 + 各 button を 縮小
+   ══════════════════════════════════════════════════════════ */
+@media (max-width:700px){
+  .composer-tools{
+    flex-wrap:nowrap !important;
+    overflow-x:auto !important;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    padding-bottom:2px;
+  }
+  .composer-tools::-webkit-scrollbar{display:none;}
+  .composer-tools > *{flex-shrink:0;}
+  /* fade-out 端を 出して 「もっとある よ」 を 視覚 sign 化 */
+  .composer{position:relative;}
+}
+
+/* ══════════════════════════════════════════════════════════
+   📱 MOBILE TITLE-TOOLTIP 抑止 (= long-press で 出る 黒帯 を 防ぐ)
+   CSS では tooltip 自体 を 完全 OFF に できない (= browser native) ので、
+   特定 element だけ user-select:none + ピンチ /長押し ハイライト OFF。
+   タイトル削除は JS 側 (= touch device 判定) で 行う。
+   ══════════════════════════════════════════════════════════ */
+@media (hover:none) and (pointer:coarse){
+  .sys-pill, .pill, .ct-act{
+    -webkit-touch-callout:none;
+    -webkit-user-select:none;user-select:none;
+  }
+}
+

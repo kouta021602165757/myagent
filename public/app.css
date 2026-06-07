@@ -9318,6 +9318,105 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
 }
 
 /* ══════════════════════════════════════════════════════════
+   🎯 HERO CARD — Desktop / Mobile 両対応 (案 B: 主要 1 + 横スクロール 2 段)
+   Desktop (≥701px): 全セル 1 行 横並び (= 既存 動作)、 wrapper は 透過 flex 表示
+   Mobile (≤700px): hc-primary 全幅 強調、 secondary / sns row は 各々 横スクロール
+   ══════════════════════════════════════════════════════════ */
+.hc-secondary-row, .hc-sns-row{
+  display:contents;  /* Desktop: wrapper を 透過化 (= 子セルが flex parent の 直接子に) */
+}
+
+@media (max-width:700px){
+  /* HERO カード を 縦 stack に */
+  #heroCard.hero-card{
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:10px !important;
+    padding:14px 14px 12px !important;
+  }
+  /* タイトル 行 */
+  .hero-card .hc-title{
+    max-width:none !important;
+    font-size:11px !important;
+    opacity:.65;
+  }
+  .hero-card .hc-title br{display:none;}
+  .hero-card .hc-title::after{content:' ';}
+  /* 主要 セル (= 月間 PV) 全幅 hero */
+  .hero-card .hc-cell.hc-primary{
+    grid-template-columns:1fr auto !important;
+    grid-template-rows:auto auto !important;
+    column-gap:10px !important;
+    padding:14px 16px;
+    background:rgba(192,255,92,.08);
+    border-radius:10px;
+    border:1px solid rgba(192,255,92,.18);
+  }
+  .hero-card .hc-cell.hc-primary .lbl{
+    font-size:11px !important;
+    opacity:.7;
+  }
+  .hero-card .hc-cell.hc-primary .val{
+    font-size:30px !important;
+    font-weight:900 !important;
+    line-height:1.1 !important;
+    grid-column:1 !important;
+  }
+  .hero-card .hc-cell.hc-primary .delta{
+    font-size:13px !important;
+    font-weight:800 !important;
+    grid-column:2 !important;
+    align-self:end;
+  }
+  /* divider 非表示 (= mobile では section 分離は wrapper 自体 が 担う) */
+  .hero-card .hc-divider{display:none !important;}
+  /* secondary-row / sns-row を 横スクロール carousel に */
+  #heroCard.hero-card .hc-secondary-row,
+  #heroCard.hero-card .hc-sns-row{
+    display:flex !important;
+    overflow-x:auto !important;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scroll-snap-type:x mandatory;
+    scrollbar-width:none;
+    gap:8px;
+    margin:0 -14px;
+    padding:0 14px 2px;
+  }
+  #heroCard.hero-card .hc-secondary-row::-webkit-scrollbar,
+  #heroCard.hero-card .hc-sns-row::-webkit-scrollbar{display:none;}
+  /* secondary セル サイズ (= ~ 0.3 セル 覗かせ で 「もっとある よ」 sign) */
+  #heroCard.hero-card .hc-secondary-row .hc-cell,
+  #heroCard.hero-card .hc-sns-row .hc-cell{
+    flex:0 0 auto;
+    scroll-snap-align:start;
+    padding:11px 14px;
+    background:rgba(255,255,255,.04);
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,.06);
+    min-width:130px;
+  }
+  #heroCard.hero-card .hc-secondary-row .hc-cell .lbl,
+  #heroCard.hero-card .hc-sns-row .hc-cell .lbl{
+    font-size:10.5px !important;
+    opacity:.7 !important;
+    margin-bottom:3px !important;
+  }
+  #heroCard.hero-card .hc-secondary-row .hc-cell .val,
+  #heroCard.hero-card .hc-sns-row .hc-cell .val{
+    font-size:18px !important;
+    font-weight:900 !important;
+  }
+  #heroCard.hero-card .hc-secondary-row .hc-cell .delta{
+    font-size:10.5px !important;
+  }
+  /* SNS row は 「未連携」 表示 を 控えめに */
+  #heroCard.hero-card .hc-sns-row .hc-cell .val{
+    font-size:15px !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
    📱 MOBILE CHAT-TOP CLEANUP (2026-06-07 round 2)
    問題: ヘッダー が ☰ + 🔧 + pill 群 + 3 ボタン で 密集 / サイト名 浮き / wrap 崩れ
    解決: row 1 = ☰ + icon + 名前 + actions、 row 2 = pills (横スクロール)

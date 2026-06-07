@@ -11964,20 +11964,6 @@ function _renderTabMedia(site){
       +     '</div>'
       +   '</div>'
       +   '<div>'+((media.categories || []).map(c => esc(c.name) + ' (' + (c.subs||[]).length + ')').join(' · ') || 'カテゴリ未設定')+'</div>'
-      + '</div>'
-      // 次のステップ — STEP 1 ✓ → STEP 2 (KW) → STEP 3 (戦略) → STEP 4 (タスク)
-      + '<div style="padding:14px 16px;background:linear-gradient(135deg,#fff,var(--peach-soft));border:1.5px solid var(--peach-dark);border-radius:11px">'
-      +   '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:10.5px;font-weight:800;letter-spacing:.04em;margin-bottom:8px">'
-      +     '<span style="color:var(--teal-deep);background:var(--peach-soft);padding:3px 8px;border-radius:5px">STEP 1 ✓ メディア</span>'
-      +     '<span style="color:var(--text3)">→</span>'
-      +     '<span style="color:var(--teal-deep)">STEP 2: KW</span>'
-      +     '<span style="color:var(--text3)">→</span>'
-      +     '<span style="color:var(--text3)">STEP 3: 戦略</span>'
-      +     '<span style="color:var(--text3)">→</span>'
-      +     '<span style="color:var(--text3)">STEP 4: タスク</span>'
-      +   '</div>'
-      +   '<div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:10px">次は <b>キーワード調査でネタを決め</b>、 記事を公開していきましょう。</div>'
-      +   '<button onclick="_closeSiteTabModal(); openKeywordPanel(\''+esc(site.id)+'\')" style="background:var(--teal);color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🔍 STEP 2: キーワード調査へ →</button>'
       + '</div>';
   }
 

@@ -9350,13 +9350,24 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   /* 全セル を 1 つ の 横スクロール 列 に */
   #heroCard.hero-card .hc-cells{
     display:flex !important;
+    flex-wrap:nowrap !important;
     overflow-x:auto !important;
-    overflow-y:hidden;
+    overflow-y:hidden !important;
     -webkit-overflow-scrolling:touch;
     scroll-snap-type:x mandatory;
     scrollbar-width:none;
     gap:6px;
     padding:0 12px 2px 0;  /* 右端 12px の 余白 で 最後 セル の 後 を 切らない */
+    /* iOS Safari: 横 swipe を 明示的 に 許可 (= 親 chat-msgs の 縦 scroll と 競合させない) */
+    touch-action:pan-x !important;
+    /* width 強制 (= flex column parent の stretch を 確実に) */
+    width:100% !important;
+    max-width:100% !important;
+    /* 内部 overflow を 確実 に 発生 させる min-width:0 = 親 から の 制約 で 縮ま ない */
+    min-width:0 !important;
+    /* 端 fade で 「→ もっとある」 sign */
+    mask-image:linear-gradient(to right, #000 calc(100% - 32px), transparent 100%);
+    -webkit-mask-image:linear-gradient(to right, #000 calc(100% - 32px), transparent 100%);
   }
   #heroCard.hero-card .hc-cells::-webkit-scrollbar{display:none;}
   /* 全セル 共通 サイズ (= コンパクト + 横並び) */

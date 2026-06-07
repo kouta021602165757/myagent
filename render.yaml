@@ -15,6 +15,12 @@ services:
         value: production
       - key: PORT
         value: 3000
+      # 公開値 (= IndexNow ホスト認証用、 https://myaiagents.agency/<key>.txt で 全員 露出 する 仕様)
+      - key: INDEXNOW_KEY
+        value: 1d5add8119d705fb4eacbc2c72ce4036
+      # cap bypass user 一覧 (= カンマ区切り UUID、 PII では ない)
+      - key: UNLIMITED_USER_IDS
+        value: 5a318a5c-964b-419b-b3e2-b07c132a6b34
       # The following are managed in the Render dashboard (do not commit values):
       - key: ANTHROPIC_API_KEY
         sync: false

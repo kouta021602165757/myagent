@@ -19096,8 +19096,8 @@ function _mediaRenderMinimalIndex(media, posts, opts){
         <div style="font-family:${s.brandFont};font-size:13px;font-weight:800;color:${s.textColor};letter-spacing:.04em">🔥 今 週 の 注目</div>
         <div style="font-size:10.5px;color:${s.mutedColor}">${recent7d > 0 ? '直近 7 日 で ' + recent7d + ' 本 公開' : trendingPosts.length + ' 本'}</div>
       </div>
-      <div class="carousel" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scrollbar-width:none;padding:0 24px 12px">
-        <div style="display:inline-flex;gap:14px;padding-right:24px">
+      <div class="carousel" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scrollbar-width:none;padding:0 24px 12px;text-align:center">
+        <div style="display:inline-flex;gap:14px;max-width:100%;text-align:left">
           ${trendingPosts.map((p, i) => `
             <a href="${_mediaPublicUrl(media, p.slug)}" style="flex:0 0 240px;scroll-snap-align:start;background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;text-decoration:none;color:inherit;transition:all .15s;display:flex;flex-direction:column" onmouseover="this.style.borderColor='${accent}'" onmouseout="this.style.borderColor='${s.cardBorder}'">
               ${p.hero_image_url

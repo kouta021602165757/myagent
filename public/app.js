@@ -15347,6 +15347,53 @@ function renderMsgs(ag, forceScrollBottom){
   // the main timeline (react / delete / pin / bookmark …) also refreshes
   // the thread so changes to thread messages show up immediately.
   if(window._activeThreadParent){ try{ _renderThreadDrawer(); }catch(e){} }
+  // 🎯 リアル タイム 生成 進捗 ticker を kick (= まだ 始動 して なければ)
+  _kickRtProgress();
+}
+
+// 🎯 リアル タイム 生成 進捗 — 「KW 分析 → SERP 解析 → 構造 設計 → 執筆 → 画像 → 公開」
+//    の phase + elapsed 秒数 + progress bar を 全 .art-rt-progress に 1 秒 ごと 更新。
+//    時間 ベース 推定 (= サーバ side push 不要、 公開 タップ で 即 動 きが 見える)。
+//    completed message (= system_publish) が 来 たら 該当 ノード が 自動 消える (= 別 render 上書き)。
+function _kickRtProgress(){
+  if(window._rtProgressTimer) return;
+  var PHASES = [
+    { until: 5,  icon: '📋', label: 'KW 分析 中',     pct: 8 },
+    { until: 15, icon: '🌐', label: 'SERP 上位 解析 中', pct: 22 },
+    { until: 30, icon: '🧠', label: '構造 設計 中',    pct: 38 },
+    { until: 75, icon: '✍️', label: '執筆 中',         pct: 78 },
+    { until: 85, icon: '🎨', label: '画像 生成 中',    pct: 90 },
+    { until: 92, icon: '🚀', label: '公開 処理 中',    pct: 97 },
+    { until: 9999, icon: '⏰', label: '最終 調整 中…', pct: 99 },
+  ];
+  function tick(){
+    var nodes = document.querySelectorAll('.art-rt-progress');
+    if(nodes.length === 0) return;
+    var now = Date.now();
+    nodes.forEach(function(node){
+      var startIso = node.getAttribute('data-rt-start');
+      if(!startIso) return;
+      var startMs = Date.parse(startIso) || now;
+      var elapsed = Math.max(0, Math.floor((now - startMs) / 1000));
+      // 該当 phase を 検出
+      var phase = PHASES[PHASES.length - 1];
+      for(var i = 0; i < PHASES.length; i++){
+        if(elapsed <= PHASES[i].until){ phase = PHASES[i]; break; }
+      }
+      // 更新
+      var iconEl = node.querySelector('.rt-phase-icon');
+      var labelEl = node.querySelector('.rt-phase-text');
+      var elapsedEl = node.querySelector('.rt-elapsed');
+      var barEl = node.querySelector('.rt-bar-fill');
+      if(iconEl && iconEl.textContent !== phase.icon) iconEl.textContent = phase.icon;
+      if(labelEl && labelEl.textContent !== phase.label) labelEl.textContent = phase.label;
+      if(elapsedEl) elapsedEl.textContent = elapsed + ' s';
+      if(barEl) barEl.style.width = phase.pct + '%';
+    });
+  }
+  // 即 1 回 + 1 秒 ごと
+  tick();
+  window._rtProgressTimer = setInterval(tick, 1000);
 }
 
 /* Compact action labels per tool name */
@@ -15691,9 +15738,24 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     }
     // 🎯 「生成中」 アイコン は pulse アニメで 動 きを 出す (= 待ってる 感 解消)
     const iconAnim = isStart ? ';animation:artStartPulse 1.4s ease-in-out infinite' : '';
-    const startStyleTag = isStart ? '<style>@keyframes artStartPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:.75}}</style>' : '';
-    // 「生成中」 サブ文 (= 進捗 ヒント)
-    const startSubline = isStart ? '<div style="font-size:11px;color:var(--text3);line-height:1.6;margin-top:2px">AI が 執筆 中 です… 通常 60-90 秒 で 完了 します。</div>' : '';
+    const startStyleTag = isStart ? '<style>@keyframes artStartPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:.75}}@keyframes artBarFill{0%{width:0%}100%{width:100%}}@keyframes artDotBlink{0%,100%{opacity:.3}50%{opacity:1}}.art-phase-dots span{display:inline-block;animation:artDotBlink 1.4s ease-in-out infinite}.art-phase-dots span:nth-child(2){animation-delay:.18s}.art-phase-dots span:nth-child(3){animation-delay:.36s}</style>' : '';
+    // 🎯 リアル タイム 進捗 表示 (= elapsed + phase + progress bar、 JS で 毎秒 更新)
+    //    data-rt-start 属性 で 公開 時刻 を 記録、 _kickRtProgress() が 1 秒 ごと に 更新。
+    const startTimeIso = (raw && raw.time) || new Date().toISOString();
+    const startSubline = isStart
+      ? '<div class="art-rt-progress" data-rt-start="' + esc(startTimeIso) + '" style="margin-top:10px">'
+        +   '<div class="rt-phase" style="font-size:11.5px;color:#92400e;font-weight:800;letter-spacing:.02em;display:flex;align-items:center;gap:6px">'
+        +     '<span class="rt-phase-icon">📋</span>'
+        +     '<span class="rt-phase-text">KW 分析 中</span>'
+        +     '<span class="art-phase-dots" style="color:#d97706;font-weight:900;letter-spacing:1px"><span>.</span><span>.</span><span>.</span></span>'
+        +     '<span class="rt-elapsed" style="margin-left:auto;font-size:10.5px;color:#92400e;font-weight:600;font-family:ui-monospace,monospace">0 s</span>'
+        +   '</div>'
+        +   '<div class="rt-bar" style="margin-top:8px;height:5px;background:rgba(217,119,6,.15);border-radius:99px;overflow:hidden">'
+        +     '<div class="rt-bar-fill" style="height:100%;background:linear-gradient(90deg,#f59e0b,#d97706);width:0%;transition:width .8s ease-out;border-radius:99px"></div>'
+        +   '</div>'
+        +   '<div style="font-size:10.5px;color:var(--text3);line-height:1.5;margin-top:6px">通常 60-90 秒 で 完了 ・ 画面 を 閉じて OK</div>'
+        + '</div>'
+      : '';
     const card = startStyleTag + '<div class="article-card" style="margin:8px 0;max-width:520px">'
       + wrapStart
       + '<div style="background:#fff;border:1px solid ' + (isStart ? '#fed7aa' : 'var(--wire)') + ';border-radius:11px;padding:14px 16px;' + (url ? 'cursor:pointer;transition:all .15s' : '') + '" '

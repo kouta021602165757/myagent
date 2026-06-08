@@ -15,13 +15,13 @@
 <!-- Preload critical assets — browser starts downloading these in parallel
      with HTML parse, before they're discovered in <script>/<link> tags below.
      Reduces critical path latency 100-300ms on cold load. -->
-<link rel="preload" as="script" href="/app.js?v=1780932836555">
-<link rel="preload" as="style" href="/app.css?v=1780932836555">
+<link rel="preload" as="script" href="/app.js?v=1780933780619">
+<link rel="preload" as="style" href="/app.css?v=1780933780619">
 <!-- Preconnect to API origin so DNS + TLS handshake is ready before the first
      fetch fires (= /api/me / /api/agents start with ~0ms connection latency). -->
 <link rel="preconnect" href="https://myaiagents.agency" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css?v=1780932836555">
+<link rel="stylesheet" href="/app.css?v=1780933780619">
 <!-- KaTeX & highlight.js — needed only when chat shows math/code blocks.
      CSS uses media="print" trick + onload swap so it doesn't block first paint.
      The JS is already defer'd. Saves a couple hundred ms on initial render
@@ -169,7 +169,11 @@
             <!-- Slash command palette — appears when '/' is the first char of composer. -->
             <div id="slashPalette" class="slash-palette" style="display:none" role="listbox"></div>
             <textarea id="ci" placeholder="何をお願いしますか？ (ファイルや URL もドロップで添付可)" rows="1" oninput="exTA(this);_mentionOnInput(this);_extHintCheck(this.value);_slashOnInput(this.value)" onkeydown="_slashOnKeydown(event) || _mentionOnKeydown(event) || taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()" onpaste="onComposerPaste(event)"></textarea>
-            <div class="composer-tools">
+            <div class="composer-tools" id="composerTools">
+              <!-- 📱 mobile only: 「+」 で 詳細 ツール を 開閉 (= 6 アイコン 押し込み 対策) -->
+              <button class="tool-btn tool-more-btn" id="toolMoreBtn" onclick="document.getElementById('composerTools').classList.toggle('expanded');this.classList.toggle('on')" title="ツール" aria-label="ツールを開く" style="display:none">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
               <button class="tool-btn" onclick="document.getElementById('imgInput').click()" title="ファイルを添付 (画像/PDF/テキスト/コード)" id="attachBtn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
               </button>
@@ -2215,7 +2219,7 @@
      blocker between body markup and first paint. Order is preserved with the
      small inline scripts below (which set window._isJa, cookie consent, and
      Sentry) — none of them depend on globals defined in app.js. -->
-<script defer src="/app.js?v=1780932836555"></script>
+<script defer src="/app.js?v=1780933780619"></script>
 
 <script>
 (function(){

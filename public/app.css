@@ -9318,6 +9318,80 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
 }
 
 /* ══════════════════════════════════════════════════════════
+   🎯 UNIFIED .btn-publish — 全 公開 ボタン の 統一 クラス
+   ・ desktop / mobile で 同 サイズ 感
+   ・ どこ で 使って も 同じ 見た目
+   ══════════════════════════════════════════════════════════ */
+.btn-publish{
+  background:var(--teal);color:#fff;border:0;
+  padding:10px 18px;border-radius:9px;
+  font-size:13px;font-weight:800;cursor:pointer;
+  font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  transition:background .15s, transform .12s, box-shadow .15s;
+  box-shadow:0 2px 6px rgba(13,79,74,.15);
+  min-height:38px;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.btn-publish:hover{background:#0a3f3a;transform:translateY(-1px);box-shadow:0 4px 10px rgba(13,79,74,.22);}
+.btn-publish:active{transform:translateY(0);box-shadow:0 1px 3px rgba(13,79,74,.15);}
+.btn-publish:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+.btn-publish.btn-publish-volt{background:var(--peach);color:#0a3d39;box-shadow:0 4px 12px rgba(192,255,92,.32);}
+.btn-publish.btn-publish-volt:hover{background:var(--peach-dark);}
+@media(max-width:700px){
+  .btn-publish{padding:13px 18px;font-size:14px;min-height:46px;}
+}
+
+/* ══════════════════════════════════════════════════════════
+   📱 MOBILE: モーダル → bottom sheet 化 (2026-06-09)
+   - 中央 ポップアップ は スマホ で 押しにくい
+   - 画面 下 から slide up する sheet は iOS 標準 UX、 親指 楽
+   ══════════════════════════════════════════════════════════ */
+@media (max-width:700px){
+  /* overlay は そのまま (= 背景 暗黒) */
+  /* wizard / settings-modal / .modal は 下 から slide up */
+  .overlay.open .wizard,
+  .overlay.open .modal,
+  .overlay.open .settings-modal,
+  .modal-overlay:not(.gone) > div[class*="modal"]{
+    position:fixed !important;
+    left:0 !important;right:0 !important;bottom:0 !important;top:auto !important;
+    max-height:90vh !important;
+    width:100% !important;
+    max-width:100% !important;
+    margin:0 !important;
+    border-radius:18px 18px 0 0 !important;
+    animation:sheetSlideUp .28s cubic-bezier(.34,1.56,.64,1) !important;
+    transform:none !important;
+  }
+  @keyframes sheetSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  /* drag handle 風 (= sheet 感 強調) */
+  .overlay.open .wizard::before,
+  .overlay.open .modal::before,
+  .overlay.open .settings-modal::before{
+    content:'';
+    position:sticky;top:0;
+    display:block;
+    width:38px;height:4px;
+    background:var(--wire3);
+    border-radius:99px;
+    margin:7px auto 0;
+    z-index:10;
+  }
+  /* スクロール 内部 化 */
+  .overlay.open .wizard,
+  .overlay.open .modal,
+  .overlay.open .settings-modal{
+    overflow-y:auto !important;
+    -webkit-overflow-scrolling:touch;
+  }
+  /* overlay 自体 を 下端 揃え */
+  .overlay.open{
+    align-items:flex-end !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
    🎯 HERO CARD — Desktop / Mobile 両対応 (案 B: 主要 1 + 横スクロール 2 段)
    Desktop (≥701px): 全セル 1 行 横並び (= 既存 動作)、 wrapper は 透過 flex 表示
    Mobile (≤700px): hc-primary 全幅 強調、 secondary / sns row は 各々 横スクロール
@@ -9451,23 +9525,56 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
 }
 
 /* ══════════════════════════════════════════════════════════
-   📱 MOBILE COMPOSER TOOLBAR (2026-06-07)
-   問題: 📎 🔗 🎤 <> 📁 🌐 ... の ツールバー が 横 overflow
-   解決: composer-tools を 横スクロール 化 + 各 button を 縮小
+   📱 MOBILE COMPOSER TOOLBAR (2026-06-09 v2)
+   問題: 6 アイコン 横スクロール は 押し込み 体験 が 悪い。
+   解決: 「+」 ボタン で 開閉 する 折り畳み メニュー に。
+   ・ デフォルト = 「+」 + 添付 + マイク + 送信 だけ 表示
+   ・ 「+」 タップ = .expanded class 付与 → 全 ツール 表示 (= grid 縦 並び)
    ══════════════════════════════════════════════════════════ */
 @media (max-width:700px){
   .composer-tools{
-    flex-wrap:nowrap !important;
-    overflow-x:auto !important;
-    overflow-y:hidden;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
+    display:flex !important;
+    flex-wrap:wrap !important;
+    overflow:visible !important;
     padding-bottom:2px;
+    gap:6px !important;
   }
-  .composer-tools::-webkit-scrollbar{display:none;}
-  .composer-tools > *{flex-shrink:0;}
-  /* fade-out 端を 出して 「もっとある よ」 を 視覚 sign 化 */
-  .composer{position:relative;}
+  /* 「+」 button を 表示 */
+  .composer-tools .tool-more-btn{
+    display:flex !important;
+    width:38px;height:38px;
+    background:var(--cream2);
+    border:1px solid var(--wire2);
+    color:var(--text);
+    padding:0;
+    align-items:center;
+    justify-content:center;
+    transition:transform .2s, background .15s;
+  }
+  .composer-tools .tool-more-btn.on{
+    transform:rotate(45deg);
+    background:var(--peach-soft);
+    color:var(--peach-dark);
+    border-color:var(--peach-dark);
+  }
+  /* 折り畳み: デフォルト = 添付 + マイク + 送信 のみ 表示 */
+  .composer-tools:not(.expanded) > .tool-btn:not(#attachBtn):not(#micBtn):not(.tool-more-btn){
+    display:none !important;
+  }
+  /* expanded 時 = 全 ツール 表示 (= 2-3 列 grid 風) */
+  .composer-tools.expanded{
+    background:var(--cream2);
+    border-radius:11px;
+    padding:8px;
+    margin-top:4px;
+  }
+  .composer-tools.expanded > .tool-btn{
+    flex:0 0 auto;
+    min-height:42px;
+    min-width:42px;
+  }
+  /* tool-spacer (= flex 1) を expanded 時 だけ 表示 */
+  .composer-tools .tool-spacer{flex:1;}
 }
 
 /* ══════════════════════════════════════════════════════════

@@ -10009,10 +10009,12 @@ window._artUpdateBatchBar = function(){
     var isMobile = window.matchMedia && window.matchMedia('(max-width:700px)').matches;
     if(isMobile){
       // スマホ: 画面下 全幅 sticky + safe-area + 大きい タップ域
-      bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#0d4f4a;color:#fff;padding:14px 14px calc(14px + env(safe-area-inset-bottom, 0));box-shadow:0 -8px 28px rgba(0,0,0,.22);display:flex;align-items:center;gap:10px;z-index:9999;font-family:inherit;flex-wrap:wrap';
+      // ⚠️ stale lock を 自動 解除 (= 前回 失敗 状態 を リセット)
+      window._artBatchInFlight = false; window._artBatchInFlightAt = 0;
+      bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#0d4f4a;color:#fff;padding:14px 14px calc(14px + env(safe-area-inset-bottom, 0));box-shadow:0 -8px 28px rgba(0,0,0,.22);display:flex;align-items:center;gap:10px;z-index:9999;font-family:inherit;flex-wrap:wrap;pointer-events:auto';
       bar.innerHTML = '<div style="font-size:13.5px;font-weight:800;flex:1 1 auto"><span id="artBatchCount">0</span> 件 選択中 <span style="font-size:10.5px;color:#9bd4cf;font-weight:500">・並列 3 件 / 約 ¥10 / 件</span></div>'
-        + '<button onclick="_artBatchClear()" style="background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;padding:12px 14px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;min-height:44px;-webkit-tap-highlight-color:transparent">クリア</button>'
-        + '<button onclick="_artBatchPublish()" style="background:#c0ff5c;color:#0a3d39;border:0;padding:14px 18px;border-radius:10px;font-size:14.5px;font-weight:900;cursor:pointer;font-family:inherit;flex:1 1 100%;min-height:50px;box-shadow:0 4px 14px rgba(192,255,92,.35);-webkit-tap-highlight-color:transparent">✨ 一括 公開 →</button>';
+        + '<button type="button" onclick="_artBatchClear()" style="background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;padding:12px 14px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;min-height:44px;-webkit-tap-highlight-color:transparent;touch-action:manipulation">クリア</button>'
+        + '<button type="button" onclick="_artBatchPublish()" style="background:#c0ff5c;color:#0a3d39;border:0;padding:14px 18px;border-radius:10px;font-size:14.5px;font-weight:900;cursor:pointer;font-family:inherit;flex:1 1 100%;min-height:50px;box-shadow:0 4px 14px rgba(192,255,92,.35);-webkit-tap-highlight-color:transparent;touch-action:manipulation">✨ 一括 公開 →</button>';
     } else {
       bar.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#0d4f4a;color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.25);display:flex;align-items:center;gap:14px;z-index:9999;font-family:inherit';
       bar.innerHTML = '<div style="font-size:13px;font-weight:800"><span id="artBatchCount">0</span> 件 選択中</div>'
@@ -10030,14 +10032,25 @@ window._artBatchClear = function(){
   _artUpdateBatchBar();
 };
 window._artBatchPublish = function(){
+  try { console.log('[batch-publish] clicked, inFlight=' + !!window._artBatchInFlight); } catch(_){}
   // 🐛 連打防止 — 1 回 fire したら 30 秒 ロック
+  // ただし 30 秒以上 たって lock が 残ってる 場合 (= server 応答 遅延 / network 切断 等) は 自動 解除
   if(window._artBatchInFlight){
-    showToast('生成中… (= 連打防止、 chat の pill で 進捗 確認できます)', 'ng');
+    var lockMs = window._artBatchInFlightAt ? (Date.now() - window._artBatchInFlightAt) : 999999;
+    if(lockMs > 30000){
+      console.warn('[batch-publish] stale lock ('+Math.round(lockMs/1000)+'s), auto-releasing');
+      window._artBatchInFlight = false;
+    } else {
+      showToast('生成 中… (= ' + Math.round((30000 - lockMs) / 1000) + ' 秒 待って 再 タップ)', 'ng');
+      return;
+    }
+  }
+  // タイトル行の checkbox のみ集計
+  var titleChecks = Array.prototype.slice.call(document.querySelectorAll('.art-title-cb:checked'));
+  if(titleChecks.length === 0){
+    showToast('タイトル を 1 つ 以上 選んで ください', 'ng');
     return;
   }
-  // タイトル行の checkbox のみ集計 (KW 行は グループ見出しで アクション無し)
-  var titleChecks = Array.prototype.slice.call(document.querySelectorAll('.art-title-cb:checked'));
-  if(titleChecks.length === 0) return;
   if(titleChecks.length > 5){ alert('一度に 公開できるのは 5 件まで。'); return; }
   var items = titleChecks.map(function(cb){
     var row = cb.closest('.art-title-row');
@@ -10067,7 +10080,8 @@ window._artBatchPublish = function(){
   var sid = (document.getElementById('siteTabOverlay') || {}).getAttribute && document.getElementById('siteTabOverlay').getAttribute('data-site-id');
   if(!sid){ showToast('siteId 不明', 'ng'); return; }
   window._artBatchInFlight = true;
-  setTimeout(function(){ window._artBatchInFlight = false; }, 30000);  // 30s 後 自動解除 (= ロック残留防止)
+  window._artBatchInFlightAt = Date.now();
+  setTimeout(function(){ window._artBatchInFlight = false; window._artBatchInFlightAt = 0; }, 30000);  // 30s 後 自動解除
   api('POST', '/api/agents/' + encodeURIComponent(sid) + '/keyword-batch-publish', { items: items })
     .then(async function(r){
       if(!r || !r.ok){

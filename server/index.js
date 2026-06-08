@@ -27740,9 +27740,10 @@ async function handleAPI(req,res,pathname,method,ip){
       ].join('\n');
     }
 
-    // 🚀 Sonnet 4.6 で 10 タイトル + signals を 安定出力 (= Haiku は 8K token 制約で 構造化出力崩れがち)
-    //   keyword-detail は user-initiated で 頻度低い → コスト許容 (≈ ¥2-3/回)
-    const info = _resolveModelInfo('sonnet');
+    // 🚀 Haiku 4.5 に 切替 (2026-06-08): Sonnet 比 5-10 倍 速い (= 90s+ → 8-15s)。
+    //   user UX 優先 (= 「タイトル 生成 が 遅い」 解決)。 出力 構造 は max_tokens 6000 で 安定。
+    //   コスト も ~1/15 で お得。 失敗 時 は parse 修復 で fallback。
+    const info = _resolveModelInfo('haiku');
     let rawText = '';
     let parsed = null;
     try {
@@ -27753,7 +27754,7 @@ async function handleAPI(req,res,pathname,method,ip){
         const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
           { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
           { model: info.modelId, max_tokens: 6000, messages:[{ role:'user', content: prompt }] },
-          { timeout: 90000 });
+          { timeout: 60000 });
         if(r.s !== 200){
           const ce = _claudeErrorMessage(r);
           console.warn('[kw-detail] AI 失敗 status=' + r.s + ' err=' + (ce.user_message||'').slice(0,100));

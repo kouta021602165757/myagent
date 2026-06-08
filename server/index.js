@@ -16470,10 +16470,11 @@ async function _mediaGenerateArticle(agent, params){
   const lpUrl = (agent.media && agent.media.lp_url) || agent.site_url || '';
   const categories = ((agent.media && agent.media.categories) || []).map(c => c.name).join(', ');
 
-  // 🚀 2026-06-09 改訂: Haiku 4.5 max_tokens 8000 で 6500 字 まで OK と 実測 確認。
-  //    デフォルト 記事 (= targetChars ≤ 7500) を 全部 Haiku に → 60-90 秒 → 15-25 秒。
-  //    長文 (= 7500+ 字) のみ Sonnet (= max 16000 token 余裕、 品質 維持)。
-  const useHaiku = targetChars < 7500 && !tpl.codeExamplesRequired;
+  // 🐛 2026-06-09 緊急 revert: Haiku 7500 閾値 を 5500 に 戻す (= 昨日 まで 動 い てた 設定)。
+  //    Haiku で targetChars 6500-7500 は max_tokens 8000 上限 に 引っかか って 構造化 出力
+  //    崩れ → 記事 生成 失敗 (= ユーザ 「全然 記事 生成 されない」 で 確認)。
+  //    安定 性 優先 で Sonnet に 戻す。 速度 は 別 方法 で 改善 する。
+  const useHaiku = targetChars < 5500 && !tpl.codeExamplesRequired;
   const model = useHaiku ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
 
   // AEO 強制構造 (= 即効性 + AI 検索引用率 UP)
@@ -27020,7 +27021,23 @@ async function handleAPI(req,res,pathname,method,ip){
             kind: 'system_publish_fail',
             thread_parent_id: j.thread_parent_id || null,
           });
-          try { await DB.saveAgent(user); } catch(_){}
+          // 🛡 fail msg は 必ず 保存 (= retry 3 回、 最後 は full DB.save)
+          let saved = false;
+          for(let attempt = 0; attempt < 3; attempt++){
+            try {
+              if(attempt < 2){
+                await DB.saveAgent(user);
+              } else {
+                await DB.save(user); // 最後 は full save (= 確実 性 優先)
+              }
+              saved = true;
+              break;
+            } catch(saveErr){
+              console.warn('[kw-batch] save fail msg attempt ' + (attempt+1) + ' failed:', saveErr.message);
+              await new Promise(r => setTimeout(r, 1000));
+            }
+          }
+          if(!saved) console.error('[kw-batch] CRITICAL: fail msg could not be saved after 3 attempts');
         }
       }
     };

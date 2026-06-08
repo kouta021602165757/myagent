@@ -13528,14 +13528,26 @@ async function googleExchange(code){
     {'Content-Type':'application/x-www-form-urlencoded'},
     new URLSearchParams({code,client_id:GOOGLE_ID,client_secret:GOOGLE_SEC,
       redirect_uri:`${APP_URL}/api/auth/google/callback`,grant_type:'authorization_code'}).toString());
-  if(r.s!==200)throw new Error('Google OAuth exchange failed');
+  if(r.s!==200){
+    const detail = typeof r.d === 'string' ? r.d.slice(0,200) : JSON.stringify(r.d||{}).slice(0,200);
+    throw new Error('exchange failed: HTTP ' + r.s + ' ' + detail);
+  }
+  if(!r.d || !r.d.access_token){
+    throw new Error('exchange failed: no access_token in response');
+  }
   return r.d;
 }
 
 async function googleUserInfo(accessToken){
   const r=await httpsReq('GET','www.googleapis.com','/oauth2/v2/userinfo',
     {'Authorization':`Bearer ${accessToken}`},null);
-  if(r.s!==200)throw new Error('Google userinfo failed');
+  if(r.s!==200){
+    const detail = typeof r.d === 'string' ? r.d.slice(0,200) : JSON.stringify(r.d||{}).slice(0,200);
+    throw new Error('userinfo failed: HTTP ' + r.s + ' ' + detail);
+  }
+  if(!r.d || !r.d.email){
+    throw new Error('userinfo failed: no email in response');
+  }
   return r.d;
 }
 
@@ -21853,22 +21865,37 @@ async function handleAPI(req,res,pathname,method,ip){
       }
       const tokens=await googleExchange(code);
       const gUser=await googleUserInfo(tokens.access_token);
-      let user=await DB.findBy('email',gUser.email.toLowerCase());
+      const emailLc = String(gUser.email||'').toLowerCase();
+      if(!emailLc) throw new Error('userinfo failed: empty email');
+      let user=await DB.findBy('email',emailLc);
       if(!user){
-        user=newUser({name:gUser.name||gUser.email,email:gUser.email.toLowerCase(),password:'',verified:true,google_id:gUser.id});
-        await DB.create(user);
+        user=newUser({name:gUser.name||emailLc,email:emailLc,password:'',verified:true,google_id:gUser.id});
+        try { await DB.create(user); }
+        catch(e){ throw new Error('db_create_failed: ' + e.message); }
       }else if(!user.google_id){
         user.google_id=gUser.id;user.verified=true;
       }
       recordLogin(user, req, 'google');
-      try{ await DB.save(user); }catch(e){}
+      try{ await DB.save(user); }catch(e){ console.warn('[Google OAuth] save failed:', e.message); }
       const token=JWT.sign({userId:user.id,email:user.email});
       res.writeHead(302,{Location:`/app?token=${token}`});res.end();
     }catch(e){
-      console.error('[Google OAuth] callback failed:', e.message);
+      console.error('[Google OAuth] callback failed:', e.message, e.stack);
+      // 診断 ring buffer に 記録
+      try {
+        if(!global._recentGoogleOAuthErrors) global._recentGoogleOAuthErrors = [];
+        global._recentGoogleOAuthErrors.unshift({
+          ts: new Date().toISOString(),
+          error: (e.message||'').slice(0, 400),
+          stack: (e.stack||'').slice(0, 600),
+        });
+        if(global._recentGoogleOAuthErrors.length > 30) global._recentGoogleOAuthErrors.length = 30;
+      } catch(_){}
       var reason = (e.message||'').includes('not_configured') ? 'not_configured'
         : (e.message||'').includes('exchange') ? 'token_exchange_failed'
         : (e.message||'').includes('userinfo') ? 'userinfo_failed'
+        : (e.message||'').includes('db_create_failed') ? 'db_create_failed'
+        : (e.message||'').includes('混雑') ? 'db_busy'
         : 'unknown';
       res.writeHead(302,{Location:'/auth.html?error=google_failed&reason='+reason});
       res.end();
@@ -22772,6 +22799,13 @@ async function handleAPI(req,res,pathname,method,ip){
     }
     out.match_rate = out.agents.length ? Math.round((out.ok / out.agents.length) * 10000) / 100 : 0;
     return jres(res, 200, out);
+  }
+
+  // 🚀 GET /api/admin/recent-google-oauth-errors — Google ログイン 失敗 ring buffer
+  if(pathname === '/api/admin/recent-google-oauth-errors' && method === 'GET'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    return jres(res, 200, { errors: global._recentGoogleOAuthErrors || [] });
   }
 
   // 🚀 GET /api/admin/recent-kw-errors — 直近 KW 取得 失敗 ring buffer (= 30 件)

@@ -706,10 +706,12 @@ window.onload = () => {
     var msg = L('Googleログインに失敗しました。','Google sign-in failed. ');
     if(reason==='not_configured') msg += L('サーバ設定が完了していません（管理者にお問い合わせください）。','Server is not configured (please contact the administrator).');
     else if(reason==='access_denied') msg += L('権限がキャンセルされました。','Permission was denied.');
-    else if(reason==='token_exchange_failed') msg += L('Googleからのトークン取得に失敗しました。','Failed to obtain a token from Google.');
-    else if(reason==='userinfo_failed') msg += L('Googleからのユーザー情報取得に失敗しました。','Failed to obtain user info from Google.');
+    else if(reason==='token_exchange_failed') msg += L('Googleからのトークン取得に失敗しました。30 秒待って再試行してください。','Failed to obtain a token from Google. Please retry in 30 seconds.');
+    else if(reason==='userinfo_failed') msg += L('Googleからのユーザー情報取得に失敗しました。30 秒待って再試行してください。','Failed to obtain user info from Google. Please retry in 30 seconds.');
     else if(reason==='no_code') msg += L('認可コードが取得できませんでした。','No authorization code returned.');
-    else if(reason) msg += L('（'+reason+'）もう一度お試しください。',' ('+reason+') Please try again.');
+    else if(reason==='db_create_failed') msg += L('ユーザー作成に失敗しました。30 秒待って再試行してください。','Failed to create your account. Please retry in 30 seconds.');
+    else if(reason==='db_busy') msg += L('データベースが混雑しています。30 秒待って再試行してください。','Database is busy. Please retry in 30 seconds.');
+    else if(reason) msg += L('（'+reason+'）30 秒待って再試行してください。',' ('+reason+') Please retry in 30 seconds.');
     else msg += L('もう一度お試しください。','Please try again.');
     showErr('l-err', msg);
   }

@@ -15652,11 +15652,8 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     const title = raw.article_title || (raw.content || '').slice(0, 60);
     const catName = raw.article_category || '';
     const catChip = catName ? '<span style="background:#f3e8ff;color:#5b21b6;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;margin-right:5px">📂 ' + esc(catName) + (isStart ? '(推定)' : '') + '</span>' : '';
-    // メイン timeline での start は 小さい pill (= 開いて中で 確認)
-    if(isStart && !_renderingInThread){
-      const parentId = raw.id || '';
-      return '<div class="sys-row" style="margin:6px 0"><span class="sys-pill" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;cursor:pointer" onclick="if(typeof _openThread===\'function\')_openThread(\''+esc(parentId)+'\')">⏳ 生成中: ' + esc((title||'').slice(0, 50)) + (catName ? ' · 📂 ' + esc(catName) : '') + ' · 💬 スレッドを開く</span></div>';
-    }
+    // 🎯 2026-06-09: 「生成中」 も フル カード で 表示 (= 既存 の 小 ピル は 目立たず 不安 を 招く)。
+    //    success と 同じ 構造 で 状態 だけ 違う ように 統一。 icon に pulse アニメ を 追加。
     const icon = isStart ? '⏳' : (isFail ? '⚠️' : '✅');
     const statusColor = isStart ? '#f59e0b' : (isFail ? '#dc2626' : '#15803d');
     const statusBg = isStart ? '#fffbeb' : (isFail ? '#fee2e2' : '#dcfce7');
@@ -15681,19 +15678,37 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
         +   '</button>'
         + '</div>';
     }
-    const card = '<div class="article-card" style="margin:8px 0;max-width:520px">'
+    // 🎯 「生成中」 用 thread 開く button (= start カード 専用)
+    var openThreadHtml = '';
+    if(isStart && threadParentId){
+      openThreadHtml = ''
+        + '<div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--wire2)">'
+        +   '<button onclick="event.preventDefault();event.stopPropagation();if(typeof _openThread===\'function\')_openThread(\''+esc(threadParentId)+'\')" '
+        +   'style="flex:1;background:#fff7ed;color:#92400e;border:1px solid #fed7aa;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;-webkit-tap-highlight-color:transparent;min-height:42px">'
+        +     '<span>💬</span><span>進捗 を 見る</span>'
+        +   '</button>'
+        + '</div>';
+    }
+    // 🎯 「生成中」 アイコン は pulse アニメで 動 きを 出す (= 待ってる 感 解消)
+    const iconAnim = isStart ? ';animation:artStartPulse 1.4s ease-in-out infinite' : '';
+    const startStyleTag = isStart ? '<style>@keyframes artStartPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:.75}}</style>' : '';
+    // 「生成中」 サブ文 (= 進捗 ヒント)
+    const startSubline = isStart ? '<div style="font-size:11px;color:var(--text3);line-height:1.6;margin-top:2px">AI が 執筆 中 です… 通常 60-90 秒 で 完了 します。</div>' : '';
+    const card = startStyleTag + '<div class="article-card" style="margin:8px 0;max-width:520px">'
       + wrapStart
-      + '<div style="background:#fff;border:1px solid var(--wire);border-radius:11px;padding:14px 16px;' + (url ? 'cursor:pointer;transition:all .15s' : '') + '" '
+      + '<div style="background:#fff;border:1px solid ' + (isStart ? '#fed7aa' : 'var(--wire)') + ';border-radius:11px;padding:14px 16px;' + (url ? 'cursor:pointer;transition:all .15s' : '') + '" '
       +   (url ? 'onmouseover="this.style.borderColor=\'#0d4f4a\';this.style.boxShadow=\'0 4px 12px rgba(0,0,0,.06)\'" onmouseout="this.style.borderColor=\'var(--wire)\';this.style.boxShadow=\'\'"' : '') + '>'
       + '<div style="display:flex;gap:12px;align-items:flex-start">'
-      +   '<div style="width:42px;height:42px;border-radius:9px;background:' + statusBg + ';color:' + statusColor + ';display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0">' + icon + '</div>'
+      +   '<div style="width:42px;height:42px;border-radius:9px;background:' + statusBg + ';color:' + statusColor + ';display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0' + iconAnim + '">' + icon + '</div>'
       +   '<div style="flex:1;min-width:0">'
       +     '<div style="font-size:10px;font-weight:800;color:' + statusColor + ';letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase">📝 ' + statusLbl + (charsLbl ? ' · ' + esc(charsLbl) : '') + '</div>'
       +     '<div style="font-size:14px;font-weight:800;color:var(--text);line-height:1.45;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + esc(title) + '</div>'
       +     (catName ? '<div style="margin-bottom:6px">' + catChip + '</div>' : '')
       +     (domain ? '<div style="font-size:11px;color:var(--text3);font-family:ui-monospace,monospace;display:flex;align-items:center;gap:5px"><span style="opacity:.7">🔗</span>' + esc(domain) + '<span style="margin-left:auto;color:var(--teal);font-weight:800">開く →</span></div>' : '')
+      +     startSubline
       +   '</div>'
       + '</div>'
+      + openThreadHtml
       + editBtnHtml
       + '</div>'
       + wrapEnd

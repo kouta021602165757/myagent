@@ -9174,7 +9174,8 @@ function _renderHeroCard(ag){
   var deltaPct = (typeof snap.delta_pv_pct === 'number') ? snap.delta_pv_pct : null;
 
   function _fmt(n){
-    if(n == null || isNaN(n)) return '—';
+    // ✅ 0 は 0 と 表示、 未計測 (= null / undefined / NaN) のみ '0' に fallback
+    if(n == null || isNaN(n)) return '0';
     if(n >= 10000) return (n/1000).toFixed(1) + 'k';
     return String(Math.round(n));
   }
@@ -9184,8 +9185,8 @@ function _renderHeroCard(ag){
     return sign + pct + '%';
   }
 
-  var pvVal = (mo30.pv != null) ? _fmt(mo30.pv) : '—';
-  var userVal = (mo30.users != null) ? _fmt(mo30.users) : '—';
+  var pvVal = _fmt(mo30.pv);
+  var userVal = _fmt(mo30.users);
 
   // 公開記事カウント (= user.notes from cache)
   var articleCount = 0;
@@ -9214,7 +9215,8 @@ function _renderHeroCard(ag){
   // 🎯 LP 流入数 (= メディアから LP に click された回数)
   //    取得は async: _lpRefCache に値があれば 即時表示、 なければ fetch して反映
   var lpRefData = (window._lpRefCache && window._lpRefCache[ag.id]) || null;
-  var lpRefVal = lpRefData ? String(lpRefData.total_30d || 0) : '計測中';
+  // ✅ 「計測中」 表示 を 廃止 → 0 表示 (= 「数字 が 反映 されてない」 印象 防止)
+  var lpRefVal = lpRefData ? String(lpRefData.total_30d || 0) : '0';
 
   // Desktop: 1 行 flex で 全セル 横並び (= 既存)
   // Mobile: タイトル 上、 全 6 セル を 1 つ の 横スクロール 列 に 統一
@@ -9367,20 +9369,17 @@ function _renderWeeklyStatsBar(ag){
     ? snap.snapshot.delta_pv_pct
     : (ag.ga4_snapshot && typeof ag.ga4_snapshot.delta_pv_pct === 'number' ? ag.ga4_snapshot.delta_pv_pct : null);
 
-  // 何も無いときは hide
-  if(articlesThis === 0 && snsThis === 0 && analysisThis === 0 && deltaPct == null){
-    el.style.display = 'none'; el.innerHTML = '';
-    return;
-  }
-
+  // ✅ 0 でも 表示 する (= 「0 で 隠す」 と 「動いて ない 感」 が 出る ため)
   var parts = ['📊 今週:'];
-  if(articlesThis > 0) parts.push('<b>記事 ' + articlesThis + ' 本</b>');
-  if(snsThis > 0) parts.push('<b>SNS 投稿 ' + snsThis + ' 件</b>');
+  parts.push('<b>記事 ' + articlesThis + ' 本</b>');
+  parts.push('<b>SNS 投稿 ' + snsThis + ' 件</b>');
   if(analysisThis > 0) parts.push('<b>分析 ' + analysisThis + ' 件</b>');
   if(deltaPct != null){
     var arrow = deltaPct >= 0 ? '▲' : '▼';
     var sign = deltaPct >= 0 ? '+' : '';
     parts.push('<b style="color:' + (deltaPct >= 0 ? '#16a34a' : '#dc2626') + '">PV ' + arrow + ' ' + sign + deltaPct + '%</b>');
+  } else {
+    parts.push('<span style="opacity:.6">PV: 計測中</span>');
   }
 
   // F: クリックで展開可能 — 直近 7 日に AI チームが作った成果物リスト
@@ -9651,16 +9650,55 @@ window._kpSearch = function(siteId){
   if(!kw){ showToast('KW を入力してください', 'ng'); return; }
   var resBox = document.getElementById('kpResult');
   if(!resBox) return;
-  resBox.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text3);font-size:12.5px">'
-    + '<div style="display:inline-block;width:18px;height:18px;border:2px solid var(--cream3);border-top-color:var(--teal);border-radius:50%;animation:artSpinner .8s linear infinite;vertical-align:middle;margin-right:8px"></div>'
-    + 'AI が 「' + esc(kw) + '」 を 分析中… (5-10 秒)</div>';
+  // 経過時間 counter で 「動いてる」 を 可視 化
+  var startMs = Date.now();
+  var settled = false;
+  var renderLoading = function(){
+    if(settled) return;
+    var sec = Math.floor((Date.now() - startMs) / 1000);
+    var phase = sec < 10 ? 'AI が 分析中…' : sec < 30 ? 'タイトル 候補 を 生成中…' : sec < 60 ? 'SERP 解析 中…' : '時間 が かかってます…';
+    resBox.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text3);font-size:12.5px">'
+      + '<div style="display:inline-block;width:18px;height:18px;border:2px solid var(--cream3);border-top-color:var(--teal);border-radius:50%;animation:artSpinner .8s linear infinite;vertical-align:middle;margin-right:8px"></div>'
+      + phase + ' 「' + esc(kw) + '」'
+      + '<div style="margin-top:8px;font-size:10.5px;color:var(--text3);opacity:.7">経過 ' + sec + ' 秒 (= 通常 10-30 秒)</div>'
+      + (sec > 60 ? '<div style="margin-top:10px;font-size:11px;color:#dc2626">AI 応答 が 遅延 中。 もう 少々 お待ち ください。</div>' : '')
+      + '</div>';
+  };
+  renderLoading();
+  var loadingTimer = setInterval(renderLoading, 1000);
+  // hard timeout 150 秒 で 強制 終了
+  var hardTimeout = setTimeout(function(){
+    if(settled) return;
+    settled = true;
+    clearInterval(loadingTimer);
+    resBox.innerHTML = '<div style="padding:18px;background:#fee2e2;border-radius:11px;color:#9f1239;font-size:12.5px;line-height:1.7">'
+      + '<div style="font-weight:800;margin-bottom:6px">⚠️ タイトル 候補 取得 タイムアウト</div>'
+      + '<div>150 秒 待っても 応答 が ありません。 AI サーバ が 混雑 してる 可能性。 30 秒 待って 再試行 して ください。</div>'
+      + '<button onclick="_kpSearch(\''+esc(siteId)+'\')" style="margin-top:10px;background:#9f1239;color:#fff;border:0;padding:8px 16px;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🔄 再 試行</button>'
+      + '</div>';
+  }, 150000);
+
   Promise.all([
     api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/keyword-detail?kw=' + encodeURIComponent(kw) + '&mode=seo').catch(function(err){ return { _error: err && err.message || 'unknown' }; }),
     api('GET', '/api/agents/' + encodeURIComponent(siteId) + '/serp-analysis?kw=' + encodeURIComponent(kw)).catch(function(){ return null; }),
   ]).then(function(arr){
+    if(settled) return;
+    settled = true;
+    clearInterval(loadingTimer);
+    clearTimeout(hardTimeout);
     _kpRender(siteId, kw, arr[0], arr[1]);
     // 🕘 履歴 に 追加 (= 成功 / 失敗 関係 なく 検索 した kw を 残す)
     try { _kpHistoryAdd(siteId, kw); } catch(_){}
+  }).catch(function(err){
+    if(settled) return;
+    settled = true;
+    clearInterval(loadingTimer);
+    clearTimeout(hardTimeout);
+    resBox.innerHTML = '<div style="padding:18px;background:#fee2e2;border-radius:11px;color:#9f1239;font-size:12.5px;line-height:1.7">'
+      + '<div style="font-weight:800;margin-bottom:6px">⚠️ エラー</div>'
+      + '<div style="font-family:ui-monospace,monospace;background:#fff;padding:7px 10px;border-radius:6px;font-size:11px">' + esc(String(err && err.message || err || 'unknown')) + '</div>'
+      + '<button onclick="_kpSearch(\''+esc(siteId)+'\')" style="margin-top:10px;background:#9f1239;color:#fff;border:0;padding:8px 16px;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">🔄 再 試行</button>'
+      + '</div>';
   });
 };
 

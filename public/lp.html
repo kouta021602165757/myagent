@@ -45,7 +45,7 @@
 <meta property="og:url" content="https://myaiagents.agency/">
 <meta property="og:title" content="MY AI Agent — AI が メディアを構築し、 あなたのサイトに 流入を起こす。">
 <meta property="og:description" content="30+ 名の AI 専門家チームが あなたのサイトを 24 時間 365 日 運用。 SEO / SNS / 競合 / KPI 全部 AI に任せて、 本業に戻ろう。">
-<meta property="og:image" content="https://myaiagents.agency/social/og-home.png">
+<meta property="og:image" content="https://myaiagents.agency/social/og-home-v3.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="MY AI Agent">
@@ -57,7 +57,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MY AI Agent — AI が メディアを構築し、 あなたのサイトに 流入を起こす。">
 <meta name="twitter:description" content="30+ 名の AI 専門家チームが 24 時間 365 日 で SEO / SNS / 競合 / KPI を運用。 Free で始められる。">
-<meta name="twitter:image" content="https://myaiagents.agency/social/og-home.png">
+<meta name="twitter:image" content="https://myaiagents.agency/social/og-home-v3.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -778,10 +778,61 @@ img{max-width:100%;display:block;}
   .nav-link{display:none;}
   .hero{padding:60px 0 40px;}
   .hero-form{flex-direction:column;border-radius:14px;padding:8px;gap:6px;}
-  .hero-form input{padding:10px 14px;}
-  .hero-form button{padding:12px;justify-content:center;border-radius:10px;}
+  .hero-form input{padding:14px 14px;font-size:16px;}
+  .hero-form button{padding:14px;justify-content:center;border-radius:10px;min-height:48px;font-size:14.5px;}
   .sec{padding:80px 0;}
   .showcase-body{padding:24px 18px 24px;}
+}
+
+/* ── 📱 mobile 強化 (2026-06-09) ────────────────────────────────
+   - 全 タップ 域 を 44px+ に
+   - iOS 16px 未満 入力 で zoom 発火 を 防止
+   - 横 overflow を 完全 排除
+   - hero h1 を スマホ で 詰め過ぎ ない (= clamp で 制御)
+   ──────────────────────────────────────────────────────────────── */
+html,body{overflow-x:hidden;}
+@media(max-width:760px){
+  /* HERO compact */
+  .hero{padding:90px 0 50px;}
+  .hero-inner{padding:0 18px;}
+  .hero-eye{font-size:10.5px;margin-bottom:18px;padding:5px 12px;}
+  .hero-h1{font-size:clamp(28px, 8.5vw, 42px) !important;line-height:1.18 !important;margin-bottom:18px;letter-spacing:-.01em;}
+  .hero-sub, .hero-lead{font-size:14.5px !important;line-height:1.7 !important;}
+
+  /* CTA 系 を 親指 サイズ に */
+  .hero-cta, .nav-cta, .btn-primary, button.btn-cta{
+    min-height:48px;
+    font-size:14.5px;
+    padding:13px 22px;
+    -webkit-tap-highlight-color:rgba(192,255,92,.18);
+  }
+
+  /* セクション パディング 圧縮 */
+  .sec{padding:60px 0 !important;}
+  .sec-inner{padding:0 18px !important;}
+  .sec-eyebrow{font-size:10px;margin-bottom:10px;}
+  .sec-h2{font-size:clamp(24px, 6vw, 32px) !important;line-height:1.25 !important;margin-bottom:16px;}
+  .sec-lead{font-size:14.5px;line-height:1.7;}
+
+  /* showcase / card 系 詰め */
+  .showcase, .sc-tile, .feat-card{padding:18px 16px !important;}
+  .showcase-body, .sc-tile-body{padding:14px !important;}
+
+  /* グリッド 1 列 強制 (= 揺れ 防止) */
+  .sc-grid, .feat-grid, .compare-grid, .how-grid{grid-template-columns:1fr !important;gap:14px !important;}
+
+  /* font-size:16px 未満 の input を 16px に (= iOS auto-zoom 防止) */
+  input[type="text"],input[type="email"],input[type="url"],input[type="number"],textarea,select{font-size:16px !important;}
+
+  /* 横 overflow 完全 抑止 (= グリッド 崩れ で 出る 横 swipe 解消) */
+  .nav, .sec, .showcase, footer{max-width:100vw;overflow-x:hidden;}
+}
+
+@media(max-width:390px){
+  .hero-h1{font-size:26px !important;}
+  .sec-h2{font-size:22px !important;}
+  .hero-eye{font-size:9.5px;}
+  .sec-eyebrow{font-size:9.5px;}
 }
 </style>
 </head>

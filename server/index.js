@@ -22774,6 +22774,92 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, out);
   }
 
+  // 🚀 GET /api/admin/user-schedules?userId=X — ユーザ の 全 schedule を 一覧
+  //    POST /api/admin/user-schedules?userId=X { action:'disable_extras' } で 重複 を 無効化
+  //    header: X-Service-Key
+  if(pathname === '/api/admin/user-schedules' && (method === 'GET' || method === 'POST')){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    const _qs = new url.URL(req.url, APP_URL).searchParams;
+    const userId = String(_qs.get('userId') || '').trim();
+    if(!userId) return jres(res, 400, { error: 'userId required' });
+    const user = await DB.findBy('id', userId).catch(() => null);
+    if(!user) return jres(res, 404, { error: 'user not found' });
+    // 全 schedule を 平坦 化 (= agent ごと に loop)
+    const all = [];
+    for(const ag of (user.agents || [])){
+      for(const s of (ag.schedules || [])){
+        if(!s) continue;
+        all.push({
+          agent_id: ag.id,
+          agent_name: ag.name || '',
+          schedule_id: s.id,
+          label: s.label || '',
+          kind: s.kind || '',
+          deliver: s.deliver || '',
+          enabled: !!s.enabled,
+          hour: s.hour, minute: s.minute,
+          last_run: s.last_run,
+          next_run: s.next_run,
+          prompt: String(s.prompt || '').slice(0, 80),
+        });
+      }
+    }
+    if(method === 'GET'){
+      return jres(res, 200, { user_id: userId, count: all.length, schedules: all });
+    }
+    // POST: action 実行
+    const body = await readBody(req).catch(() => ({}));
+    const action = String(body && body.action || '').trim();
+    if(action === 'disable_all_morning'){
+      // 「毎朝レポート」 系 全 disable
+      let disabled = 0;
+      for(const ag of (user.agents || [])){
+        for(const s of (ag.schedules || [])){
+          if(!s) continue;
+          if(/毎朝レポート|morning.?report/i.test(s.label || '') && s.enabled){
+            s.enabled = false;
+            disabled++;
+          }
+        }
+      }
+      await DB.save(user);
+      return jres(res, 200, { ok: true, action, disabled });
+    }
+    if(action === 'keep_one_morning'){
+      // 最新 site agent の 1 つ だけ 残し、 残り の 「毎朝レポート」 を disable
+      const morningOwners = (user.agents || [])
+        .filter(ag => ag && (ag.schedules || []).some(s => s && /毎朝レポート|morning.?report/i.test(s.label || '')))
+        .sort((a, b) => Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0));
+      let disabled = 0;
+      morningOwners.forEach((ag, idx) => {
+        for(const s of (ag.schedules || [])){
+          if(!s) continue;
+          if(/毎朝レポート|morning.?report/i.test(s.label || '')){
+            if(idx > 0){ // 最新 以外 = 全部 OFF
+              if(s.enabled){ s.enabled = false; disabled++; }
+            }
+          }
+        }
+      });
+      await DB.save(user);
+      return jres(res, 200, { ok: true, action, kept_agent: morningOwners[0] && morningOwners[0].id, disabled });
+    }
+    if(action === 'disable_schedule'){
+      const sid = String(body && body.schedule_id || '').trim();
+      let found = false;
+      for(const ag of (user.agents || [])){
+        for(const s of (ag.schedules || [])){
+          if(s && s.id === sid){ s.enabled = false; found = true; }
+        }
+      }
+      if(!found) return jres(res, 404, { error: 'schedule_id not found' });
+      await DB.save(user);
+      return jres(res, 200, { ok: true, action, schedule_id: sid });
+    }
+    return jres(res, 400, { error: 'unknown action', supported: ['disable_all_morning', 'keep_one_morning', 'disable_schedule'] });
+  }
+
   // 🚀 GET /api/admin/seo-sitemap-urls — 全 サイト マップ URL 一覧 を 返す
   //    (= GSC / Bing Webmaster に 手動 登録 する 際 に コピペ で 使える)
   if(pathname === '/api/admin/seo-sitemap-urls' && method === 'GET'){

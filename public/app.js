@@ -2334,6 +2334,8 @@ document.addEventListener('DOMContentLoaded',async()=>{
         me = JSON.parse(_cMe);
         agents = JSON.parse(_cAg);
         if(!me.favorites) me.favorites = [];
+        // Loader を 即 close (= cache で UI が 完成 してる)
+        try { document.getElementById('loader').classList.add('gone'); } catch(_){}
         try { if(typeof renderHomeDashboard === 'function') renderHomeDashboard(); } catch(_){}
         try { if(typeof renderAgList === 'function') renderAgList(); } catch(_){}
       }
@@ -2440,6 +2442,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
     try {
       localStorage.setItem('cache_me_v1', JSON.stringify(me));
       localStorage.setItem('cache_agents_v1', JSON.stringify(agents));
+      localStorage.setItem('cache_ts_v1', String(Date.now()));
     } catch(_){ /* quota / private mode 等 — silently fail */ }
     // Fetch joined groups (where I'm an invitee, hosted by others)
     try { await fetchJoinedGroups(); } catch(e){ console.warn('[groups] fetch failed:', e.message); }

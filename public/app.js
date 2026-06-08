@@ -15351,6 +15351,31 @@ function renderMsgs(ag, forceScrollBottom){
   _kickRtProgress();
 }
 
+// 🎯 stale な 「生成中」 カード を 削除 (= 10 分 以上 完了 しない もの)。
+//    既存 DELETE /api/agents/:id/messages/:idx を 使う。
+window._dismissStalePublish = async function(msgId){
+  if(!msgId) return;
+  if(!confirm('この 「生成中」 表示 を 削除 しますか? (= 元 の 生成 ジョブ は サーバ 側 で 既に 中断 された 可能性 大)')) return;
+  try {
+    const ag = (agents||[]).find(a => a && a.id === activeId);
+    if(!ag || !Array.isArray(ag.history)) return;
+    // msgId に 該当 する idx を 検出
+    const idx = ag.history.findIndex(m => m && m.id === msgId);
+    if(idx < 0){
+      // 既に local では 消えてる、 念のため 再 render
+      if(typeof renderMsgs === 'function') renderMsgs(ag);
+      return;
+    }
+    await api('DELETE', '/api/agents/' + encodeURIComponent(ag.id) + '/messages/' + idx);
+    // local も 同期 で 削除 (= splice で idx ベース)
+    ag.history.splice(idx, 1);
+    if(typeof renderMsgs === 'function') renderMsgs(ag);
+    try { showToast('削除 しました', 'ok'); } catch(_){}
+  } catch(e){
+    try { showToast('削除 失敗: ' + (e.message||'unknown'), 'ng'); } catch(_){}
+  }
+};
+
 // 🎯 リアル タイム 生成 進捗 — 「KW 分析 → SERP 解析 → 構造 設計 → 執筆 → 画像 → 公開」
 //    の phase + elapsed 秒数 + progress bar を 全 .art-rt-progress に 1 秒 ごと 更新。
 //    時間 ベース 推定 (= サーバ side push 不要、 公開 タップ で 即 動 きが 見える)。
@@ -15697,6 +15722,7 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     const isFail = raw.kind === 'system_publish_fail';
     // 🎯 完了 検出: start カード に 対応 する 完了 (= success / fail) msg が ある なら、
     // 「生成中」 カード を 隠す (= 完了 カード だけ で 十分、 「最終 調整 中…」 stuck 解消)
+    let isStale = false;
     if(isStart && !_renderingInThread && ag && Array.isArray(ag.history)){
       const myId = raw.id || '';
       if(myId){
@@ -15706,6 +15732,11 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
           return ''; // 完了 した start カード は 非表示 (= success カード に 統合)
         }
       }
+      // 🎯 stale 検出: 10 分 以上 経過 + 完了 無 し = 生成 失敗 (= サーバ クラッシュ / AI timeout)
+      const startMs = Date.parse(raw.time || 0) || 0;
+      if(startMs && (Date.now() - startMs) > 10 * 60 * 1000){
+        isStale = true;
+      }
     }
     const url = raw.article_url || '';
     const title = raw.article_title || (raw.content || '').slice(0, 60);
@@ -15713,10 +15744,10 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     const catChip = catName ? '<span style="background:#f3e8ff;color:#5b21b6;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:800;margin-right:5px">📂 ' + esc(catName) + (isStart ? '(推定)' : '') + '</span>' : '';
     // 🎯 2026-06-09: 「生成中」 も フル カード で 表示 (= 既存 の 小 ピル は 目立たず 不安 を 招く)。
     //    success と 同じ 構造 で 状態 だけ 違う ように 統一。 icon に pulse アニメ を 追加。
-    const icon = isStart ? '⏳' : (isFail ? '⚠️' : '✅');
-    const statusColor = isStart ? '#f59e0b' : (isFail ? '#dc2626' : '#15803d');
-    const statusBg = isStart ? '#fffbeb' : (isFail ? '#fee2e2' : '#dcfce7');
-    const statusLbl = isStart ? '生成中' : (isFail ? '失敗' : '公開済');
+    const icon = isStart ? (isStale ? '❌' : '⏳') : (isFail ? '⚠️' : '✅');
+    const statusColor = isStart ? (isStale ? '#dc2626' : '#f59e0b') : (isFail ? '#dc2626' : '#15803d');
+    const statusBg = isStart ? (isStale ? '#fee2e2' : '#fffbeb') : (isFail ? '#fee2e2' : '#dcfce7');
+    const statusLbl = isStart ? (isStale ? 'タイムアウト' : '生成中') : (isFail ? '失敗' : '公開済');
     const domain = url ? url.replace(/^https?:\/\//, '').split('/')[0] : '';
     const chars = (raw.content || '').match(/(\d{2,5})\s*字/);
     const charsLbl = chars ? chars[1] + ' 字' : '';
@@ -15748,26 +15779,42 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
         +   '</button>'
         + '</div>';
     }
-    // 🎯 「生成中」 アイコン は pulse アニメで 動 きを 出す (= 待ってる 感 解消)
-    const iconAnim = isStart ? ';animation:artStartPulse 1.4s ease-in-out infinite' : '';
+    // 🎯 「生成中」 アイコン は pulse アニメで 動 きを 出す (= stale 時 は アニメ なし)
+    const iconAnim = (isStart && !isStale) ? ';animation:artStartPulse 1.4s ease-in-out infinite' : '';
     const startStyleTag = isStart ? '<style>@keyframes artStartPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:.75}}@keyframes artBarFill{0%{width:0%}100%{width:100%}}@keyframes artDotBlink{0%,100%{opacity:.3}50%{opacity:1}}.art-phase-dots span{display:inline-block;animation:artDotBlink 1.4s ease-in-out infinite}.art-phase-dots span:nth-child(2){animation-delay:.18s}.art-phase-dots span:nth-child(3){animation-delay:.36s}</style>' : '';
-    // 🎯 リアル タイム 進捗 表示 (= elapsed + phase + progress bar、 JS で 毎秒 更新)
-    //    data-rt-start 属性 で 公開 時刻 を 記録、 _kickRtProgress() が 1 秒 ごと に 更新。
-    const startTimeIso = (raw && raw.time) || new Date().toISOString();
-    const startSubline = isStart
-      ? '<div class="art-rt-progress" data-rt-start="' + esc(startTimeIso) + '" style="margin-top:10px">'
-        +   '<div class="rt-phase" style="font-size:11.5px;color:#92400e;font-weight:800;letter-spacing:.02em;display:flex;align-items:center;gap:6px">'
-        +     '<span class="rt-phase-icon">📋</span>'
-        +     '<span class="rt-phase-text">KW 分析 中</span>'
-        +     '<span class="art-phase-dots" style="color:#d97706;font-weight:900;letter-spacing:1px"><span>.</span><span>.</span><span>.</span></span>'
-        +     '<span class="rt-elapsed" style="margin-left:auto;font-size:10.5px;color:#92400e;font-weight:600;font-family:ui-monospace,monospace">0 s</span>'
-        +   '</div>'
-        +   '<div class="rt-bar" style="margin-top:8px;height:5px;background:rgba(217,119,6,.15);border-radius:99px;overflow:hidden">'
-        +     '<div class="rt-bar-fill" style="height:100%;background:linear-gradient(90deg,#f59e0b,#d97706);width:0%;transition:width .8s ease-out;border-radius:99px"></div>'
-        +   '</div>'
-        +   '<div style="font-size:10.5px;color:var(--text3);line-height:1.5;margin-top:6px">通常 60-90 秒 で 完了 ・ 画面 を 閉じて OK</div>'
-        + '</div>'
-      : '';
+    // 🎯 stale なら 「生成 失敗」 表示 + dismiss button
+    let startSubline = '';
+    if(isStart){
+      if(isStale){
+        const dismissAttrEsc = esc((raw && raw.id) || '');
+        startSubline = ''
+          + '<div style="margin-top:10px;padding:10px 12px;background:#fee2e2;border:1px solid #fecaca;border-radius:8px;font-size:11.5px;color:#9f1239;line-height:1.65">'
+          +   '⚠️ <b>生成 が 完了 しません でした</b> (= 10 分 以上 応答 なし)。'
+          +   '<br>サーバ 側 で 失敗 or 中断 された 可能性。 再 試行 して ください。'
+          + '</div>'
+          + '<div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--wire2)">'
+          +   '<button onclick="event.preventDefault();event.stopPropagation();_dismissStalePublish(\'' + dismissAttrEsc + '\')" '
+          +   'style="flex:1;background:#fff;color:var(--text2);border:1px solid var(--wire2);padding:10px 14px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">'
+          +     '✕ 閉じる'
+          +   '</button>'
+          + '</div>';
+      } else {
+        // リアル タイム 進捗 表示 (= 通常 ケース)
+        const startTimeIso = (raw && raw.time) || new Date().toISOString();
+        startSubline = '<div class="art-rt-progress" data-rt-start="' + esc(startTimeIso) + '" style="margin-top:10px">'
+          +   '<div class="rt-phase" style="font-size:11.5px;color:#92400e;font-weight:800;letter-spacing:.02em;display:flex;align-items:center;gap:6px">'
+          +     '<span class="rt-phase-icon">📋</span>'
+          +     '<span class="rt-phase-text">KW 分析 中</span>'
+          +     '<span class="art-phase-dots" style="color:#d97706;font-weight:900;letter-spacing:1px"><span>.</span><span>.</span><span>.</span></span>'
+          +     '<span class="rt-elapsed" style="margin-left:auto;font-size:10.5px;color:#92400e;font-weight:600;font-family:ui-monospace,monospace">0 s</span>'
+          +   '</div>'
+          +   '<div class="rt-bar" style="margin-top:8px;height:5px;background:rgba(217,119,6,.15);border-radius:99px;overflow:hidden">'
+          +     '<div class="rt-bar-fill" style="height:100%;background:linear-gradient(90deg,#f59e0b,#d97706);width:0%;transition:width .8s ease-out;border-radius:99px"></div>'
+          +   '</div>'
+          +   '<div style="font-size:10.5px;color:var(--text3);line-height:1.5;margin-top:6px">通常 60-90 秒 で 完了 ・ 画面 を 閉じて OK</div>'
+          + '</div>';
+      }
+    }
     const card = startStyleTag + '<div class="article-card" style="margin:8px 0;max-width:520px">'
       + wrapStart
       + '<div style="background:#fff;border:1px solid ' + (isStart ? '#fed7aa' : 'var(--wire)') + ';border-radius:11px;padding:14px 16px;' + (url ? 'cursor:pointer;transition:all .15s' : '') + '" '

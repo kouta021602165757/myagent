@@ -22774,6 +22774,13 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, out);
   }
 
+  // 🚀 GET /api/admin/recent-kw-errors — 直近 KW 取得 失敗 ring buffer (= 30 件)
+  if(pathname === '/api/admin/recent-kw-errors' && method === 'GET'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    return jres(res, 200, { errors: global._recentKwErrors || [] });
+  }
+
   // 🚀 GET /api/admin/user-schedules?userId=X — ユーザ の 全 schedule を 一覧
   //    POST /api/admin/user-schedules?userId=X { action:'disable_extras' } で 重複 を 無効化
   //    header: X-Service-Key
@@ -27628,6 +27635,20 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, { steps, fetched_at: new Date().toISOString() });
   }
 
+  // KW detail 失敗 ring buffer (= /api/admin/recent-kw-errors で 取り出し)
+  if(!global._recentKwErrors) global._recentKwErrors = [];
+  function _recordKwDetailError(kw, mode, errMsg, rawTail){
+    try {
+      global._recentKwErrors.unshift({
+        ts: new Date().toISOString(),
+        kw, mode,
+        error: String(errMsg || '').slice(0, 400),
+        raw_tail: String(rawTail || '').slice(0, 400),
+      });
+      if(global._recentKwErrors.length > 30) global._recentKwErrors.length = 30;
+    } catch(_){}
+  }
+
   // GET /api/agents/:id/keyword-detail?kw=XXX&mode=seo|aeo
   //   選択キーワードの詳細: サジェスト + 周辺語 + 推奨タイトル × 5 + シグナル + (AEO) PAA + schema
   //   キャッシュ: agent.keyword_detail[mode + ':' + kw] に 24 時間
@@ -27743,9 +27764,48 @@ async function handleAPI(req,res,pathname,method,ip){
     // 🚀 Haiku 4.5 に 切替 (2026-06-08): Sonnet 比 5-10 倍 速い (= 90s+ → 8-15s)。
     //   user UX 優先 (= 「タイトル 生成 が 遅い」 解決)。 出力 構造 は max_tokens 6000 で 安定。
     //   コスト も ~1/15 で お得。 失敗 時 は parse 修復 で fallback。
+    // 🔧 Tool Use で JSON 構造化 を **強制** (2026-06-08): 過去 「取得失敗」 多発 の 根本 原因 は
+    //    自由文 出力 の JSON 形 崩れ。 Anthropic Tool Use なら schema 通り の input_json が
+    //    必ず 返る (= JSON.parse 失敗 が 起きない)。 失敗 時 は 診断 ring buffer に 記録。
     const info = _resolveModelInfo('haiku');
     let rawText = '';
     let parsed = null;
+    const _kwTool = {
+      name: 'return_kw_analysis',
+      description: 'キーワード分析 + 推奨タイトル 10 件 を 構造化 で 返す',
+      input_schema: {
+        type: 'object',
+        properties: {
+          signals: {
+            type: 'object',
+            properties: {
+              competition: { type: 'string', enum: ['緩', '中', '激'] },
+              volume_est: { type: 'integer', description: '月間 推定 検索 ボリューム' },
+              estimated_pv: { type: 'integer', description: '想定 月間 PV' },
+              immediacy_score: { type: 'integer', description: '即効性 0-100' },
+              score: { type: 'string', enum: ['S', 'A', 'B', 'C'] },
+            },
+          },
+          titles: {
+            type: 'array',
+            minItems: 5,
+            maxItems: 10,
+            items: {
+              type: 'object',
+              required: ['rank', 'title'],
+              properties: {
+                rank: { type: 'integer' },
+                title: { type: 'string' },
+                chars_target: { type: 'integer' },
+                h2_count: { type: 'integer' },
+                reason: { type: 'string' },
+              },
+            },
+          },
+        },
+        required: ['titles'],
+      },
+    };
     try {
       if(info.provider === 'gemini'){
         const r = await _callGemini([{role:'user', content: prompt}], '', info);
@@ -27753,19 +27813,37 @@ async function handleAPI(req,res,pathname,method,ip){
       } else if(ANTHROPIC){
         const r = await httpsReq('POST', 'api.anthropic.com', '/v1/messages',
           { 'Content-Type':'application/json', 'x-api-key': ANTHROPIC, 'anthropic-version':'2023-06-01' },
-          { model: info.modelId, max_tokens: 6000, messages:[{ role:'user', content: prompt }] },
+          {
+            model: info.modelId,
+            max_tokens: 4096,
+            tools: [_kwTool],
+            tool_choice: { type: 'tool', name: 'return_kw_analysis' },
+            messages: [{ role:'user', content: prompt }],
+          },
           { timeout: 60000 });
         if(r.s !== 200){
           const ce = _claudeErrorMessage(r);
           console.warn('[kw-detail] AI 失敗 status=' + r.s + ' err=' + (ce.user_message||'').slice(0,100));
+          _recordKwDetailError(kw, mode, 'AI HTTP ' + r.s + ': ' + (ce.user_message||'').slice(0,200), '');
           return jres(res, 502, { error: ce.error, detail: ce.user_message, status: r.s });
         }
-        rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+        // 🎯 Tool Use 結果 を 取り出す (= input field が 構造化 JSON)
+        const tu = (r.d.content || []).find(b => b && b.type === 'tool_use' && b.name === 'return_kw_analysis');
+        if(tu && tu.input && Array.isArray(tu.input.titles) && tu.input.titles.length > 0){
+          parsed = tu.input;
+        } else {
+          // フォールバック: tool 呼ばれず 自由文 で 返した 場合 を 旧 path で 救済
+          rawText = (r.d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+          console.warn('[kw-detail] tool 未呼出、 自由文 fallback', rawText.slice(0, 200));
+        }
       } else {
         return jres(res, 500, { error: 'no_ai_provider', detail: 'AI provider が設定されていません。' });
       }
-      const jsonM = rawText.match(/\{[\s\S]*"titles"[\s\S]*\}/);
-      parsed = JSON.parse(jsonM ? jsonM[0] : rawText);
+      // tool 未呼出 で parsed が まだ null なら 自由文 parse 試行
+      if(!parsed && rawText){
+        const jsonM = rawText.match(/\{[\s\S]*"titles"[\s\S]*\}/);
+        try { parsed = JSON.parse(jsonM ? jsonM[0] : rawText); } catch(_){}
+      }
     } catch(e){
       console.warn('[kw-detail] parse failed:', e.message, '\nraw tail:', rawText.slice(-300));
       // JSON 修復: control char escape + 末尾 切れの 補完を 試みる
@@ -27779,12 +27857,18 @@ async function handleAPI(req,res,pathname,method,ip){
         }
       } catch(_){}
       if(!parsed || !Array.isArray(parsed.titles)){
+        _recordKwDetailError(kw, mode, 'parse_failed: ' + e.message, rawText.slice(-300));
         return jres(res, 502, { error: 'parse_failed', message: e.message, raw: rawText.slice(0, 300) });
       }
       // 修復成功時は signals 等 missing なので フォールバック値
       parsed.signals = parsed.signals || {};
       parsed.paa = parsed.paa || [];
       parsed.citation_checklist = parsed.citation_checklist || [];
+    }
+    // ガード: titles が 空 or null → Tool Use でも minItems 違反 で 空 で 来る 可能性
+    if(!parsed || !Array.isArray(parsed.titles) || parsed.titles.length === 0){
+      _recordKwDetailError(kw, mode, 'empty titles after parse', JSON.stringify(parsed||{}).slice(0, 300));
+      return jres(res, 502, { error: 'empty_titles', detail: '生成 結果 に タイトル が ありません。 別 KW で 再 試行 してください。' });
     }
 
     const out = {

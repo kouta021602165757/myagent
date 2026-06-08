@@ -2324,6 +2324,17 @@ document.addEventListener('DOMContentLoaded',async()=>{
   if(urlToken){ localStorage.setItem('token',urlToken); history.replaceState({},'',location.pathname); }
   token=localStorage.getItem('token');
   if(!token){ location.href='auth.html'; return; }
+  // 🚨 watchdog: 3 秒 後 loader が まだ 出てたら 強制 close (= 「読み込み中 ずっと 出る」 解消)
+  //    fetch が 遅延 / 失敗 しても UI を 凍結 しない。 cache 無い 場合 で も 3 秒 で UI に 移行。
+  setTimeout(function(){
+    try {
+      var l = document.getElementById('loader');
+      if(l && !l.classList.contains('gone')){
+        console.warn('[boot] watchdog: loader still showing after 3s, forcing close');
+        l.classList.add('gone');
+      }
+    } catch(_){}
+  }, 3000);
   try{
     // 🚀 楽観 render: 前回の /api/me + /api/agents が localStorage に あれば 即時 sidebar 表示
     //   その後 fetch 完了で 上書き。 reload 2 回目以降は 「サイト一覧 が 一瞬で 出る」 体験。

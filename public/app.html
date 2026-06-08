@@ -15,13 +15,13 @@
 <!-- Preload critical assets — browser starts downloading these in parallel
      with HTML parse, before they're discovered in <script>/<link> tags below.
      Reduces critical path latency 100-300ms on cold load. -->
-<link rel="preload" as="script" href="/app.js?v=1780936478257">
-<link rel="preload" as="style" href="/app.css?v=1780936478257">
+<link rel="preload" as="script" href="/app.js?v=1780937439251">
+<link rel="preload" as="style" href="/app.css?v=1780937439251">
 <!-- Preconnect to API origin so DNS + TLS handshake is ready before the first
      fetch fires (= /api/me / /api/agents start with ~0ms connection latency). -->
 <link rel="preconnect" href="https://myaiagents.agency" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css?v=1780936478257">
+<link rel="stylesheet" href="/app.css?v=1780937439251">
 <!-- KaTeX & highlight.js — needed only when chat shows math/code blocks.
      CSS uses media="print" trick + onload swap so it doesn't block first paint.
      The JS is already defer'd. Saves a couple hundred ms on initial render
@@ -33,7 +33,22 @@
 </head>
 <body>
 
-<div class="loader" id="loader"><div class="loader-ring"></div></div>
+<div class="loader" id="loader">
+  <div style="text-align:center">
+    <div class="loader-ring" style="margin:0 auto"></div>
+    <div id="loaderMsg" style="margin-top:14px;font-size:12.5px;color:rgba(255,255,255,.7);font-family:'Noto Sans JP',system-ui,sans-serif">読み込み 中…</div>
+    <button onclick="document.getElementById('loader').classList.add('gone')" style="margin-top:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.65);padding:7px 16px;border-radius:8px;font-size:11px;font-family:inherit;cursor:pointer;display:none" id="loaderSkipBtn">スキップ してアプリ を 開く →</button>
+  </div>
+</div>
+<script>
+// 2 秒 後 から スキップ button を 表示 (= ユーザ が 操作 不能 状態 を 救済)
+setTimeout(function(){
+  var btn = document.getElementById('loaderSkipBtn');
+  if(btn) btn.style.display = 'inline-block';
+  var msg = document.getElementById('loaderMsg');
+  if(msg) msg.textContent = 'サーバ 応答 が 遅延 中…';
+}, 2000);
+</script>
 
 <!-- 旧 First-run onboarding wizard は廃止。新規ユーザーは LP → signup →
      /onboarding.html (スプラッシュ) → /app.html へ遷移。
@@ -2219,7 +2234,7 @@
      blocker between body markup and first paint. Order is preserved with the
      small inline scripts below (which set window._isJa, cookie consent, and
      Sentry) — none of them depend on globals defined in app.js. -->
-<script defer src="/app.js?v=1780936478257"></script>
+<script defer src="/app.js?v=1780937439251"></script>
 
 <script>
 (function(){

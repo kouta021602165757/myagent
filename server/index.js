@@ -15945,6 +15945,13 @@ const _MEDIA_SLUG_NEG_TTL = 60 * 1000;
 function _mediaSlugCacheClear(slug){
   if(slug) _mediaSlugCache.delete(slug);
   else _mediaSlugCache.clear();
+  // 🚀 server-side HTML cache も 同時 に invalidate (= 新 記事 公開 で 即 反映)
+  try {
+    if(global._mediaHomeHtmlCache){
+      if(slug) global._mediaHomeHtmlCache.delete(slug);
+      else global._mediaHomeHtmlCache.clear();
+    }
+  } catch(_){}
 }
 // opts.includePosts: 個別記事 SSR で body_html が必要な時のみ true。
 //   false (= 一覧ページ) なら full row fetch を skip して egress を半減。
@@ -19040,8 +19047,8 @@ function _mediaRenderMinimalIndex(media, posts, opts){
   const heroPostCard = (p, opts2) => {
     const sz = opts2 && opts2.size || 'small';
     const isBig = sz === 'big';
-    const imgHeight = isBig ? '380px' : '120px';
-    const titleSize = isBig ? '26px' : '14px';
+    const imgHeight = isBig ? '240px' : '130px';
+    const titleSize = isBig ? '22px' : '14px';
     const titleLineClamp = isBig ? '3' : '2';
     const excerptShow = isBig && p.excerpt;
     const idx = opts2 && opts2.idx || 0;
@@ -19068,15 +19075,15 @@ function _mediaRenderMinimalIndex(media, posts, opts){
         <div style="font-size:10.5px;color:${s.mutedColor}">${posts.length} 記事 公開 中</div>
       </div>
       ${heroPosts.length >= 5 ? `
-        <div style="display:grid;grid-template-columns:1.6fr 1fr;grid-template-rows:1fr 1fr;gap:18px;height:660px" class="hero-grid">
-          <div style="grid-row:1/3">${heroPostCard(heroPosts[0], { size:'big', idx:0 })}</div>
-          ${heroPostCard(heroPosts[1], { size:'small', idx:1 })}
-          ${heroPostCard(heroPosts[2], { size:'small', idx:2 })}
-          ${heroPostCard(heroPosts[3], { size:'small', idx:3 })}
-          ${heroPostCard(heroPosts[4], { size:'small', idx:4 })}
+        <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;grid-template-rows:auto auto;gap:16px" class="hero-grid">
+          <div style="grid-row:1/3;grid-column:1/2">${heroPostCard(heroPosts[0], { size:'big', idx:0 })}</div>
+          <div>${heroPostCard(heroPosts[1], { size:'small', idx:1 })}</div>
+          <div>${heroPostCard(heroPosts[2], { size:'small', idx:2 })}</div>
+          <div>${heroPostCard(heroPosts[3], { size:'small', idx:3 })}</div>
+          <div>${heroPostCard(heroPosts[4], { size:'small', idx:4 })}</div>
         </div>
       ` : `
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
           ${heroPosts.map((p, i) => heroPostCard(p, { size:'small', idx:i })).join('')}
         </div>
       `}
@@ -19235,7 +19242,13 @@ ${schemaTags}
   @media (max-width:760px){
     /* HERO grid: 1 列 縦 stack に (= モバイル) */
     .hero-grid{grid-template-columns:1fr !important;grid-template-rows:auto !important;height:auto !important;gap:14px !important}
-    .hero-grid > div:first-child{grid-row:auto !important}
+    .hero-grid > div:first-child{grid-row:auto !important;grid-column:auto !important}
+    .hero-grid > div{grid-column:auto !important}
+  }
+  @media (min-width:761px) and (max-width:980px){
+    /* タブレット: 2 列 で 大カード 上、 小カード 4 つ 下 */
+    .hero-grid{grid-template-columns:1fr 1fr !important;grid-template-rows:auto !important;height:auto !important}
+    .hero-grid > div:first-child{grid-row:auto !important;grid-column:1/3 !important}
   }
   @media (max-width:640px){
     section[style*="grid-template-columns:1.3fr 1fr"]{grid-template-columns:1fr !important}
@@ -34831,6 +34844,20 @@ const server=http.createServer(async(req,res)=>{
     return (async () => {
       const slug = mediaIndexRoute[1];
       try {
+        // 🚀 server-side HTML cache (= 5 min per media)、 5 秒 → 50ms に 短縮
+        if(!global._mediaHomeHtmlCache) global._mediaHomeHtmlCache = new Map();
+        const HOME_TTL = 5 * 60 * 1000;
+        const cached = global._mediaHomeHtmlCache.get(slug);
+        if(cached && Date.now() - cached.t < HOME_TTL){
+          res.writeHead(200, {
+            'Content-Type': 'text/html;charset=utf-8',
+            'Cache-Control': 'public, max-age=300',
+            'X-Frame-Options': 'SAMEORIGIN',
+            'X-Cache': 'HIT',
+            'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
+          });
+          return res.end(cached.html);
+        }
         const found = await _findUserByMediaSlug(slug, { includePosts: false });
         if(!found){
           res.writeHead(404, { 'Content-Type': 'text/html;charset=utf-8' });
@@ -34839,10 +34866,17 @@ const server=http.createServer(async(req,res)=>{
         const { agent } = found;
         const posts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
         const html = _mediaRenderMinimalIndex(agent.media, posts, { agent });
+        // cache 保存 (= max 200 entries で LRU 風)
+        if(global._mediaHomeHtmlCache.size > 200){
+          const first = global._mediaHomeHtmlCache.keys().next().value;
+          global._mediaHomeHtmlCache.delete(first);
+        }
+        global._mediaHomeHtmlCache.set(slug, { html, t: Date.now() });
         res.writeHead(200, {
           'Content-Type': 'text/html;charset=utf-8',
           'Cache-Control': 'public, max-age=300',
           'X-Frame-Options': 'SAMEORIGIN',
+          'X-Cache': 'MISS',
           'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
         });
         return res.end(html);

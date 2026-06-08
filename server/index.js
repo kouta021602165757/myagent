@@ -19052,10 +19052,15 @@ function _mediaRenderMinimalIndex(media, posts, opts){
     const titleLineClamp = isBig ? '3' : '2';
     const excerptShow = isBig && p.excerpt;
     const idx = opts2 && opts2.idx || 0;
+    // 🎯 hero フォールバック: hero_image_url が 無 い 時 は SVG hero (= カテゴリ 装飾) を 必ず 出す
+    let cardHero = p.hero_image_url;
+    if(!cardHero){
+      try { cardHero = _svgHeroForArticle(p, media); } catch(_){}
+    }
     return `
       <article style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;display:flex;flex-direction:column;transition:all .2s;cursor:pointer" onmouseover="this.style.borderColor='${accent}';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)'" onmouseout="this.style.borderColor='${s.cardBorder}';this.style.transform='';this.style.boxShadow=''">
-        ${p.hero_image_url
-          ? '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;text-decoration:none"><img loading="lazy" decoding="async" src="'+_mediaEsc(p.hero_image_url)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:'+imgHeight+';object-fit:cover;display:block"></a>'
+        ${cardHero
+          ? '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;text-decoration:none"><img loading="lazy" decoding="async" src="'+_mediaEsc(cardHero)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:'+imgHeight+';object-fit:cover;display:block"></a>'
           : '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;height:'+imgHeight+';background:'+heroGrad[idx%heroGrad.length]+';text-decoration:none"></a>'}
         <div style="padding:${isBig ? '20px 22px' : '12px 14px'};flex:1;display:flex;flex-direction:column">
           ${p.category_name ? '<div style="font-size:9.5px;font-weight:800;color:'+accent+';letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;font-family:'+s.brandFont+'">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
@@ -19098,10 +19103,13 @@ function _mediaRenderMinimalIndex(media, posts, opts){
       </div>
       <div class="carousel" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scrollbar-width:none;padding:0 24px 12px;text-align:center">
         <div style="display:inline-flex;gap:14px;max-width:100%;text-align:left">
-          ${trendingPosts.map((p, i) => `
+          ${trendingPosts.map((p, i) => {
+            let trHero = p.hero_image_url;
+            if(!trHero){ try { trHero = _svgHeroForArticle(p, media); } catch(_){} }
+            return `
             <a href="${_mediaPublicUrl(media, p.slug)}" style="flex:0 0 240px;scroll-snap-align:start;background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;text-decoration:none;color:inherit;transition:all .15s;display:flex;flex-direction:column" onmouseover="this.style.borderColor='${accent}'" onmouseout="this.style.borderColor='${s.cardBorder}'">
-              ${p.hero_image_url
-                ? '<img loading="lazy" decoding="async" src="'+_mediaEsc(p.hero_image_url)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:130px;object-fit:cover">'
+              ${trHero
+                ? '<img loading="lazy" decoding="async" src="'+_mediaEsc(trHero)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:130px;object-fit:cover">'
                 : '<div style="height:130px;background:'+heroGrad[(i+5)%heroGrad.length]+'"></div>'}
               <div style="padding:13px 14px;flex:1;display:flex;flex-direction:column">
                 ${p.category_name ? '<div style="font-size:9.5px;font-weight:800;color:'+accent+';letter-spacing:.06em;margin-bottom:5px">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
@@ -19109,16 +19117,20 @@ function _mediaRenderMinimalIndex(media, posts, opts){
                 <div style="font-size:10px;color:${s.mutedColor};margin-top:auto">${_mediaEsc(_mediaFmtDate(p.published_at))}</div>
               </div>
             </a>
-          `).join('')}
+          `;
+          }).join('')}
         </div>
       </div>
     </section>` : '';
 
   // ── 全 記事 grid (= 「もっと 読む」 区画) ──
-  const cardsHTML = (restPosts.length > 0) ? restPosts.map((p, i) => `
+  const cardsHTML = (restPosts.length > 0) ? restPosts.map((p, i) => {
+    let gridHero = p.hero_image_url;
+    if(!gridHero){ try { gridHero = _svgHeroForArticle(p, media); } catch(_){} }
+    return `
       <article style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;display:flex;flex-direction:column;transition:all .15s" onmouseover="this.style.borderColor='${accent}'" onmouseout="this.style.borderColor='${s.cardBorder}'">
-        ${p.hero_image_url
-          ? '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block"><img loading="lazy" decoding="async" src="'+_mediaEsc(p.hero_image_url)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:150px;object-fit:cover"></a>'
+        ${gridHero
+          ? '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block"><img loading="lazy" decoding="async" src="'+_mediaEsc(gridHero)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:150px;object-fit:cover"></a>'
           : '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;height:150px;background:'+heroGrad[(i+15)%heroGrad.length]+'"></a>'}
         <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column">
           ${p.category_name ? '<div style="font-size:9.5px;font-weight:800;color:'+accent+';letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;font-family:'+s.brandFont+'">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
@@ -19128,7 +19140,8 @@ function _mediaRenderMinimalIndex(media, posts, opts){
           ${p.excerpt ? '<p style="font-size:12px;color:'+s.subColor+';line-height:1.55;margin:0 0 10px;flex:1">'+_mediaEsc((p.excerpt||'').slice(0,100))+'</p>' : ''}
           <div style="font-size:10.5px;color:${s.mutedColor};margin-top:auto">${_mediaEsc(_mediaFmtDate(p.published_at))}</div>
         </div>
-      </article>`).join('') : '';
+      </article>`;
+    }).join('') : '';
 
   // ── アーカイブ 月別 list ──
   const archiveHTML = monthList.length > 1 ? `

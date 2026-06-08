@@ -15695,6 +15695,18 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
   if(raw && (raw.kind === 'system_publish' || raw.kind === 'system_publish_fail' || raw.kind === 'system_publish_start') && (raw.article_title || raw.article_url)){
     const isStart = raw.kind === 'system_publish_start';
     const isFail = raw.kind === 'system_publish_fail';
+    // 🎯 完了 検出: start カード に 対応 する 完了 (= success / fail) msg が ある なら、
+    // 「生成中」 カード を 隠す (= 完了 カード だけ で 十分、 「最終 調整 中…」 stuck 解消)
+    if(isStart && !_renderingInThread && ag && Array.isArray(ag.history)){
+      const myId = raw.id || '';
+      if(myId){
+        const completed = ag.history.find(m => m && m.thread_parent_id === myId &&
+          (m.kind === 'system_publish' || m.kind === 'system_publish_fail'));
+        if(completed){
+          return ''; // 完了 した start カード は 非表示 (= success カード に 統合)
+        }
+      }
+    }
     const url = raw.article_url || '';
     const title = raw.article_title || (raw.content || '').slice(0, 60);
     const catName = raw.article_category || '';

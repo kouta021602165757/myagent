@@ -5471,12 +5471,20 @@ function _fetchGa4Snapshot(siteId, opts){
   // 5 分以内に取得済みならスキップ (= 何度も dashboard を re-render する時の保護)
   if(!force && existing && existing._localFetchedMs && Date.now() - existing._localFetchedMs < 5*60*1000) return;
   if(window._ga4FetchInFlight && window._ga4FetchInFlight[siteId]) return;
+  // 🎯 GA4 未接続 ユーザ では fetch しても 必ず 「connected:false」 が 返るだけ。
+  //    トースト 出さず に skip して 「GA4 数字を読み込み中… が ずっと 出る」 を 解消。
+  if(me && !me.google_sheets_connected){
+    window._ga4Snapshots[siteId] = { connected: false, snapshot: null, _localFetchedMs: Date.now() };
+    return;
+  }
   window._ga4FetchInFlight = window._ga4FetchInFlight || {};
   window._ga4FetchInFlight[siteId] = true;
   var method = force ? 'POST' : 'GET';
   var path = '/api/agents/' + encodeURIComponent(siteId) + '/ga4' + (force ? '/refresh' : '');
   // visible loading pill
   _setLoading('ga4-'+siteId, force ? 'GA4 数字を再取得中…' : 'GA4 数字を読み込み中…');
+  // 🛡 安全 装置: 30 秒 以上 残ってる pill は 強制 クリア
+  setTimeout(function(){ _clearLoading('ga4-'+siteId); }, 30000);
   api(method, path)
     .then(function(r){
       window._ga4Snapshots[siteId] = {

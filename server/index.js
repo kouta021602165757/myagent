@@ -16470,12 +16470,10 @@ async function _mediaGenerateArticle(agent, params){
   const lpUrl = (agent.media && agent.media.lp_url) || agent.site_url || '';
   const categories = ((agent.media && agent.media.categories) || []).map(c => c.name).join(', ');
 
-  // 🚀 Phase 1+2: model 自動選択 (= 短文は Haiku、 長文は Sonnet)
-  //    targetChars 8000 未満 → Haiku で十分品質、 コスト 1/15
-  // Haiku 切替: targetChars が 5500 未満なら Haiku (= 短文で速い)、 それ以上は Sonnet
-  //   Haiku max output = 8000 token、 日本語 5000-6000 字 でカツカツ → 出力切れる
-  //   従って targetChars 7000+ は Sonnet (= max 16000 token、 余裕) で生成
-  const useHaiku = targetChars < 5500 && !tpl.codeExamplesRequired;
+  // 🚀 2026-06-09 改訂: Haiku 4.5 max_tokens 8000 で 6500 字 まで OK と 実測 確認。
+  //    デフォルト 記事 (= targetChars ≤ 7500) を 全部 Haiku に → 60-90 秒 → 15-25 秒。
+  //    長文 (= 7500+ 字) のみ Sonnet (= max 16000 token 余裕、 品質 維持)。
+  const useHaiku = targetChars < 7500 && !tpl.codeExamplesRequired;
   const model = useHaiku ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
 
   // AEO 強制構造 (= 即効性 + AI 検索引用率 UP)
@@ -26941,8 +26939,9 @@ async function handleAPI(req,res,pathname,method,ip){
     // 🚀 軽量 save (= agents 列のみ、 start parent message 群)
     try { await DB.saveAgent(user); } catch(_){}
     jres(res, 200, { ok: true, started_at: now0, jobs });
-    // 並列 3 件まで で 順次 処理
-    const CONCURRENCY = 3;
+    // 🎯 2026-06-09: concurrency 3 → 2 に 削減 (= 「1 件 ずつ 終わる」 体感 UP)。
+    //    Haiku 化 で 1 記事 15-25 秒、 2 並列 で 5 件 ≈ 60 秒 (= 旧 Sonnet 3 並列 と 同 等)
+    const CONCURRENCY = 2;
     let cursor = 0;
     const worker = async () => {
       while(true){

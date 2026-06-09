@@ -634,6 +634,104 @@ async function _jobsListForAgent(agentId, opts){
   return Array.isArray(r.d) ? r.d : [];
 }
 
+// ──────────────────────────────────────────────────────────────
+// 📊 media_visits: 自前 PV カウント (= GA4 不要 で メディア PV / users 取得)
+// ──────────────────────────────────────────────────────────────
+const _BOT_RE = /bot|crawler|spider|preview|fetch|monitor|axios|curl|wget|python-requests|node-fetch|headless|lighthouse|gtmetrix|pagespeed|ahrefs|semrush|moz|chatgpt|claude|gpt|llm|openai|anthropic|google-extended|gptbot/i;
+function _isBotUA(ua){ return _BOT_RE.test(String(ua || '')); }
+
+function _recordMediaVisit(mediaSlug, innerPathname, req, parsedUrl){
+  try {
+    if(!USE_SUPA || !mediaSlug) return;
+    const ua = String((req.headers && req.headers['user-agent']) || '').slice(0, 250);
+    const isBot = _isBotUA(ua);
+    // post slug / page type 推定
+    const segs = String(innerPathname || '/').split('?')[0].split('/').filter(Boolean);
+    let postSlug = null, pageType = 'home';
+    const SPECIAL = new Set(['about', 'contact', 'privacy', 'tokushoho', 'author', 'category', 'sitemap.xml', 'robots.txt', 'llms.txt']);
+    if(segs.length === 0){ pageType = 'home'; }
+    else if(SPECIAL.has(segs[0])){ pageType = segs[0]; }
+    else { pageType = 'post'; postSlug = segs[0].slice(0, 200); }
+    // sitemap / robots は 計測 対象 外
+    if(pageType === 'sitemap.xml' || pageType === 'robots.txt' || pageType === 'llms.txt') return;
+    const ip = String(((req.headers && req.headers['x-forwarded-for']) || '').split(',')[0].trim()
+      || (req.socket && req.socket.remoteAddress) || '');
+    const day = new Date().toISOString().slice(0, 10);
+    const sessionHash = crypto.createHash('sha256').update(ip + '|' + ua + '|' + day + '|' + mediaSlug).digest('hex').slice(0, 32);
+    const ipHash = ip ? crypto.createHash('sha256').update(ip).digest('hex').slice(0, 24) : null;
+    const referrer = String((req.headers && (req.headers['referer'] || req.headers['referrer'])) || '').slice(0, 500);
+    const qs = (parsedUrl && parsedUrl.query) || {};
+    const row = {
+      media_slug: mediaSlug,
+      post_slug: postSlug,
+      page_type: pageType,
+      session_hash: sessionHash,
+      ip_hash: ipHash,
+      referrer: referrer || null,
+      utm_source: (qs.utm_source && String(qs.utm_source).slice(0, 80)) || null,
+      utm_medium: (qs.utm_medium && String(qs.utm_medium).slice(0, 80)) || null,
+      utm_campaign: (qs.utm_campaign && String(qs.utm_campaign).slice(0, 120)) || null,
+      user_agent: ua,
+      is_bot: isBot,
+    };
+    // fire-and-forget (= 配信 速度 を 妨げ ない)
+    sbReq('POST', 'media_visits', '', row).catch(e => {
+      // テーブル 未 作成 / column 不在 等 は warn のみ
+      if(!global._mediaVisitsTableMissing){
+        global._mediaVisitsTableMissing = (e && /relation .* does not exist/i.test(String(e.message || ''))) || false;
+      }
+      console.warn('[media_visits] insert failed:', (e && e.message || '').slice(0, 120));
+    });
+  } catch(_){}
+}
+
+// 集計 helper (= /api/agents/:id/media/stats が GA4 で 0 件 取れ ない とき の fallback)
+async function _mediaVisitsAggregate(mediaSlug, days){
+  if(!USE_SUPA || !mediaSlug) return null;
+  const sinceIso = new Date(Date.now() - days * 86400000).toISOString();
+  try {
+    // 1) 全 visit
+    const r = await sbReq('GET', 'media_visits',
+      '?select=post_slug,page_type,session_hash,visited_at,referrer,utm_source,utm_medium,utm_campaign'
+      + '&media_slug=eq.' + encodeURIComponent(mediaSlug)
+      + '&is_bot=eq.false'
+      + '&visited_at=gte.' + encodeURIComponent(sinceIso)
+      + '&limit=10000');
+    if(r.s >= 400) return null;
+    const rows = Array.isArray(r.d) ? r.d : [];
+    const pv = rows.length;
+    const sessions = new Set(rows.map(x => x.session_hash).filter(Boolean)).size;
+    const byPost = {};
+    const referrerCounts = {};
+    const utmSourceCounts = {};
+    rows.forEach(x => {
+      if(x.post_slug){
+        if(!byPost[x.post_slug]) byPost[x.post_slug] = { pv: 0, sessions: new Set() };
+        byPost[x.post_slug].pv++;
+        if(x.session_hash) byPost[x.post_slug].sessions.add(x.session_hash);
+      }
+      const refHost = (function(){
+        try {
+          const u = new URL(x.referrer || '');
+          return u.hostname.replace(/^www\./, '');
+        } catch(_){ return null; }
+      })();
+      if(refHost) referrerCounts[refHost] = (referrerCounts[refHost] || 0) + 1;
+      if(x.utm_source) utmSourceCounts[x.utm_source] = (utmSourceCounts[x.utm_source] || 0) + 1;
+    });
+    const topPosts = Object.entries(byPost)
+      .map(([slug, v]) => ({ slug, pv: v.pv, sessions: v.sessions.size }))
+      .sort((a, b) => b.pv - a.pv);
+    const topReferrers = Object.entries(referrerCounts)
+      .map(([host, n]) => ({ host, count: n }))
+      .sort((a, b) => b.count - a.count).slice(0, 10);
+    return { pv, sessions, top_posts: topPosts, top_referrers: topReferrers, utm_source_counts: utmSourceCounts };
+  } catch(e){
+    console.warn('[media_visits] aggregate failed:', e.message);
+    return null;
+  }
+}
+
 // ── DB ABSTRACTION ────────────────────────────────────────────
 // 注意: コードと Supabase スキーマは共に snake_case を使用。case 変換は不要。
 const DB={
@@ -27350,6 +27448,30 @@ async function handleAPI(req,res,pathname,method,ip){
       }
     }
 
+    // 📊 自前 集計 fallback (= GA4 が 0 件 or 未接続 の とき media_visits から 補完)
+    //   GA4 が サブドメイン 計測 してない user で も これ で PV / Users が 出る。
+    if(!out.pv || out.pv === 0){
+      try {
+        const visits = await _mediaVisitsAggregate(ag.media.slug, days);
+        if(visits && (visits.pv > 0 || visits.sessions > 0)){
+          out.pv = visits.pv;
+          out.sessions = visits.sessions;
+          out.source = 'media_visits';
+          // top_posts を 自前 集計 で 上書き (= slug ベース で idx と join)
+          const titleMap = new Map();
+          (ag.media_posts_idx || []).forEach(p => { if(p && p.slug) titleMap.set(p.slug, p.title || p.slug); });
+          out.top_posts = visits.top_posts
+            .filter(t => titleMap.has(t.slug))
+            .slice(0, 10)
+            .map(t => ({ slug: t.slug, title: titleMap.get(t.slug), pv: t.pv, sessions: t.sessions }));
+          out.top_referrers = visits.top_referrers || [];
+        }
+      } catch(e){
+        console.warn('[media-stats] self-aggregate failed:', e.message);
+        if(debug && global._mediaStatsDebug) global._mediaStatsDebug.errors.push('self_aggregate: ' + e.message);
+      }
+    }
+
     // GSC — page filter で /media/:slug/* の clicks / impressions / position
     if(out.gsc_connected){
       try {
@@ -34781,6 +34903,10 @@ const server=http.createServer(async(req,res)=>{
     // パス (= /xxx) → /media/<slug>/xxx
     // /api/ や / 以外は そのまま (= 内部 API は メインドメインで)
     if(!pathname.startsWith('/api/') && !pathname.startsWith('/auth') && !pathname.startsWith('/app')){
+      // 📊 自前 PV カウント (= GA4 不要) — GET のみ + 静的 アセット 除外
+      if(method === 'GET' && !/\.(css|js|png|jpg|jpeg|svg|gif|webp|ico|map|woff2?|ttf|otf|json|xml|txt)$/i.test(pathname)){
+        try { _recordMediaVisit(slug, pathname, req, parsed); } catch(_){}
+      }
       const newPath = pathname === '/' || pathname === ''
         ? '/media/' + slug
         : '/media/' + slug + pathname;

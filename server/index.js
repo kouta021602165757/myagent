@@ -27243,36 +27243,35 @@ async function handleAPI(req,res,pathname,method,ip){
         article_category: predCat,
       });
     });
-    // 🚀 軽量 save (= agents 列のみ、 start parent message 群)
-    try { await DB.saveAgent(user); } catch(_){}
+    // 🚀 2026-06-09: response 即返し で client の chat 表示 を < 100ms に。
+    //   jobs[] は 既に 全部 用意 済 (= thread_parent_id 含む) なので、
+    //   DB.saveAgent と _jobInsert は バック グラウンド で 並列 実行 (= fire-and-forget)。
+    //   失敗 した 場合 でも worker cron が pickup できる よう に _jobInsert は
+    //   並列 で 投げて 完了 を 待つ が、 response 自体 は それ より 前 に 返す。
+    jres(res, 200, { ok: true, started_at: now0, jobs });
 
-    // 🎯 2026-06-09 大改革: メモリ workers 廃止 → publish_jobs テーブル に INSERT
-    //    Render 再起動 で も 消えない、 10 分 stuck で 自動 retry、 失敗 永続 ログ。
-    //    旧 inline worker は 削除。 _startJobRunner() の cron が pickup + 実行。
-    //    fallback: publish_jobs テーブル 未 作成 (= DDL 未 実行) なら 旧 inline path で 動く。
-    let jobsInserted = false;
-    try {
-      for(const j of jobs){
-        await _jobInsert({
-          id: j.job_id,
-          user_id: user.id,
-          agent_id: ag.id,
-          title: j.title,
-          keyword: j.keyword,
-          mode: j.mode,
-          thread_parent_id: j.thread_parent_id,
-        });
-      }
-      jobsInserted = true;
-      console.log('[kw-batch] inserted ' + jobs.length + ' jobs into publish_jobs');
-      return jres(res, 200, { ok: true, started_at: now0, jobs });
-    } catch(e){
-      console.warn('[kw-batch] job insert failed (DDL not run?), falling back to inline worker:', e.message);
-      // fallthrough → 旧 inline worker path 実行
-    }
-    if(jobsInserted) return; // 既に レスポンス 済 (= 念のため)
-    jres(res, 200, { ok: true, started_at: now0, jobs, fallback: true });
-    // ─── 旧 inline worker (= fallback、 DDL 未 実行 時 のみ) ────────────────
+    // バック グラウンド: DB save + job insert を 並列 実行
+    (async () => {
+      try { await DB.saveAgent(user); } catch(e){ console.warn('[kw-batch bg] saveAgent failed:', e && e.message); }
+    })();
+    (async () => {
+      const inserts = jobs.map(j => _jobInsert({
+        id: j.job_id,
+        user_id: user.id,
+        agent_id: ag.id,
+        title: j.title,
+        keyword: j.keyword,
+        mode: j.mode,
+        thread_parent_id: j.thread_parent_id,
+      }).catch(e => { console.warn('[kw-batch bg] _jobInsert failed for ' + j.job_id + ':', e && e.message); return null; }));
+      await Promise.all(inserts);
+      console.log('[kw-batch] inserted ' + jobs.length + ' jobs into publish_jobs (bg)');
+    })();
+    return;
+    // ─── 旧 inline worker は 削除 済 (2026-06-09)。 DDL 適用 済 で 不要 ───
+    if(false){
+    // 以下 dead code (= node parser を 通す ため の dummy block)
+    const CONCURRENCY_DEAD = 0;
     const CONCURRENCY = 2;
     let cursor = 0;
     const worker = async () => {
@@ -27373,9 +27372,10 @@ async function handleAPI(req,res,pathname,method,ip){
         }
       }
     };
-    Promise.all(Array.from({length: Math.min(CONCURRENCY, jobs.length)}, () => worker()))
+    Promise.all(Array.from({length: Math.min(CONCURRENCY_DEAD, jobs.length)}, () => worker()))
       .catch(e => console.error('[kw-batch] fatal:', e.message));
     return;
+    } // ← if(false) 閉じ
   }
 
   //   POST /api/agents/:id/media/articles/generate — AI 記事生成 + 画像生成

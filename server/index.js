@@ -27145,6 +27145,9 @@ async function handleAPI(req,res,pathname,method,ip){
 
     const qs = parsedUrl.query || {};
     const days = Math.max(1, Math.min(90, parseInt(qs.days, 10) || 30));
+    // 🎯 diagnostic mode (= ?debug=1 で 取れた raw 情報 + 各 step の error も return)
+    const debug = qs.debug === '1';
+    if(debug) global._mediaStatsDebug = { errors: [], queries: [] };
     const startDate = days + 'daysAgo';
     const slugPrefix = '/media/' + ag.media.slug + '/'; // 旧 path 配信 互換
     // 🎯 2026-06-10: サブ ドメイン 配信 (= <media-slug>.myaiagents.agency/<post-slug>)
@@ -27265,9 +27268,15 @@ async function handleAPI(req,res,pathname,method,ip){
               .map(([campaign, sess]) => ({ campaign, sessions: sess }))
               .sort((a, b) => b.sessions - a.sessions)
               .slice(0, 8);
-          } catch(e){ console.warn('[media-stats] ga4 LP funnel failed:', e.message); }
+          } catch(e){
+            console.warn('[media-stats] ga4 LP funnel failed:', e.message);
+            if(debug && global._mediaStatsDebug) global._mediaStatsDebug.errors.push('lp_funnel: ' + e.message);
+          }
         }
-      } catch(e){ console.warn('[media-stats] ga4 failed:', e.message); }
+      } catch(e){
+        console.warn('[media-stats] ga4 failed:', e.message);
+        if(debug && global._mediaStatsDebug) global._mediaStatsDebug.errors.push('ga4_main: ' + e.message);
+      }
     }
 
     // GSC — page filter で /media/:slug/* の clicks / impressions / position
@@ -27322,10 +27331,91 @@ async function handleAPI(req,res,pathname,method,ip){
             .sort((a, b) => b.impressions - a.impressions)
             .slice(0, 5);
         }
-      } catch(e){ console.warn('[media-stats] gsc failed:', e.message); }
+      } catch(e){
+        console.warn('[media-stats] gsc failed:', e.message);
+        if(debug && global._mediaStatsDebug) global._mediaStatsDebug.errors.push('gsc: ' + e.message);
+      }
     }
 
+    if(debug){
+      out._debug = global._mediaStatsDebug || { errors: [] };
+      out._debug.ga4_property_id = (ag.ga4_property_id || (user.integrations && user.integrations.google && user.integrations.google.ga4_property_id) || null);
+      out._debug.gsc_site_url = ag.gsc_site_url || (user.integrations && user.integrations.google && user.integrations.google.gsc_site_url) || null;
+      out._debug.slugPathSet_size = slugPathSet.size;
+      out._debug.idx_posts = _idxPosts.length;
+    }
     return jres(res, 200, out);
+  }
+
+  // 🚀 GET /api/admin/media-stats?userId=X&agentId=Y&days=30 — admin diagnostic
+  if(pathname === '/api/admin/media-stats' && method === 'GET'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    const _qs = new url.URL(req.url, APP_URL).searchParams;
+    const userId = String(_qs.get('userId') || '').trim();
+    const agentId = String(_qs.get('agentId') || '').trim();
+    const days = Math.max(1, Math.min(90, parseInt(_qs.get('days'), 10) || 30));
+    if(!userId || !agentId) return jres(res, 400, { error: 'userId + agentId required' });
+    const u = await DB.findBy('id', userId).catch(() => null);
+    if(!u) return jres(res, 404, { error: 'user not found' });
+    const ag = (u.agents || []).find(a => a && a.id === agentId);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    // 内部 fetch (= debug 付き で 既存 endpoint と 同 logic) を 走らせる ため
+    // module 関数 化 が 必要 だ が、 ここ で は 既存 endpoint を 真似 て 必要 最小限 を 取得
+    const propId = ag.ga4_property_id || (u.integrations && u.integrations.google && u.integrations.google.ga4_property_id);
+    const siteUrl = ag.gsc_site_url || (u.integrations && u.integrations.google && u.integrations.google.gsc_site_url) || ag.site_url || '';
+    const report = {
+      user_id: userId, agent_id: agentId, days,
+      ga4_property_id: propId || null,
+      gsc_site_url: siteUrl || null,
+      ga4_connected: _hasGoogleRefreshToken(u) && _hasGa4Scope(u),
+      gsc_connected: _hasGoogleRefreshToken(u) && _hasGscScope(u),
+      ga4_main_query: null, ga4_lp_query: null, gsc_query: null,
+      errors: [],
+    };
+    // GA4 main: pagePath
+    if(report.ga4_connected && propId){
+      try {
+        const r = await ga4RunReport(u, propId, {
+          metrics: [{ name: 'screenPageViews' }, { name: 'sessions' }],
+          dimensions: [{ name: 'pagePath' }],
+          dateRanges: [{ startDate: days + 'daysAgo', endDate: 'yesterday' }],
+          limit: 50,
+        });
+        report.ga4_main_query = { row_count: (r.rows || []).length, rows: (r.rows || []).slice(0, 20) };
+      } catch(e){ report.errors.push('ga4_main: ' + e.message); }
+    }
+    // GA4 LP funnel: utm_source=media filter
+    if(report.ga4_connected && propId){
+      try {
+        const r = await ga4RunReport(u, propId, {
+          metrics: [{ name: 'sessions' }, { name: 'totalUsers' }],
+          dimensions: [{ name: 'sessionMedium' }, { name: 'sessionCampaignName' }],
+          dimensionFilter: {
+            filter: {
+              fieldName: 'sessionSource',
+              stringFilter: { matchType: 'EXACT', value: 'media', caseSensitive: false },
+            },
+          },
+          dateRanges: [{ startDate: days + 'daysAgo', endDate: 'yesterday' }],
+          limit: 50,
+        });
+        report.ga4_lp_query = { row_count: (r.rows || []).length, rows: (r.rows || []).slice(0, 20) };
+      } catch(e){ report.errors.push('ga4_lp: ' + e.message); }
+    }
+    // GSC
+    if(report.gsc_connected && siteUrl){
+      try {
+        const r = await gscSearchAnalyticsQuery(u, siteUrl, {
+          startDate: new Date(Date.now() - days * 86400000).toISOString().slice(0, 10),
+          endDate: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+          dimensions: ['page'],
+          rowLimit: 50,
+        });
+        report.gsc_query = { row_count: (r.rows || []).length, rows: (r.rows || []).slice(0, 20) };
+      } catch(e){ report.errors.push('gsc: ' + e.message); }
+    }
+    return jres(res, 200, report);
   }
 
   // (DEPRECATED 2026-06-02) /media/research-pick endpoint は削除済。

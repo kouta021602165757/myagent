@@ -554,6 +554,85 @@ function _buildMediaPostRows(user, ag){
   return rows;
 }
 
+// ══════════════════════════════════════════════════════════════
+// publish_jobs CRUD helpers (= 「記事 公開 ジョブ」 の 永続 化)
+// メモリ jobs[] を 廃止 → DB row で 状態 管理。 Render 再起動 で も 消えない。
+// ══════════════════════════════════════════════════════════════
+async function _jobInsert(job){
+  if(!USE_SUPA) return null;
+  const row = {
+    id: job.id || ('job_' + crypto.randomBytes(6).toString('hex')),
+    user_id: String(job.user_id),
+    agent_id: String(job.agent_id),
+    state: 'pending',
+    progress_pct: 0,
+    title: String(job.title || ''),
+    keyword: String(job.keyword || job.title || ''),
+    mode: String(job.mode || 'seo'),
+    thread_parent_id: job.thread_parent_id || null,
+  };
+  const r = await sbReq('POST', 'publish_jobs', '', row);
+  if(r.s >= 400){
+    console.warn('[jobs] insert failed HTTP ' + r.s + ':', JSON.stringify(r.d||'').slice(0,200));
+    throw new Error('publish_jobs insert failed: ' + (r.d && r.d.message || r.s));
+  }
+  return Array.isArray(r.d) ? r.d[0] : (r.d || row);
+}
+
+async function _jobUpdate(id, patch){
+  if(!USE_SUPA || !id) return false;
+  const body = Object.assign({}, patch, { updated_at: new Date().toISOString() });
+  const r = await sbReq('PATCH', 'publish_jobs', '?id=eq.' + encodeURIComponent(id), body);
+  return r.s < 400;
+}
+
+// state を 条件 付き で claim (= optimistic lock)。 既に 他 worker が claim 済 なら null。
+async function _jobClaim(id, expectState){
+  if(!USE_SUPA || !id) return null;
+  const qs = '?id=eq.' + encodeURIComponent(id) + '&state=eq.' + encodeURIComponent(expectState) + '&select=*';
+  const r = await sbReq('PATCH', 'publish_jobs', qs, {
+    state: 'generating',
+    started_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    phase: 'kw_analysis',
+    progress_pct: 5,
+  });
+  if(r.s >= 400 || !Array.isArray(r.d) || r.d.length === 0) return null;
+  return r.d[0];
+}
+
+// pending or stale generating (= updated_at < 10 min) を 取得
+async function _jobsPickup(limit){
+  if(!USE_SUPA) return [];
+  const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  // PostgREST or filter: state=pending OR (state=generating AND updated_at < 10min ago)
+  const qs = '?or=(state.eq.pending,and(state.eq.generating,updated_at.lt.' + encodeURIComponent(tenMinAgo) + '))'
+    + '&retry_count=lt.3'  // 3 回 retry 上限
+    + '&order=created_at.asc&limit=' + (limit || 3);
+  const r = await sbReq('GET', 'publish_jobs', qs);
+  return Array.isArray(r.d) ? r.d : [];
+}
+
+// 単一 job 取得
+async function _jobGet(id){
+  if(!USE_SUPA || !id) return null;
+  const r = await sbReq('GET', 'publish_jobs', '?id=eq.' + encodeURIComponent(id) + '&limit=1');
+  return Array.isArray(r.d) && r.d[0] ? r.d[0] : null;
+}
+
+// ユーザ / agent の jobs 一覧 (= polling 用)
+async function _jobsListForAgent(agentId, opts){
+  if(!USE_SUPA || !agentId) return [];
+  opts = opts || {};
+  let qs = '?agent_id=eq.' + encodeURIComponent(agentId);
+  if(opts.activeOnly){
+    qs += '&state=in.(pending,generating,failed)'; // failed も 含める (= UI で 表示)
+  }
+  qs += '&order=created_at.desc&limit=' + (opts.limit || 30);
+  const r = await sbReq('GET', 'publish_jobs', qs);
+  return Array.isArray(r.d) ? r.d : [];
+}
+
 // ── DB ABSTRACTION ────────────────────────────────────────────
 // 注意: コードと Supabase スキーマは共に snake_case を使用。case 変換は不要。
 const DB={
@@ -20167,6 +20246,169 @@ function _startAgentScheduler(){
   console.log('[schedule] agent scheduler started (60s tick)');
 }
 
+// ══════════════════════════════════════════════════════════════════
+// 🚀 publish_jobs Worker (= 「同じ 問題 二度 と」 の 根本 解決)
+// ══════════════════════════════════════════════════════════════════
+// memory jobs[] → DB row へ 移行。 Render 再起動 で も 消えない、
+// stale (= 10 分 動 い てない generating) は 自動 retry、 失敗 ログ 永続。
+async function _processJob(rawJob){
+  // claim する (= 同時 worker と 競合 防止)
+  const claimed = await _jobClaim(rawJob.id, rawJob.state);
+  if(!claimed){
+    return false; // 別 worker が 先 に 取った
+  }
+  const job = claimed;
+  console.log('[job] 🚀 ' + job.id + ' picked up: ' + (job.title||'').slice(0,40));
+
+  // user + agent 取得
+  let user, ag;
+  try {
+    user = await DB.findBy('id', job.user_id);
+    if(!user) throw new Error('user not found');
+    ag = (user.agents || []).find(a => a && a.id === job.agent_id);
+    if(!ag) throw new Error('agent not found');
+    if(!ag.media || !ag.media.id) throw new Error('media not created');
+  } catch(e){
+    await _jobUpdate(job.id, { state: 'failed', error: 'setup: ' + e.message, completed_at: new Date().toISOString() });
+    return false;
+  }
+
+  // 生成
+  try {
+    await _jobUpdate(job.id, { phase: 'writing', progress_pct: 25 });
+    const article = await _mediaGenerateArticle(ag, {
+      title: job.title, keyword: job.keyword, mode: job.mode,
+    });
+
+    await _jobUpdate(job.id, { phase: 'image', progress_pct: 75 });
+    const heroUrl = await _mediaGenerateHeroImage(
+      { title: article.title, category_name: article.category_name }, ag.media
+    ).catch(() => null);
+
+    await _jobUpdate(job.id, { phase: 'publish', progress_pct: 90 });
+    const existingSlugs = (ag.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
+    const postSlug = await _mediaPostSlugSmart(article.title, job.keyword, existingSlugs);
+    const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');
+    const now = new Date().toISOString();
+    const postMeta = {
+      id: postId, slug: postSlug, title: article.title, excerpt: article.excerpt,
+      category_name: article.category_name || '',
+      tags: Array.isArray(article.tags) ? article.tags : [],
+      hero_image_url: heroUrl, status: 'published', published_at: now,
+      keyword: job.keyword, vertical: article.vertical || '',
+      template_used: article.template_used || '',
+    };
+    if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
+    ag.media_posts_idx.unshift(postMeta);
+    delete ag.keyword_suggestions;
+    if(!user.media_posts_full) user.media_posts_full = {};
+    user.media_posts_full[postId] = { body_html: article.body_html, saved_at: now };
+
+    // planned_articles から 自動 削除
+    const matchKw = String(job.keyword || '').toLowerCase();
+    const matchTitle = String(article.title || '').toLowerCase();
+    if(Array.isArray(ag.planned_articles)){
+      ag.planned_articles = ag.planned_articles.filter(p => {
+        if(!p) return false;
+        const t = (p.title || '').toLowerCase();
+        const k = (p.keyword || '').toLowerCase();
+        return t !== matchTitle && t !== matchKw && k !== matchKw && k !== matchTitle;
+      });
+    }
+
+    // chat に 完了 msg push (= 後方 互換、 既存 UI で 動 く)
+    const pubUrl = _mediaPublicUrl(ag.media, postSlug);
+    if(!Array.isArray(ag.history)) ag.history = [];
+    ag.history.push({
+      id: 'm_' + crypto.randomBytes(5).toString('hex'),
+      role: 'assistant',
+      content: '✅ 「' + article.title + '」 を 公開しました\n→ ' + pubUrl + '\n⏱ ' + (article.body_html || '').length + ' 字' + (article.category_name ? ' ・ ' + article.category_name : ''),
+      time: now,
+      kind: 'system_publish',
+      article_url: pubUrl,
+      article_title: article.title,
+      article_category: article.category_name || '',
+      thread_parent_id: job.thread_parent_id || null,
+    });
+
+    // DB 保存 retry 3 回 (= 確実 性 優先)
+    let saved = false;
+    for(let attempt = 0; attempt < 3; attempt++){
+      try {
+        if(attempt < 2) await DB.saveAgent(user, { mediaPostsFull: true });
+        else await DB.save(user);
+        saved = true; break;
+      } catch(saveErr){
+        console.warn('[job] save attempt ' + (attempt+1) + ' failed:', saveErr.message);
+        await new Promise(r => setTimeout(r, 1000 + attempt * 1500));
+      }
+    }
+    if(!saved) throw new Error('DB save failed after 3 retries');
+
+    // job 完了 マーク
+    await _jobUpdate(job.id, {
+      state: 'completed',
+      phase: 'publish',
+      progress_pct: 100,
+      post_id: postId,
+      post_slug: postSlug,
+      completed_at: now,
+    });
+
+    // 副 効果 (= cache invalidate + IndexNow)
+    try { _mediaSlugCacheClear((ag.media && ag.media.slug) || ''); } catch(_){}
+    try { _indexNowPingFAF([pubUrl, _mediaPublicUrl(ag.media), _mediaPublicUrl(ag.media, 'sitemap.xml')]); } catch(_){}
+
+    console.log('[job] ✅ ' + job.id + ' completed: ' + postSlug);
+    return true;
+  } catch(e){
+    console.error('[job] ❌ ' + job.id + ' failed:', e.message, (e.stack||'').slice(0,400));
+    // fail msg を ag.history に push (= 後方 互換、 UI に エラー カード 出す)
+    try {
+      if(user && ag && Array.isArray(ag.history)){
+        ag.history.push({
+          id: 'm_' + crypto.randomBytes(5).toString('hex'),
+          role: 'assistant',
+          content: '⚠️ 「' + job.title + '」 の 公開に失敗: ' + (e.message || 'unknown').slice(0, 200),
+          time: new Date().toISOString(),
+          kind: 'system_publish_fail',
+          thread_parent_id: job.thread_parent_id || null,
+        });
+        try { await DB.saveAgent(user); } catch(_){}
+      }
+    } catch(_){}
+    // job 失敗 マーク (= retry_count 増、 3 回 以上 で pickup 対象 外)
+    await _jobUpdate(job.id, {
+      state: 'failed',
+      error: (e.message || 'unknown').slice(0, 1000),
+      retry_count: (job.retry_count || 0) + 1,
+      completed_at: new Date().toISOString(),
+    });
+    return false;
+  }
+}
+
+let _jobRunnerInterval = null;
+let _jobRunnerActive = false;
+function _startJobRunner(){
+  if(_jobRunnerInterval) return;
+  _jobRunnerInterval = setInterval(async () => {
+    if(_jobRunnerActive) return;
+    _jobRunnerActive = true;
+    try {
+      const jobs = await _jobsPickup(2); // 並列 2 件 まで
+      if(jobs.length === 0) return;
+      console.log('[job-runner] picked up', jobs.length, 'jobs');
+      await Promise.all(jobs.map(_processJob));
+    } catch(e){
+      console.warn('[job-runner] tick failed:', e.message);
+    } finally {
+      _jobRunnerActive = false;
+    }
+  }, 10 * 1000); // 10 秒 ごと
+  console.log('[job-runner] started (10s tick)');
+}
+
 // ──────────────────────────────────────────────────────────────────
 // 🌅 Day 3-A: 朝の "1 個" 提案 cron (= 毎朝 JST 7 時に AI が next-action を chat に push)
 // ──────────────────────────────────────────────────────────────────
@@ -26873,6 +27115,23 @@ async function handleAPI(req,res,pathname,method,ip){
   // 「First win」 動線は KW 調査 panel に集約済 (= research_keyword tool で
   //  10 件 候補を出してユーザが選ぶ形)。 1 件 自動選定 は使われなくなった。
 
+  // 🚀 GET /api/agents/:id/publish-jobs — client polling 用 (= job 状態 一覧)
+  //   ?active=1 → pending / generating / failed のみ (= 完了 は 含めない)
+  const _pjListMatch = pathname.match(/^\/api\/agents\/([^/]+)\/publish-jobs$/);
+  if(_pjListMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === _pjListMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    const _qs = url.parse(req.url, true).query || {};
+    const activeOnly = String(_qs.active || '') === '1';
+    try {
+      const jobs = await _jobsListForAgent(ag.id, { activeOnly, limit: parseInt(_qs.limit, 10) || 30 });
+      return jres(res, 200, { ok: true, jobs });
+    } catch(e){
+      console.warn('[publish-jobs list] failed:', e.message);
+      return jres(res, 500, { error: 'list_failed', detail: e.message });
+    }
+  }
+
   //   POST /api/agents/:id/keyword-batch-publish — KW 一括公開 (= 並列 3 件まで)
   //   body: { items: [{title, keyword, mode}, ...] }  最大 10 件
   //   各記事完了時に ag.history に system message を append (= 「✅ 公開しました: <URL>」)
@@ -26940,9 +27199,34 @@ async function handleAPI(req,res,pathname,method,ip){
     });
     // 🚀 軽量 save (= agents 列のみ、 start parent message 群)
     try { await DB.saveAgent(user); } catch(_){}
-    jres(res, 200, { ok: true, started_at: now0, jobs });
-    // 🎯 2026-06-09: concurrency 3 → 2 に 削減 (= 「1 件 ずつ 終わる」 体感 UP)。
-    //    Haiku 化 で 1 記事 15-25 秒、 2 並列 で 5 件 ≈ 60 秒 (= 旧 Sonnet 3 並列 と 同 等)
+
+    // 🎯 2026-06-09 大改革: メモリ workers 廃止 → publish_jobs テーブル に INSERT
+    //    Render 再起動 で も 消えない、 10 分 stuck で 自動 retry、 失敗 永続 ログ。
+    //    旧 inline worker は 削除。 _startJobRunner() の cron が pickup + 実行。
+    //    fallback: publish_jobs テーブル 未 作成 (= DDL 未 実行) なら 旧 inline path で 動く。
+    let jobsInserted = false;
+    try {
+      for(const j of jobs){
+        await _jobInsert({
+          id: j.job_id,
+          user_id: user.id,
+          agent_id: ag.id,
+          title: j.title,
+          keyword: j.keyword,
+          mode: j.mode,
+          thread_parent_id: j.thread_parent_id,
+        });
+      }
+      jobsInserted = true;
+      console.log('[kw-batch] inserted ' + jobs.length + ' jobs into publish_jobs');
+      return jres(res, 200, { ok: true, started_at: now0, jobs });
+    } catch(e){
+      console.warn('[kw-batch] job insert failed (DDL not run?), falling back to inline worker:', e.message);
+      // fallthrough → 旧 inline worker path 実行
+    }
+    if(jobsInserted) return; // 既に レスポンス 済 (= 念のため)
+    jres(res, 200, { ok: true, started_at: now0, jobs, fallback: true });
+    // ─── 旧 inline worker (= fallback、 DDL 未 実行 時 のみ) ────────────────
     const CONCURRENCY = 2;
     let cursor = 0;
     const worker = async () => {
@@ -35262,6 +35546,8 @@ if(require.main === module){
   // ── Per-agent schedule runner: 60s tick that fires due schedules.
   // Disabled in tests (LDB_PATH set => test mode).
   if(!process.env.LDB_PATH){
+    // 🚀 publish_jobs worker (= 「同じ 問題 二度 と」 の 核 — 10 秒 ごと pickup)
+    _startJobRunner();
     _startAgentScheduler();
     // 🌅 朝の 1 個提案 + 📉 自動リライト cron (= Day 3 「最短最速 訪問者増」)
     if(process.env.MORNING_PROPOSAL_ENABLED !== 'false'){

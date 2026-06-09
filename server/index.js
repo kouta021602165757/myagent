@@ -18252,6 +18252,11 @@ async function executeRewriteMediaArticleTool(user, agent, input){
     if(!user.media_posts_full) user.media_posts_full = {};
     user.media_posts_full[postMeta.id] = { body_html: parsed.body_html, saved_at: now };
     postMeta.rewritten_at = now;
+    // 🛡 2026-06-09: chat handler の後段 save は billing/balance/usage のみ touch なので
+    //   media_posts_full は DB に 反映 されない (= 「rewrite した の に 元 のまま」 silent fail)。
+    //   ここ で 明示 save。
+    try { await DB.saveAgent(user, { mediaPostsFull: true }); }
+    catch(e){ return { error: 'rewrite_save_failed', detail: e && e.message }; }
     try { _mediaSlugCacheClear(agent.media.slug); } catch(_){}
     const pubUrl = _mediaPublicUrl(agent.media, postMeta.slug);
     return {
@@ -20454,7 +20459,17 @@ function _startJobRunner(){
       const jobs = await _jobsPickup(2); // 並列 2 件 まで
       if(jobs.length === 0) return;
       console.log('[job-runner] picked up', jobs.length, 'jobs');
-      await Promise.all(jobs.map(_processJob));
+      // 🛡 2026-06-09: 同 user の 2 job が 同時 走る と user.media_posts_full を 並列
+      //   mutate して 後勝ち で 1 件 消える race。 同 user は serialize、 別 user は 並列。
+      const byUser = new Map();
+      for(const j of jobs){
+        const arr = byUser.get(j.user_id) || [];
+        arr.push(j);
+        byUser.set(j.user_id, arr);
+      }
+      await Promise.all(Array.from(byUser.values()).map(async (sameUserJobs) => {
+        for(const j of sameUserJobs){ await _processJob(j); }
+      }));
     } catch(e){
       console.warn('[job-runner] tick failed:', e.message);
     } finally {
@@ -20671,8 +20686,17 @@ async function _articleRankCheckTick(){
           if(position > 30){
             console.log('[rank-check] 圏外検出 → 自動リライト: user=' + u.id + ' post=' + p.slug + ' pos=' + position);
             try {
-              // 既存リライト endpoint と同じ logic を inline で
-              await _autoRewriteOneArticle(u, ag, p);
+              // 🛡 2026-06-09: media_posts_full が select=* で 取れて ない (= 20626 で 列限定)
+              //   ため そのまま _autoRewriteOneArticle に 渡すと user.media_posts_full = {} を
+              //   作り → DB.save → 既存 全 post の body_html を 上書 き 消去 する データ ロス バグ。
+              //   full reload で 安全 化。
+              const fullUser = await DB.findBy('id', u.id).catch(() => null);
+              if(!fullUser){ throw new Error('full user reload failed'); }
+              const fullAgent = (fullUser.agents || []).find(a => a && a.id === ag.id);
+              if(!fullAgent){ throw new Error('agent missing in full user'); }
+              await _autoRewriteOneArticle(fullUser, fullAgent, p);
+              // 上 で DB.save 済 (= _autoRewriteOneArticle 内)。 ローカル u にも 反映 して おく。
+              u.media_posts_full = fullUser.media_posts_full;
               p._last_auto_rewrite_at = new Date().toISOString();
               // chat に通知
               if(!Array.isArray(ag.history)) ag.history = [];
@@ -27266,11 +27290,13 @@ async function handleAPI(req,res,pathname,method,ip){
     //   並列 で 投げて 完了 を 待つ が、 response 自体 は それ より 前 に 返す。
     jres(res, 200, { ok: true, started_at: now0, jobs });
 
-    // バック グラウンド: DB save + job insert を 並列 実行
+    // 🛡 2026-06-09: race 修正。 旧 実装 は saveAgent と _jobInsert を 並列 で 投げて いた
+    //   が、 worker cron が _jobInsert 完了 を 検知 して pickup → user reload した時 に
+    //   saveAgent が まだ 終わって なくて start msg が ag.history に 無い 状態 で 完了 msg
+    //   を push する orphan バグ。 saveAgent を 完了 さ せて から _jobInsert する。
     (async () => {
-      try { await DB.saveAgent(user); } catch(e){ console.warn('[kw-batch bg] saveAgent failed:', e && e.message); }
-    })();
-    (async () => {
+      try { await DB.saveAgent(user); }
+      catch(e){ console.warn('[kw-batch bg] saveAgent failed:', e && e.message); }
       const inserts = jobs.map(j => _jobInsert({
         id: j.job_id,
         user_id: user.id,
@@ -27284,114 +27310,6 @@ async function handleAPI(req,res,pathname,method,ip){
       console.log('[kw-batch] inserted ' + jobs.length + ' jobs into publish_jobs (bg)');
     })();
     return;
-    // ─── 旧 inline worker は 削除 済 (2026-06-09)。 DDL 適用 済 で 不要 ───
-    if(false){
-    // 以下 dead code (= node parser を 通す ため の dummy block)
-    const CONCURRENCY_DEAD = 0;
-    const CONCURRENCY = 2;
-    let cursor = 0;
-    const worker = async () => {
-      while(true){
-        const idx = cursor++;
-        if(idx >= jobs.length) return;
-        const j = jobs[idx];
-        try {
-          const article = await _mediaGenerateArticle(ag, { title: j.title, keyword: j.keyword, mode: j.mode });
-          const heroUrl = await _mediaGenerateHeroImage({ title: article.title, category_name: article.category_name }, ag.media).catch(() => null);
-          const existingSlugs = (ag.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
-          const postSlug = await _mediaPostSlugSmart(article.title, j.keyword, existingSlugs);
-          const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');
-          const now = new Date().toISOString();
-          const postMeta = {
-            id: postId, slug: postSlug, title: article.title, excerpt: article.excerpt,
-            category_name: article.category_name || '',
-            tags: Array.isArray(article.tags) ? article.tags : [],
-            hero_image_url: heroUrl, status: 'published', published_at: now,
-            keyword: j.keyword, vertical: article.vertical || '',
-            template_used: article.template_used || '',
-          };
-          if(!Array.isArray(ag.media_posts_idx)) ag.media_posts_idx = [];
-          ag.media_posts_idx.unshift(postMeta);
-          delete ag.keyword_suggestions;
-          if(!user.media_posts_full) user.media_posts_full = {};
-          user.media_posts_full[postId] = { body_html: article.body_html, saved_at: now };
-          // 公開した KW を planned_articles から削除
-          const matchKw = j.keyword.toLowerCase();
-          const matchTitle = (article.title || '').toLowerCase();
-          if(Array.isArray(ag.planned_articles) && ag.planned_articles.length){
-            ag.planned_articles = ag.planned_articles.filter(p => {
-              if(!p) return false;
-              const t = (p.title || '').toLowerCase();
-              const k = (p.keyword || '').toLowerCase();
-              return t !== matchTitle && t !== matchKw && k !== matchKw && k !== matchTitle;
-            });
-          }
-          // ✨ chat に system message を append (= 公開 URL + メタ、 thread 子 として)
-          const pubUrl = _mediaPublicUrl(ag.media, postSlug);
-          ag.history.push({
-            id: 'm_' + crypto.randomBytes(5).toString('hex'),
-            role: 'assistant',
-            content: '✅ 「' + article.title + '」 を 公開しました\n→ ' + pubUrl + '\n⏱ ' + (article.body_html || '').length + ' 字' + (article.category_name ? ' ・ ' + article.category_name : ''),
-            time: now,
-            kind: 'system_publish',
-            article_url: pubUrl,
-            article_title: article.title,
-            article_category: article.category_name || '',
-            thread_parent_id: j.thread_parent_id || null,
-          });
-          // 🚀 saveAgent: agents + media_posts_full のみ touch (= history_archive 3MB skip)
-          await DB.saveAgent(user, { mediaPostsFull: true });
-          // 🛡 cache clear: slug 無 い 場合 は 全 clear で 安全 倒し (= 「反映されない」 対策)
-          _mediaSlugCacheClear((ag.media && ag.media.slug) || '');
-          // 🚀 SEO: IndexNow ping (= 新 記事 + sitemap + ホーム) を fire-and-forget で
-          _indexNowPingFAF([pubUrl, _mediaPublicUrl(ag.media), _mediaPublicUrl(ag.media, 'sitemap.xml')]);
-          console.log('[kw-batch] ✅ ' + j.job_id + ' published: ' + postSlug);
-        } catch(e){
-          console.error('[kw-batch] ❌ ' + j.job_id + ' failed:', e.message, e.stack);
-          // 直近 公開エラー を ring buffer に記録 (= /api/admin/recent-publish-errors で 取り出し可能)
-          try {
-            if(!global._recentPublishErrors) global._recentPublishErrors = [];
-            global._recentPublishErrors.unshift({
-              ts: new Date().toISOString(),
-              user_id: user.id, agent_id: ag.id, job_id: j.job_id,
-              title: j.title, keyword: j.keyword, mode: j.mode,
-              error: (e.message || 'unknown').slice(0, 400),
-              stack: (e.stack || '').slice(0, 800),
-            });
-            if(global._recentPublishErrors.length > 50) global._recentPublishErrors.length = 50;
-          } catch(_){}
-          ag.history.push({
-            id: 'm_' + crypto.randomBytes(5).toString('hex'),
-            role: 'assistant',
-            content: '⚠️ 「' + j.title + '」 の 公開に失敗: ' + (e.message || 'unknown').slice(0, 200),
-            time: new Date().toISOString(),
-            kind: 'system_publish_fail',
-            thread_parent_id: j.thread_parent_id || null,
-          });
-          // 🛡 fail msg は 必ず 保存 (= retry 3 回、 最後 は full DB.save)
-          let saved = false;
-          for(let attempt = 0; attempt < 3; attempt++){
-            try {
-              if(attempt < 2){
-                await DB.saveAgent(user);
-              } else {
-                await DB.save(user); // 最後 は full save (= 確実 性 優先)
-              }
-              saved = true;
-              break;
-            } catch(saveErr){
-              console.warn('[kw-batch] save fail msg attempt ' + (attempt+1) + ' failed:', saveErr.message);
-              await new Promise(r => setTimeout(r, 1000));
-            }
-          }
-          if(!saved) console.error('[kw-batch] CRITICAL: fail msg could not be saved after 3 attempts');
-        }
-      }
-    };
-    Promise.all(Array.from({length: Math.min(CONCURRENCY_DEAD, jobs.length)}, () => worker()))
-      .catch(e => console.error('[kw-batch] fatal:', e.message));
-    return;
-    } // ← if(false) 閉じ
   }
 
   //   POST /api/agents/:id/media/articles/generate — AI 記事生成 + 画像生成

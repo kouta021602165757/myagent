@@ -11955,8 +11955,11 @@ window._startMediaRealtimePoll = function(siteId){
 // GA4/GSC 実数値 stats を Dashboard モーダル開いた後に非同期 fetch
 window._fetchMediaStats = async function(siteId){
   if(!siteId) return;
+  // 🎯 2026-06-10 debug: ユーザ console 不要 で fetch 状態 が 画面 で 見える ように。
+  try { showToast && showToast('📊 stats fetch start (siteId=' + siteId.slice(0,10) + ')', 'ok'); } catch(_){}
   try {
     var r = await api('GET', '/api/agents/'+encodeURIComponent(siteId)+'/media/stats?days=30');
+    try { showToast && showToast('📊 stats response: pv=' + (r && r.pv) + ' clicks=' + (r && r.clicks) + ' ga4=' + (r && r.ga4_connected) + ' gsc=' + (r && r.gsc_connected), (r && r.has_media) ? 'ok' : 'ng'); } catch(_){}
     if(!r || !r.has_media) return;
     // 数値を DOM に流し込む
     var pvEl = document.querySelector('#mediaStat_pv [data-stat="pv"]');
@@ -12071,6 +12074,8 @@ window._fetchMediaStats = async function(siteId){
     }
   } catch(e){
     console.warn('[media-stats] fetch failed:', e && e.message);
+    // 🎯 真因 即可視化 (= ユーザ console 不要)
+    try { showToast && showToast('❌ stats fetch エラー: ' + (e && e.message || 'unknown'), 'ng', 8000); } catch(_){}
     var fail = document.querySelectorAll('[data-stat]');
     fail.forEach(function(el){ if(el.textContent === '…') el.textContent = '—'; });
   }

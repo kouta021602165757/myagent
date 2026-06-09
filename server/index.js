@@ -20332,18 +20332,24 @@ async function _processJob(rawJob){
     });
 
     // DB 保存 retry 3 回 (= 確実 性 優先)
+    // 真因 把握 ために 各 attempt の 詳細 error を 残す
     let saved = false;
+    let saveErrors = [];
     for(let attempt = 0; attempt < 3; attempt++){
       try {
         if(attempt < 2) await DB.saveAgent(user, { mediaPostsFull: true });
         else await DB.save(user);
         saved = true; break;
       } catch(saveErr){
-        console.warn('[job] save attempt ' + (attempt+1) + ' failed:', saveErr.message);
+        const errMsg = (saveErr && saveErr.message || 'unknown').slice(0, 200);
+        saveErrors.push('attempt' + (attempt+1) + ': ' + errMsg);
+        console.warn('[job] save attempt ' + (attempt+1) + ' failed:', errMsg);
+        // 真因 を job.error にも 残す (= 次回 retry で 見える)
+        try { await _jobUpdate(job.id, { error: 'save attempt ' + (attempt+1) + ': ' + errMsg }); } catch(_){}
         await new Promise(r => setTimeout(r, 1000 + attempt * 1500));
       }
     }
-    if(!saved) throw new Error('DB save failed after 3 retries');
+    if(!saved) throw new Error('DB save failed after 3 retries: ' + saveErrors.join(' | '));
 
     // job 完了 マーク
     await _jobUpdate(job.id, {

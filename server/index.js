@@ -23138,6 +23138,13 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, { errors: global._recentKwErrors || [] });
   }
 
+  // 🚀 GET /api/admin/recent-chat-errors — 直近 AI チャット 応答 失敗 ring buffer (= 50 件)
+  if(pathname === '/api/admin/recent-chat-errors' && method === 'GET'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    return jres(res, 200, { errors: global._recentChatErrors || [] });
+  }
+
   // 🚀 GET /api/admin/user-schedules?userId=X — ユーザ の 全 schedule を 一覧
   //    POST /api/admin/user-schedules?userId=X { action:'disable_extras' } で 重複 を 無効化
   //    header: X-Service-Key
@@ -33653,6 +33660,19 @@ ${orgSummary || '(汎用チーム)'}
       }catch(e){
         // Browser unavailable on this host — fall back to plain chat so user still gets an answer
         const msg = (e&&e.message)||'';
+        // 🎯 真因 把握 ring buffer (= /api/admin/recent-chat-errors で 取り出し可能)
+        try {
+          if(!global._recentChatErrors) global._recentChatErrors = [];
+          global._recentChatErrors.unshift({
+            ts: new Date().toISOString(),
+            user_id: user && user.id, agent_id: agent && agent.id, agent_name: agent && agent.name,
+            model: (agent && agent.model) || '?',
+            message: (message || '').slice(0, 200),
+            error: msg.slice(0, 400),
+            stack: ((e && e.stack) || '').slice(0, 600),
+          });
+          if(global._recentChatErrors.length > 50) global._recentChatErrors.length = 50;
+        } catch(_){}
         if(/browser|playwright|launch_failed|not_installed/i.test(msg)){
           console.warn('[chat] Chrome unavailable, falling back to plain chat:', msg);
           try{

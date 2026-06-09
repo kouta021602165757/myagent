@@ -23189,6 +23189,42 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, { errors: global._recentChatErrors || [] });
   }
 
+  // 🚀 GET /api/admin/user-traffic?userId=X&days=30 — user の 全 media GA4 traffic
+  //    各 media-bearing agent の 過去 N 日 PV / Sessions / Users を 返す。
+  if(pathname === '/api/admin/user-traffic' && method === 'GET'){
+    const provided = req.headers['x-service-key'] || '';
+    if(!SUPA_KEY || provided !== SUPA_KEY) return jres(res, 401, { error: 'invalid service key' });
+    const _qs = new url.URL(req.url, APP_URL).searchParams;
+    const userId = String(_qs.get('userId') || '').trim();
+    const days = Math.max(1, Math.min(365, parseInt(_qs.get('days'), 10) || 30));
+    if(!userId) return jres(res, 400, { error: 'userId required' });
+    const user = await DB.findBy('id', userId).catch(() => null);
+    if(!user) return jres(res, 404, { error: 'user not found' });
+    const out = [];
+    for(const ag of (user.agents || [])){
+      if(!ag || !ag.media || !ag.media.slug) continue;
+      const propId = ag.ga4_property_id || (user.integrations && user.integrations.google && user.integrations.google.ga4_property_id);
+      const entry = {
+        agent_id: ag.id, media_slug: ag.media.slug, media_name: ag.media.name,
+        ga4_property_id: propId || null,
+        posts_count: (ag.media_posts_idx || []).length,
+        traffic: null, error: null,
+      };
+      if(!propId){ entry.error = 'ga4_property_id 未設定'; out.push(entry); continue; }
+      try {
+        const r = await executeGa4QueryTool(user, ag, {
+          property_id: propId,
+          start: days + 'daysAgo', end: 'today',
+          metrics: ['screenPageViews', 'sessions', 'totalUsers', 'engagedSessions'],
+        });
+        if(r && r.error){ entry.error = String(r.error).slice(0, 200); }
+        else { entry.traffic = r; }
+      } catch(e){ entry.error = (e && e.message || 'unknown').slice(0, 200); }
+      out.push(entry);
+    }
+    return jres(res, 200, { ok: true, user_id: userId, days, results: out });
+  }
+
   // 🚀 GET /api/admin/user-schedules?userId=X — ユーザ の 全 schedule を 一覧
   //    POST /api/admin/user-schedules?userId=X { action:'disable_extras' } で 重複 を 無効化
   //    header: X-Service-Key

@@ -601,12 +601,13 @@ async function _jobClaim(id, expectState){
   return r.d[0];
 }
 
-// pending or stale generating (= updated_at < 10 min) を 取得
+// pending or stale generating (= updated_at < 3 min) を 取得
+// 3 分 = 記事 生成 (30-90 秒) + 余裕。 二重 pickup は _jobClaim の optimistic lock で 防ぐ。
 async function _jobsPickup(limit){
   if(!USE_SUPA) return [];
-  const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-  // PostgREST or filter: state=pending OR (state=generating AND updated_at < 10min ago)
-  const qs = '?or=(state.eq.pending,and(state.eq.generating,updated_at.lt.' + encodeURIComponent(tenMinAgo) + '))'
+  const staleSince = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+  // PostgREST or filter: state=pending OR (state=generating AND updated_at < 3min ago)
+  const qs = '?or=(state.eq.pending,and(state.eq.generating,updated_at.lt.' + encodeURIComponent(staleSince) + '))'
     + '&retry_count=lt.3'  // 3 回 retry 上限
     + '&order=created_at.asc&limit=' + (limit || 3);
   const r = await sbReq('GET', 'publish_jobs', qs);
@@ -20250,7 +20251,7 @@ function _startAgentScheduler(){
 // 🚀 publish_jobs Worker (= 「同じ 問題 二度 と」 の 根本 解決)
 // ══════════════════════════════════════════════════════════════════
 // memory jobs[] → DB row へ 移行。 Render 再起動 で も 消えない、
-// stale (= 10 分 動 い てない generating) は 自動 retry、 失敗 ログ 永続。
+// stale (= 3 分 動 い てない generating) は 自動 retry、 失敗 ログ 永続。
 async function _processJob(rawJob){
   // claim する (= 同時 worker と 競合 防止)
   const claimed = await _jobClaim(rawJob.id, rawJob.state);

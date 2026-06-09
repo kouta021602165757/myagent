@@ -15319,7 +15319,11 @@ function renderMsgs(ag, forceScrollBottom){
   inner.innerHTML = _nudgeHTML + _setupProgressBanner + _mediaExistingHero + _mediaIntroBanner + _olderHistBanner + ag.history.map(function(m,i){
     // Thread children are hidden from the main timeline ONLY on desktop;
     // on mobile they show inline so the user always sees the AI reply.
-    if(m && m.thread_parent_id && _wideEnoughForDrawer) return '';
+    // 🎯 2026-06-09: ただし system_publish / system_publish_fail (= 記事 公開 完了 通知)
+    //   は thread_parent_id 持ち でも メイン chat に も 表示 (= 「公開 完了 が メイン
+    //   chat に 出 ない」 ユーザ 期待 を 満たす)。
+    var isPubResult = m && (m.kind === 'system_publish' || m.kind === 'system_publish_fail');
+    if(m && m.thread_parent_id && _wideEnoughForDrawer && !isPubResult) return '';
     if(m.role === 'system'){
       // PM dispatch — 専用カード (= 「PM が振った」 が分かりやすい)
       if(m.pm_dispatch){
@@ -15818,8 +15822,9 @@ function _renderMsg(role, ag, content, time, images, idx, tool_log, raw){
     const isFail = raw.kind === 'system_publish_fail';
     // 🎯 完了 検出: start カード に 対応 する 完了 (= success / fail) msg が ある なら、
     // 「生成中」 カード を 隠す (= 完了 カード だけ で 十分、 「最終 調整 中…」 stuck 解消)
+    // 🎯 2026-06-09: thread 内 でも 同 ロジック を 適用 (= 親 が ずっと 「最終 調整 中」 のまま 残る バグ 解消)
     let isStale = false;
-    if(isStart && !_renderingInThread && ag && Array.isArray(ag.history)){
+    if(isStart && ag && Array.isArray(ag.history)){
       const myId = raw.id || '';
       if(myId){
         const completed = ag.history.find(m => m && m.thread_parent_id === myId &&

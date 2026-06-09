@@ -17281,45 +17281,49 @@ function _categoryToEnSubtitle(cat){
 
 function _svgHeroForArticle(post, media){
   const tpl = (media && media.template) || 'minimal';
-  // 🎨 media.brand_color を SVG palette に反映
   const pal = _svgPaletteFor(tpl, media && media.brand_color);
   const category = String(post && post.category_name || '').slice(0, 14) || '記事';
-  const categoryEn = _categoryToEnSubtitle(category);
   const brandJp = String(media && media.name || 'Blog').slice(0, 24);
-  const brandEn = brandJp.replace(/[^\x00-\x7F]/g, '').toUpperCase().slice(0, 24) || 'MEDIA';
-  // 🎨 2026-06-07: タイトル baked-in を 廃止 (= カード で h3 と 二重 表示 になる バグ)。
-  //    SVG hero は カテゴリ + ブランド + 装飾 の 抽象 visual に。
-  //    タイトル は HTML 側 で h1 / h3 として 表示。
+  // 🎨 2026-06-09: タイトル baked-in 復活 (= 「サムネ ぽくない」 解消)。
+  //   タイトル を 中央 大 表示、 カテゴリ は 左上 小 chip のみ。
+  //   h3 と 二重 表示 は SSR HTML 側 で hero を 大き め + card h3 sr-only にする 方針。
+  const title = String(post && post.title || '').trim();
+  // 24 char で 改行 (= 2 行 max、 3 行目 以降 は ellipsis)
+  const titleChars = Array.from(title);
+  const lines = [];
+  let buf = '';
+  for(const ch of titleChars){
+    buf += ch;
+    if(buf.length >= 22){ lines.push(buf); buf = ''; if(lines.length >= 2) break; }
+  }
+  if(buf && lines.length < 2) lines.push(buf);
+  if(lines.length === 2 && buf && titleChars.length > 44) lines[1] = lines[1].slice(0, 20) + '…';
+  const fontSize = lines.length >= 2 ? 64 : 76;
+  const lineGap = lines.length >= 2 ? 88 : 0;
+  const startY = 360 - ((lines.length - 1) * lineGap) / 2;
+  const titleTspans = lines.map((ln, i) =>
+    `<tspan x="640" y="${startY + i * lineGap}">${_svgEscape(ln)}</tspan>`
+  ).join('');
   const svg = ''
     + `<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" width="1280" height="720">`
     +   `<rect width="1280" height="720" fill="${pal.bg}"/>`
-    // 大円 (= 左上)
-    +   `<circle cx="160" cy="200" r="240" fill="${pal.deco}" opacity="0.45"/>`
-    // 中円 (= 右上)
-    +   `<circle cx="1140" cy="100" r="130" fill="${pal.deco}" opacity="0.55"/>`
-    // 小円 (= 右下)
-    +   `<circle cx="1010" cy="620" r="80" fill="${pal.deco}" opacity="0.45"/>`
-    // 三角 (= 右下寄り)
-    +   `<polygon points="800,550 870,620 730,620" fill="${pal.deco}" opacity="0.5"/>`
-    // 装飾ドット
+    +   `<circle cx="160" cy="200" r="240" fill="${pal.deco}" opacity="0.35"/>`
+    +   `<circle cx="1140" cy="100" r="130" fill="${pal.deco}" opacity="0.45"/>`
+    +   `<circle cx="1010" cy="620" r="80" fill="${pal.deco}" opacity="0.35"/>`
+    +   `<polygon points="800,550 870,620 730,620" fill="${pal.deco}" opacity="0.4"/>`
     +   `<circle cx="260" cy="540" r="9" fill="${pal.deco}"/>`
     +   `<circle cx="950" cy="200" r="6" fill="${pal.deco}"/>`
     +   `<circle cx="180" cy="600" r="5" fill="${pal.deco}" opacity="0.7"/>`
-    // 大型 カテゴリ ラベル (= 中央、 装飾 として 機能、 タイトル 代わり)
-    +   `<text x="640" y="380" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="120" font-weight="900" fill="${pal.text}" opacity="0.12">${_svgEscape(category)}</text>`
-    // カテゴリ pill (= 左上)
+    // メイン タイトル (= 中央 大、 サムネ の 主役)
+    +   `<text text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="${fontSize}" font-weight="900" fill="${pal.text}" letter-spacing="-1">${titleTspans}</text>`
+    // カテゴリ chip (= 左上 小)
     +   `<g>`
     +     `<ellipse cx="200" cy="110" rx="130" ry="26" fill="#ffffff" stroke="${pal.deco}" stroke-width="2"/>`
-    +     `<text x="200" y="116" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic','Helvetica Neue',sans-serif" font-size="18" font-weight="700" fill="${pal.accent}">${_svgEscape(category)}</text>`
-    +     `<text x="200" y="148" text-anchor="middle" font-family="'Helvetica Neue',sans-serif" font-size="11" letter-spacing="3" fill="${pal.sub}">${_svgEscape(categoryEn)}</text>`
+    +     `<text x="200" y="118" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="18" font-weight="700" fill="${pal.accent}">${_svgEscape(category)}</text>`
     +   `</g>`
-    // ブランドマーク (= 右下)
-    +   `<g>`
-    +     `<text x="1220" y="680" text-anchor="end" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="17" font-weight="800" fill="${pal.text}">${_svgEscape(brandJp)}</text>`
-    +     `<text x="1220" y="702" text-anchor="end" font-family="'Helvetica Neue',sans-serif" font-size="11" letter-spacing="3" fill="${pal.sub}">${_svgEscape(brandEn)}</text>`
-    +   `</g>`
+    // ブランドマーク (= 右下 小)
+    +   `<text x="1220" y="685" text-anchor="end" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="15" font-weight="700" fill="${pal.sub}">${_svgEscape(brandJp)}</text>`
     + `</svg>`;
-  // data URI として返す (= <img src> で直接埋め込み可)
   return 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64');
 }
 
@@ -19171,9 +19175,10 @@ function _mediaRenderMinimalIndex(media, posts, opts){
     const titleLineClamp = isBig ? '3' : '2';
     const excerptShow = isBig && p.excerpt;
     const idx = opts2 && opts2.idx || 0;
-    // 🎯 hero フォールバック: hero_image_url が 無 い 時 は SVG hero (= カテゴリ 装飾) を 必ず 出す
+    // 🎯 hero フォールバック: hero_image_url が 無 い 時 は SVG hero を 必ず 出す
+    //   さらに data:image/svg は 古い デザイン の 可能 性 ある の で 都度 再生成 (= 設定 / SVG ロジック 変更 が 即時 反映)
     let cardHero = p.hero_image_url;
-    if(!cardHero){
+    if(!cardHero || (typeof cardHero === 'string' && cardHero.startsWith('data:image/svg'))){
       try { cardHero = _svgHeroForArticle(p, media); } catch(_){}
     }
     return `
@@ -19224,7 +19229,9 @@ function _mediaRenderMinimalIndex(media, posts, opts){
         <div style="display:inline-flex;gap:14px;max-width:100%;text-align:left">
           ${trendingPosts.map((p, i) => {
             let trHero = p.hero_image_url;
-            if(!trHero){ try { trHero = _svgHeroForArticle(p, media); } catch(_){} }
+            if(!trHero || (typeof trHero === 'string' && trHero.startsWith('data:image/svg'))){
+              try { trHero = _svgHeroForArticle(p, media); } catch(_){}
+            }
             return `
             <a href="${_mediaPublicUrl(media, p.slug)}" style="flex:0 0 240px;scroll-snap-align:start;background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;text-decoration:none;color:inherit;transition:all .15s;display:flex;flex-direction:column" onmouseover="this.style.borderColor='${accent}'" onmouseout="this.style.borderColor='${s.cardBorder}'">
               ${trHero
@@ -19245,7 +19252,9 @@ function _mediaRenderMinimalIndex(media, posts, opts){
   // ── 全 記事 grid (= 「もっと 読む」 区画) ──
   const cardsHTML = (restPosts.length > 0) ? restPosts.map((p, i) => {
     let gridHero = p.hero_image_url;
-    if(!gridHero){ try { gridHero = _svgHeroForArticle(p, media); } catch(_){} }
+    if(!gridHero || (typeof gridHero === 'string' && gridHero.startsWith('data:image/svg'))){
+      try { gridHero = _svgHeroForArticle(p, media); } catch(_){}
+    }
     return `
       <article style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;display:flex;flex-direction:column;transition:all .15s" onmouseover="this.style.borderColor='${accent}'" onmouseout="this.style.borderColor='${s.cardBorder}'">
         ${gridHero

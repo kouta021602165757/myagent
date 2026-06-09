@@ -11966,6 +11966,22 @@ window._fetchMediaStats = async function(siteId){
     if(ckEl) ckEl.textContent = (r.clicks == null) ? '—' : (r.clicks >= 1000 ? (Math.round(r.clicks/100)/10)+'k' : String(r.clicks));
     if(psEl) psEl.textContent = (r.avg_position == null) ? '—' : ('#' + r.avg_position);
 
+    // 🎯 2026-06-10: GA4 / GSC が サブドメイン 計測 未設定 だと PV=0 / clicks=0 で 「数字 取れて ない」
+    //   状況 を ユーザ に 説明 する banner を 出す。
+    var noPv = r.ga4_connected && (r.pv === 0 || r.pv == null) && (Array.isArray(r.top_posts) && r.top_posts.every(function(t){ return !t.pv; }));
+    var noGsc = r.gsc_connected && (r.clicks === 0 || r.clicks == null);
+    if((noPv || noGsc) && document.getElementById('mediaStat_pv') && !document.getElementById('mediaStatGuide')){
+      var msgs = [];
+      if(noPv) msgs.push('<b>GA4 で サブドメイン (= ' + (location.hostname || 'media') + ') の data が 0 件</b>。 親 ドメイン と 別 stream に なってる 可能性 — GA4 admin で 「data stream を 追加」 or 「サブドメイン を 既存 stream に 含める」 設定を。');
+      if(noGsc) msgs.push('<b>GSC が 別 サイト 監視 中</b> — Search Console で <code>https://media-blog.myaiagents.agency</code> を Property 追加 + 所有権 確認 + sitemap.xml submit が 必要。');
+      var guide = document.createElement('div');
+      guide.id = 'mediaStatGuide';
+      guide.style.cssText = 'background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #f59e0b;border-radius:10px;padding:11px 14px;font-size:11.5px;color:#78350f;line-height:1.6;margin:10px 0';
+      guide.innerHTML = '⚠️ <b>計測 設定 が 未完了 です</b><br>' + msgs.map(function(m){ return '・ ' + m; }).join('<br>');
+      var card = document.getElementById('mediaStat_pv') && document.getElementById('mediaStat_pv').closest('div[style*="linear-gradient"]');
+      if(card && card.parentElement) card.parentElement.insertBefore(guide, card.nextSibling);
+    }
+
     // tooltip に接続状態を入れる (= ユーザに「GA4 未接続」 等を教える)
     var pvParent = document.getElementById('mediaStat_pv');
     if(pvParent && !r.ga4_connected){ pvParent.title = 'GA4 未接続 — 🔌 接続から GA4 をつなぐと PV が見えます'; pvParent.style.opacity = '.6'; }

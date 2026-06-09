@@ -18357,6 +18357,23 @@ async function executePublishToMediaTool(user, agent, input){
     });
   }
 
+  // 🎯 2026-06-09: 公開 完了 card を ag.history に push (= AI の markdown text
+  //   ではなく、 client 既存 の article-card UI で render される)。
+  //   kind:'system_publish' を 拾って [public/app.js:15816] が ✅ 公開済 card を 出す。
+  if(!Array.isArray(agent.history)) agent.history = [];
+  const _now = new Date().toISOString();
+  const _pubUrl = _mediaPublicUrl(agent.media, postSlug);
+  agent.history.push({
+    id: 'm_' + crypto.randomBytes(5).toString('hex'),
+    role: 'assistant',
+    content: '✅ 「' + postMeta.title + '」 を 公開しました\n→ ' + _pubUrl + '\n⏱ ' + (article.body_html || '').length + ' 字' + (postMeta.category_name ? ' ・ ' + postMeta.category_name : ''),
+    time: _now,
+    kind: 'system_publish',
+    article_url: _pubUrl,
+    article_title: postMeta.title,
+    article_category: postMeta.category_name || '',
+  });
+
   try { await DB.save(user); } catch(e){ return { error: 'save_failed: ' + e.message }; }
   _mediaSlugCacheClear(agent.media.slug);
 
@@ -18383,6 +18400,9 @@ async function executePublishToMediaTool(user, agent, input){
     media_name: agent.media.name,
     media_slug: agent.media.slug,
     sns_shared: snsResults,
+    // 🎯 client に 公開 通知 card は 既 に push 済。 AI は タイトル / URL / 概要 の 重複 列挙
+    //    を 避けて、 1 行 「公開 しました」 か 短い 補足 だけ で OK。
+    instructions: 'ユーザ には 既 に 公開 通知 カード が 表示 されて います。 タイトル・URL・概要 の 重複 列挙 は 避けて、 1 行 で 「公開 しました」 か 短い 補足 (= SNS 共有 結果 や 次の アクション 提案) だけ 返答 して ください。',
   };
 }
 

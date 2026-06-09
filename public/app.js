@@ -11996,6 +11996,45 @@ window._fetchMediaStats = async function(siteId){
         weakHolder.style.display = 'block';
       }
     }
+    // 📈 LP 流入 セクション (= メディア → LP の CV、 utm_source=media 集計)
+    if(weakHolder && r.lp_sessions !== null && r.lp_sessions !== undefined){
+      var lpSess = r.lp_sessions || 0;
+      var lpUsers = r.lp_users || 0;
+      var lpTopHTML = (r.lp_top_referrers && r.lp_top_referrers.length > 0)
+        ? r.lp_top_referrers.slice(0, 5).map(function(t, i){
+            var rank = i + 1;
+            return '<div class="mw-row" style="align-items:center">'
+              + '<div style="font-size:13px;font-weight:900;color:#7c3aed;width:24px;text-align:center">#' + rank + '</div>'
+              + '<div class="mw-row-bd">'
+              +   '<div class="mw-row-ti">' + esc((t.title || t.slug || '').slice(0,70)) + '</div>'
+              +   '<div class="mw-row-mt">🎯 LP 送客 ' + t.sessions + ' sessions</div>'
+              + '</div>'
+              + '</div>';
+          }).join('')
+        : '<div style="font-size:11px;color:var(--text3);padding:8px 4px">まだ メディア → LP の 送客 が 0 件 です。 記事 内 CTA を タップ させる 工夫 (= 文脈 fit / 配置) を 増やし ましょう。</div>';
+      var lpCtaHTML = (r.lp_cta_breakdown && r.lp_cta_breakdown.length > 0)
+        ? '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--wire2)"><div style="font-size:10.5px;color:var(--text3);margin-bottom:6px;font-weight:700">CTA 位置 別 (= utm_campaign)</div>'
+          + r.lp_cta_breakdown.slice(0, 5).map(function(c){
+              return '<div style="display:inline-flex;align-items:center;gap:5px;background:#ede9fe;color:#5b21b6;padding:3px 8px;border-radius:6px;font-size:10.5px;font-weight:700;margin:2px 4px 2px 0">'
+                + esc(c.campaign) + ' × ' + c.sessions
+                + '</div>';
+            }).join('') + '</div>'
+        : '';
+      weakHolder.innerHTML += ''
+        + '<div class="mw-sec" style="margin-bottom:14px;border:1px solid #a78bfa;background:linear-gradient(135deg,#faf5ff,#fff)">'
+        +   '<div class="mw-sec-h">📈 メディア → LP 流入 (= 直近 ' + r.days + ' 日)</div>'
+        +   '<div style="padding:8px 12px;font-size:12px;color:var(--text);font-weight:700">'
+        +     '<span style="font-size:20px;font-weight:900;color:#7c3aed">' + lpSess + '</span>'
+        +     ' <span style="opacity:.7">sessions</span> · '
+        +     '<span style="font-size:16px;font-weight:900;color:#7c3aed">' + lpUsers + '</span>'
+        +     ' <span style="opacity:.7">users</span>'
+        +   '</div>'
+        +   '<div style="font-size:10.5px;color:var(--text3);padding:0 12px 8px">記事 別 送客 ランキング:</div>'
+        +   '<div class="mw-list">' + lpTopHTML + '</div>'
+        +   lpCtaHTML
+        + '</div>';
+      weakHolder.style.display = 'block';
+    }
     if(weakHolder && r.weak_posts && r.weak_posts.length > 0){
       var rowsHTML = r.weak_posts.map(function(w){
         var hostNow = (r && r._host) || 'myaiagents.agency';

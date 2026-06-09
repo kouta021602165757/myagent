@@ -13857,6 +13857,10 @@ async function ga4RunReport(user, propertyId, opts){
     dimensions: (opts && opts.dimensions) || [{ name: 'date' }],
     limit: Math.min(1000, Math.max(1, Number((opts && opts.limit)||50))),
   };
+  // 🎯 2026-06-10: dimensionFilter / metricFilter を pass-through (= utm_source filter 等 で 必須)
+  if(opts && opts.dimensionFilter) body.dimensionFilter = opts.dimensionFilter;
+  if(opts && opts.metricFilter)    body.metricFilter    = opts.metricFilter;
+  if(opts && opts.orderBys)        body.orderBys        = opts.orderBys;
   const r = await httpsReq('POST', 'analyticsdata.googleapis.com',
     '/v1beta/properties/'+String(propertyId).replace('properties/','')+':runReport',
     { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' }, body);
@@ -27175,6 +27179,11 @@ async function handleAPI(req,res,pathname,method,ip){
       top_posts: [],   // 上位 PV 記事
       weak_posts: [],  // 順位下落 or PV 少
       posts_count: (ag.media_posts_idx || []).filter(p => p && p.status !== 'draft').length,
+      // 📈 LP 流入 (= メディア → LP 集客 効果)
+      lp_sessions: null,        // メディア 経由 で LP に 到達 した session 数
+      lp_users: null,           // 同 上 unique user
+      lp_top_referrers: [],     // 流入 多い 記事 TOP (= utm_medium で 集計)
+      lp_cta_breakdown: [],     // CTA 別 流入 (= utm_campaign で 集計)
     };
 
     // GA4 — pagePath / screenPageViews を引いて prefix で filter
@@ -27215,6 +27224,48 @@ async function handleAPI(req,res,pathname,method,ip){
             const m = bySlug[p.slug];
             return { slug: p.slug, title: p.title, pv: m ? m.pv : 0, sessions: m ? m.ss : 0 };
           }).sort((a, b) => b.pv - a.pv).slice(0, 10);
+
+          // 📈 LP 流入 query (= utm_source=media で filter、 メディア → LP の CV)
+          try {
+            const lpResp = await ga4RunReport(user, propertyId, {
+              metrics: [{ name: 'sessions' }, { name: 'totalUsers' }],
+              dimensions: [{ name: 'sessionMedium' }, { name: 'sessionCampaignName' }, { name: 'landingPagePlusQueryString' }],
+              dimensionFilter: {
+                filter: {
+                  fieldName: 'sessionSource',
+                  stringFilter: { matchType: 'EXACT', value: 'media', caseSensitive: false },
+                },
+              },
+              dateRanges: [{ startDate, endDate: 'yesterday' }],
+              limit: 1000,
+            });
+            let lpTotalSess = 0, lpTotalUsers = 0;
+            const byReferrerSlug = {}; // utm_medium = post slug 想定
+            const byCampaign = {};     // utm_campaign = CTA 位置 (= hero / mid / end 等)
+            (lpResp.rows || []).forEach(row => {
+              const medium = (row.dimensionValues || [])[0] && row.dimensionValues[0].value || '';
+              const campaign = (row.dimensionValues || [])[1] && row.dimensionValues[1].value || '';
+              const ss = parseInt((row.metricValues || [])[0] && row.metricValues[0].value || '0', 10) || 0;
+              const us = parseInt((row.metricValues || [])[1] && row.metricValues[1].value || '0', 10) || 0;
+              lpTotalSess += ss; lpTotalUsers += us;
+              if(medium){
+                byReferrerSlug[medium] = (byReferrerSlug[medium] || 0) + ss;
+              }
+              if(campaign){
+                byCampaign[campaign] = (byCampaign[campaign] || 0) + ss;
+              }
+            });
+            out.lp_sessions = lpTotalSess;
+            out.lp_users    = lpTotalUsers;
+            out.lp_top_referrers = Object.entries(byReferrerSlug)
+              .map(([slug, sess]) => ({ slug, sessions: sess, title: slugTitle.get(slug) || slug }))
+              .sort((a, b) => b.sessions - a.sessions)
+              .slice(0, 8);
+            out.lp_cta_breakdown = Object.entries(byCampaign)
+              .map(([campaign, sess]) => ({ campaign, sessions: sess }))
+              .sort((a, b) => b.sessions - a.sessions)
+              .slice(0, 8);
+          } catch(e){ console.warn('[media-stats] ga4 LP funnel failed:', e.message); }
         }
       } catch(e){ console.warn('[media-stats] ga4 failed:', e.message); }
     }

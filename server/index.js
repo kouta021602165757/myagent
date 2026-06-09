@@ -15952,6 +15952,7 @@ function _mediaSlugCacheClear(slug){
       else global._mediaHomeHtmlCache.clear();
     }
   } catch(_){}
+  console.log('[media-cache-clear] slug=' + (slug || 'ALL') + ' (slug + html cache invalidated)');
 }
 // opts.includePosts: 個別記事 SSR で body_html が必要な時のみ true。
 //   false (= 一覧ページ) なら full row fetch を skip して egress を半減。
@@ -26995,7 +26996,8 @@ async function handleAPI(req,res,pathname,method,ip){
           });
           // 🚀 saveAgent: agents + media_posts_full のみ touch (= history_archive 3MB skip)
           await DB.saveAgent(user, { mediaPostsFull: true });
-          _mediaSlugCacheClear(ag.media.slug);
+          // 🛡 cache clear: slug 無 い 場合 は 全 clear で 安全 倒し (= 「反映されない」 対策)
+          _mediaSlugCacheClear((ag.media && ag.media.slug) || '');
           // 🚀 SEO: IndexNow ping (= 新 記事 + sitemap + ホーム) を fire-and-forget で
           _indexNowPingFAF([pubUrl, _mediaPublicUrl(ag.media), _mediaPublicUrl(ag.media, 'sitemap.xml')]);
           console.log('[kw-batch] ✅ ' + j.job_id + ' published: ' + postSlug);
@@ -27109,7 +27111,8 @@ async function handleAPI(req,res,pathname,method,ip){
             });
           }
           await DB.saveAgent(user, { mediaPostsFull: true });
-          _mediaSlugCacheClear(ag.media.slug);
+          // 🛡 cache clear: slug 無 い 場合 は 全 clear で 安全 倒し (= 「反映されない」 対策)
+          _mediaSlugCacheClear((ag.media && ag.media.slug) || '');
           _indexNowPingFAF([_mediaPublicUrl(ag.media, postSlug), _mediaPublicUrl(ag.media), _mediaPublicUrl(ag.media, 'sitemap.xml')]);
           console.log('[media-art-async] ✅ ' + jobId + ' published: ' + postSlug);
         } catch(e){
@@ -34880,7 +34883,8 @@ const server=http.createServer(async(req,res)=>{
         if(cached && Date.now() - cached.t < HOME_TTL){
           res.writeHead(200, {
             'Content-Type': 'text/html;charset=utf-8',
-            'Cache-Control': 'public, max-age=300',
+            // ブラウザ キャッシュ 60s に 短縮 (= 公開 直後 の 「反映 されない」 解消)
+            'Cache-Control': 'public, max-age=60, must-revalidate',
             'X-Frame-Options': 'SAMEORIGIN',
             'X-Cache': 'HIT',
             'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",
@@ -34903,7 +34907,7 @@ const server=http.createServer(async(req,res)=>{
         global._mediaHomeHtmlCache.set(slug, { html, t: Date.now() });
         res.writeHead(200, {
           'Content-Type': 'text/html;charset=utf-8',
-          'Cache-Control': 'public, max-age=300',
+          'Cache-Control': 'public, max-age=60, must-revalidate',
           'X-Frame-Options': 'SAMEORIGIN',
           'X-Cache': 'MISS',
           'Content-Security-Policy': "default-src 'self'; img-src https: data:; style-src 'unsafe-inline' 'self'; script-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'",

@@ -7585,14 +7585,53 @@ async function executeImageEditTool(input){
 // ── Image provider clients ───────────────────────────────────
 
 function _imgPollinations(prompt, width, height){
-  // Free fallback — FLUX Schnell via Pollinations.ai (GET URL, no auth).
-  const seed = Math.floor(Math.random() * 999999999);
-  const url = 'https://image.pollinations.ai/prompt/'
-    + _encodeForMd(prompt)
-    + '?width=' + width
-    + '&height=' + height
-    + '&model=flux&nologo=true&safe=true&seed=' + seed;
-  return { url, provider: 'pollinations' };
+  // 🎨 2026-06-09: Pollinations.ai が 課金 制 (HTTP 402) に なった ので
+  //    SVG data URL に 切り 替え。 prompt から hash で 色 を 決定、
+  //    タイトル に prompt の 先頭 を 表示。 broken image を 出 さ ない。
+  return _imgSvgFromPrompt(prompt, width, height);
+}
+
+// prompt 文字列 + サイズ から SVG hero を 生成 し data URL で 返す。
+// API key / 外部 fetch 不要、 client 側 で 確実 に 描画 される。
+function _imgSvgFromPrompt(prompt, width, height){
+  const w = Math.max(256, Math.min(1536, parseInt(width) || 1024));
+  const h = Math.max(256, Math.min(1536, parseInt(height) || 1024));
+  const title = String(prompt || '').slice(0, 60);
+  // prompt hash → palette 選択 (= 同じ prompt は 同じ 色 で 再現 可能)
+  const hash = Math.abs(_strHash(title));
+  const PALETTES = [
+    { bg: '#0f172a', deco: '#1e293b', accent: '#38bdf8', text: '#f8fafc', sub: '#94a3b8' }, // dark slate
+    { bg: '#fef3c7', deco: '#fcd34d', accent: '#d97706', text: '#78350f', sub: '#a16207' }, // amber
+    { bg: '#dcfce7', deco: '#86efac', accent: '#16a34a', text: '#14532d', sub: '#15803d' }, // green
+    { bg: '#fce7f3', deco: '#f9a8d4', accent: '#db2777', text: '#831843', sub: '#9d174d' }, // pink
+    { bg: '#e0e7ff', deco: '#a5b4fc', accent: '#4f46e5', text: '#1e1b4b', sub: '#3730a3' }, // indigo
+    { bg: '#cffafe', deco: '#67e8f9', accent: '#0891b2', text: '#164e63', sub: '#155e75' }, // cyan
+  ];
+  const pal = PALETTES[hash % PALETTES.length];
+  // タイトル 折返 し (= 24 char で 改行)
+  const lines = [];
+  let buf = '';
+  for(const ch of title){
+    buf += ch;
+    if(buf.length >= 24){ lines.push(buf); buf = ''; }
+  }
+  if(buf) lines.push(buf);
+  const lineHeight = Math.max(36, Math.floor(h / 12));
+  const fontSize = Math.max(28, Math.floor(h / 16));
+  const startY = Math.floor(h / 2) - ((lines.length - 1) * lineHeight) / 2;
+  const titleTspans = lines.map((ln, i) =>
+    `<tspan x="${w/2}" y="${startY + i * lineHeight}">${_svgEscape(ln)}</tspan>`
+  ).join('');
+  const svg = ''
+    + `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`
+    +   `<rect width="${w}" height="${h}" fill="${pal.bg}"/>`
+    +   `<circle cx="${w*0.15}" cy="${h*0.25}" r="${h*0.3}" fill="${pal.deco}" opacity="0.45"/>`
+    +   `<circle cx="${w*0.88}" cy="${h*0.15}" r="${h*0.18}" fill="${pal.deco}" opacity="0.55"/>`
+    +   `<circle cx="${w*0.78}" cy="${h*0.85}" r="${h*0.12}" fill="${pal.deco}" opacity="0.45"/>`
+    +   `<text text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic','Helvetica Neue',sans-serif" font-size="${fontSize}" font-weight="700" fill="${pal.text}">${titleTspans}</text>`
+    +   `<text x="${w-20}" y="${h-20}" text-anchor="end" font-family="'Helvetica Neue',sans-serif" font-size="${Math.max(10, Math.floor(h/40))}" letter-spacing="2" fill="${pal.sub}">AI · GENERATED</text>`
+    + `</svg>`;
+  return { url: 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64'), provider: 'svg' };
 }
 
 // Generic JSON POST helper for the image providers below.

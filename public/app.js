@@ -10131,6 +10131,7 @@ window._artBatchPublish = function(){
       }
       showToast('✨ ' + items.length + ' 件 生成開始 → chat で 進捗確認', 'ok');
       _artBatchClear();
+      try { if(typeof _startPublishPoller === 'function') _startPublishPoller(); } catch(_){}
       // panel を 閉じて chat に 切替 → ユーザは pill で 進捗 即確認できる
       try { if(typeof _closeSiteTabModal === 'function') _closeSiteTabModal(); } catch(_){}
       try { if(typeof openAgent === 'function') await openAgent(sid); } catch(_){}
@@ -12527,6 +12528,7 @@ window._kwInvokeArticleGen = async function(siteId, title, mode, keywordOpt){
       }
     }
     showToast('✨ 生成 開始 (chat に thread が 立ちました)', 'ok');
+    try { if(typeof _startPublishPoller === 'function') _startPublishPoller(); } catch(_){}
     // chat に 切替 + thread 自動 open (= 楽観 push 済なので 即時に message が 見える)
     try { if(typeof openAgent === 'function') await openAgent(siteId); } catch(_){}
     setTimeout(function(){
@@ -15368,7 +15370,82 @@ function renderMsgs(ag, forceScrollBottom){
   if(window._activeThreadParent){ try{ _renderThreadDrawer(); }catch(e){} }
   // 🎯 リアル タイム 生成 進捗 ticker を kick (= まだ 始動 して なければ)
   _kickRtProgress();
+  // 🎯 「生成中」 カード あれば publish poller も kick (= 完了 msg 自動 反映)
+  try {
+    if(ag && Array.isArray(ag.history)){
+      const hasPending = ag.history.some(m => {
+        if(!m || m.kind !== 'system_publish_start') return false;
+        const startMs = Date.parse(m.time || 0) || 0;
+        if(!startMs || (Date.now() - startMs) > 10 * 60 * 1000) return false;
+        const completed = ag.history.some(x => x && x.thread_parent_id === m.id &&
+          (x.kind === 'system_publish' || x.kind === 'system_publish_fail'));
+        return !completed;
+      });
+      if(hasPending && typeof _startPublishPoller === 'function') _startPublishPoller();
+    }
+  } catch(_){}
 }
+
+// 🎯 公開 ポーリング — 「生成中」 カード が ある 間、 サーバ history を 5 秒 ごと に 確認 し
+//    新 完了 msg を 検出 した ら local agent.history に push + re-render。
+//    server で 公開 完了 → client が 自動 反映 (= リロード 不要)。
+window._publishPollerTimer = null;
+window._startPublishPoller = function(){
+  if(window._publishPollerTimer) return; // 既に 起動 中
+  const POLL_INTERVAL = 5000; // 5s
+  const MAX_DURATION = 15 * 60 * 1000; // 15 分 で 諦め
+  const startedAt = Date.now();
+  const tick = async () => {
+    if(Date.now() - startedAt > MAX_DURATION){
+      clearInterval(window._publishPollerTimer);
+      window._publishPollerTimer = null;
+      return;
+    }
+    // 各 agent で 「生成中」 (= system_publish_start) かつ 完了 msg 無し の もの が ある か
+    const agentsWithPending = (agents||[]).filter(ag => {
+      if(!ag || !Array.isArray(ag.history)) return false;
+      return ag.history.some(m => {
+        if(!m || m.kind !== 'system_publish_start') return false;
+        const startMs = Date.parse(m.time || 0) || 0;
+        if(!startMs || (Date.now() - startMs) > 10 * 60 * 1000) return false; // > 10 min = stale 扱い、 poll しない
+        // 完了 msg ある?
+        const completed = ag.history.some(x => x && x.thread_parent_id === m.id &&
+          (x.kind === 'system_publish' || x.kind === 'system_publish_fail'));
+        return !completed; // pending = true
+      });
+    });
+    if(agentsWithPending.length === 0){
+      clearInterval(window._publishPollerTimer);
+      window._publishPollerTimer = null;
+      return;
+    }
+    // 各 pending agent の history を 取得
+    for(const ag of agentsWithPending){
+      try {
+        const r = await api('GET', '/api/agents/' + encodeURIComponent(ag.id) + '/history?limit=50');
+        if(!r || !Array.isArray(r.items)) continue;
+        const existingIds = new Set((ag.history||[]).map(m => m && m.id).filter(Boolean));
+        let appended = 0;
+        for(const m of r.items){
+          if(!m || !m.id) continue;
+          if(existingIds.has(m.id)) continue;
+          ag.history.push(m);
+          appended++;
+        }
+        if(appended > 0 && ag.id === activeId){
+          try { renderMsgs(ag); } catch(_){}
+          console.log('[publish-poll] +' + appended + ' new msgs for agent ' + ag.id);
+        }
+      } catch(e){
+        console.warn('[publish-poll] fetch failed for', ag.id, ':', e.message);
+      }
+    }
+  };
+  window._publishPollerTimer = setInterval(tick, POLL_INTERVAL);
+  // 即 1 回 実行 (= 5 秒 待た ない)
+  tick();
+  console.log('[publish-poll] started (interval=' + POLL_INTERVAL + 'ms)');
+};
 
 // 🎯 stale な 「生成中」 カード を 削除 (= 10 分 以上 完了 しない もの)。
 //    既存 DELETE /api/agents/:id/messages/:idx を 使う。

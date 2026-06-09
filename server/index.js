@@ -18321,7 +18321,7 @@ async function executePublishToMediaTool(user, agent, input){
 
   // slug 採番 + 保存 (= AI で 英語 slug 生成、 失敗時は タイトル直 slugify)
   const existingSlugs = (agent.media_posts_idx || []).map(p => p && p.slug).filter(Boolean);
-  const postSlug = await _mediaPostSlugSmart(article.title, params.keyword || article.title, existingSlugs);
+  const postSlug = await _mediaPostSlugSmart(article.title, title || article.title, existingSlugs);
   const postId = 'mpo_' + crypto.randomBytes(6).toString('hex');
   const now = new Date().toISOString();
   const postMeta = {

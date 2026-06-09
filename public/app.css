@@ -4414,7 +4414,8 @@ input,textarea{font-family:var(--sans);}
 .ws-d-meta{ flex-shrink: 0; font-size: 10px; color: var(--text3); font-weight: 600; }
 
 @media (max-width: 560px){
-  .weekly-stats-bar{ margin: 4px 12px 6px; padding: 5px 10px; font-size: 11px; }
+  /* スマホでは「今週の動き」サマリーバーを非表示 (JS が inline display を付けるため !important が必要) */
+  .weekly-stats-bar{ display: none !important; }
 }
 
 /* ── Task strip (= chat 上部、 今週のタスク chips) — mock-strategy-v3 と同じ class 体系 ──
@@ -9587,6 +9588,36 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   .sys-pill, .pill, .ct-act{
     -webkit-touch-callout:none;
     -webkit-user-select:none;user-select:none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   📱 Mobile UX globals (2026-06-09) — 「アプリ リリース 控え しっかり mobile」
+   - iOS Safari の auto-zoom 防止 (= 全 input/textarea/select を 16px に 強制)
+   - touch target 44x44 最低 保証 (= Apple HIG / WCAG 2.5.5)
+   - horizontal overflow 抑止 (= 親 要素 から の 1px 漏れ 防止)
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 700px){
+  /* iOS Safari: < 16px の input は タップ で 自動 zoom する → 全部 16px に */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+  /* 主要 button の hit area 44x44 保証 (= 親指 で 押し やすく) */
+  .send-btn,
+  .tool-btn,
+  .tool-more-btn,
+  .btn-publish,
+  button.send-btn,
+  button.tool-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* 横 スクロール 漏れ を 親 で 抑止 (= 「右 に 1px はみ出 て swipe で 動 く」 解消) */
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 }
 

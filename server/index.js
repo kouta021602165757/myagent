@@ -27142,7 +27142,28 @@ async function handleAPI(req,res,pathname,method,ip){
     const qs = parsedUrl.query || {};
     const days = Math.max(1, Math.min(90, parseInt(qs.days, 10) || 30));
     const startDate = days + 'daysAgo';
-    const slugPrefix = '/media/' + ag.media.slug + '/';
+    const slugPrefix = '/media/' + ag.media.slug + '/'; // 旧 path 配信 互換
+    // 🎯 2026-06-10: サブ ドメイン 配信 (= <media-slug>.myaiagents.agency/<post-slug>)
+    //   の pagePath = `/<post-slug>` に 対応。 旧 path (= /media/<media-slug>/<post-slug>)
+    //   も Set に 入れて 後方 互換。
+    const _idxPosts = (ag.media_posts_idx || []).filter(p => p && p.slug && p.status !== 'draft');
+    const slugPathSet = new Set();
+    const slugTitle = new Map();
+    _idxPosts.forEach(p => {
+      slugPathSet.add('/' + p.slug);
+      slugPathSet.add('/' + p.slug + '/');
+      slugPathSet.add(slugPrefix + p.slug);
+      slugPathSet.add(slugPrefix + p.slug + '/');
+      slugTitle.set(p.slug, p.title || p.slug);
+    });
+    const _pathToSlug = (path) => {
+      // /<slug> or /<slug>/ or /media/<media-slug>/<slug> から post slug を 抽出
+      if(!path) return null;
+      const noQuery = path.split('?')[0].split('#')[0];
+      const trimmed = noQuery.replace(/\/$/, '');
+      const segs = trimmed.split('/').filter(Boolean);
+      return segs[segs.length - 1] || null;
+    };
 
     const out = {
       has_media: true,
@@ -27176,24 +27197,24 @@ async function handleAPI(req,res,pathname,method,ip){
             limit: 1000,
           });
           let totalPv = 0, totalSess = 0;
-          const byPath = {};
+          const bySlug = {};
           (r.rows || []).forEach(row => {
             const path = (row.dimensionValues || [])[0] && row.dimensionValues[0].value || '';
-            if(!path.startsWith(slugPrefix)) return;
+            if(!slugPathSet.has(path) && !slugPathSet.has(path.replace(/\/$/, ''))) return;
+            const slug = _pathToSlug(path);
+            if(!slug || !slugTitle.has(slug)) return;
             const pv = parseInt((row.metricValues || [])[0] && row.metricValues[0].value || '0', 10) || 0;
             const ss = parseInt((row.metricValues || [])[1] && row.metricValues[1].value || '0', 10) || 0;
             totalPv += pv; totalSess += ss;
-            byPath[path] = { pv, ss };
+            bySlug[slug] = { pv: (bySlug[slug] ? bySlug[slug].pv : 0) + pv, ss: (bySlug[slug] ? bySlug[slug].ss : 0) + ss };
           });
           out.pv = totalPv;
           out.sessions = totalSess;
-          // top_posts: 公開済 idx の slug と join
-          const idx = (ag.media_posts_idx || []).filter(p => p && p.status !== 'draft');
-          out.top_posts = idx.map(p => {
-            const path = slugPrefix + p.slug;
-            const m = byPath[path];
-            return { slug: p.slug, title: p.title, pv: m ? m.pv : 0 };
-          }).sort((a, b) => b.pv - a.pv).slice(0, 5);
+          // top_posts: 公開済 idx の slug と join (= 全 件 返す、 client で sort + 5 件 cut)
+          out.top_posts = _idxPosts.map(p => {
+            const m = bySlug[p.slug];
+            return { slug: p.slug, title: p.title, pv: m ? m.pv : 0, sessions: m ? m.ss : 0 };
+          }).sort((a, b) => b.pv - a.pv).slice(0, 10);
         }
       } catch(e){ console.warn('[media-stats] ga4 failed:', e.message); }
     }
@@ -27216,7 +27237,10 @@ async function handleAPI(req,res,pathname,method,ip){
           const byPage = {};
           (r.rows || []).forEach(row => {
             const page = (row.keys || [])[0] || '';
-            if(page.indexOf(slugPrefix) < 0) return;
+            // GSC は full URL を 返す → host を 落とし て path で マッチ
+            const pagePath = page.replace(/^https?:\/\/[^\/]+/, '') || '/';
+            const slugMatch = slugPathSet.has(pagePath) || slugPathSet.has(pagePath.replace(/\/$/, ''));
+            if(!slugMatch) return;
             const c = row.clicks || 0;
             const im = row.impressions || 0;
             const pos = row.position || 0;

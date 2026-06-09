@@ -11972,8 +11972,30 @@ window._fetchMediaStats = async function(siteId){
     var ckParent = document.getElementById('mediaStat_clicks');
     if(ckParent && !r.gsc_connected){ ckParent.title = 'GSC 未接続 — 🔌 接続から Search Console をつなぐと表示されます'; ckParent.style.opacity = '.6'; }
 
-    // 弱記事 (= 順位下落 / 表示はあるがクリック少) があれば リライト CTA を表示
+    // 📈 流入 多い 記事 TOP (= top_posts、 GA4 PV 順)
     var weakHolder = document.getElementById('mediaStatsWeak');
+    if(weakHolder && Array.isArray(r.top_posts) && r.top_posts.length > 0){
+      var topVisible = r.top_posts.filter(function(t){ return (t.pv || 0) > 0; }).slice(0, 8);
+      if(topVisible.length > 0){
+        var topRowsHTML = topVisible.map(function(t, i){
+          var rank = i + 1;
+          var rankColor = i === 0 ? '#f59e0b' : (i === 1 ? '#9ca3af' : (i === 2 ? '#b45309' : 'var(--text3)'));
+          return '<div class="mw-row" style="align-items:center">'
+            + '<div style="font-size:14px;font-weight:900;color:'+rankColor+';width:24px;text-align:center">#' + rank + '</div>'
+            + '<div class="mw-row-bd">'
+            +   '<div class="mw-row-ti">' + esc((t.title||t.slug||'').slice(0,70)) + '</div>'
+            +   '<div class="mw-row-mt">📊 PV ' + t.pv + ' · セッション ' + (t.sessions||0) + '</div>'
+            + '</div>'
+            + '</div>';
+        }).join('');
+        weakHolder.innerHTML += ''
+          + '<div class="mw-sec" style="margin-bottom:14px">'
+          +   '<div class="mw-sec-h">📈 流入 多い 記事 TOP ' + topVisible.length + ' (= 直近 ' + r.days + ' 日)</div>'
+          +   '<div class="mw-list">' + topRowsHTML + '</div>'
+          + '</div>';
+        weakHolder.style.display = 'block';
+      }
+    }
     if(weakHolder && r.weak_posts && r.weak_posts.length > 0){
       var rowsHTML = r.weak_posts.map(function(w){
         var hostNow = (r && r._host) || 'myaiagents.agency';

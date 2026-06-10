@@ -27312,7 +27312,7 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!ag) return jres(res, 404, { error: 'agent not found' });
     if(!ag.media || !ag.media.id) return jres(res, 200, { has_media: false });
 
-    const qs = parsedUrl.query || {};
+    const qs = url.parse(req.url, true).query || {};
     const days = Math.max(1, Math.min(90, parseInt(qs.days, 10) || 30));
     // 🎯 diagnostic mode (= ?debug=1 で 取れた raw 情報 + 各 step の error も return)
     const debug = qs.debug === '1';

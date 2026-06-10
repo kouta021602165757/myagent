@@ -11971,7 +11971,9 @@ window._fetchMediaStats = async function(siteId){
 
     // 🎯 2026-06-10: GA4 / GSC が サブドメイン 計測 未設定 だと PV=0 / clicks=0 で 「数字 取れて ない」
     //   状況 を ユーザ に 説明 する banner を 出す。
-    var noPv = r.ga4_connected && (r.pv === 0 || r.pv == null) && (Array.isArray(r.top_posts) && r.top_posts.every(function(t){ return !t.pv; }));
+    //   ただし 自前 計測 (= source: 'media_visits') で pv > 0 取れて る なら banner 不要 (= 計測 動 い てる)。
+    var hasSelfPv = (r.source === 'media_visits' && r.pv > 0);
+    var noPv = !hasSelfPv && r.ga4_connected && (r.pv === 0 || r.pv == null) && (Array.isArray(r.top_posts) && r.top_posts.every(function(t){ return !t.pv; }));
     var noGsc = r.gsc_connected && (r.clicks === 0 || r.clicks == null);
     if((noPv || noGsc) && document.getElementById('mediaStat_pv') && !document.getElementById('mediaStatGuide')){
       var msgs = [];
@@ -12020,17 +12022,31 @@ window._fetchMediaStats = async function(siteId){
       var lpSess = r.lp_sessions || 0;
       var lpUsers = r.lp_users || 0;
       var lpTopHTML = (r.lp_top_referrers && r.lp_top_referrers.length > 0)
-        ? r.lp_top_referrers.slice(0, 5).map(function(t, i){
+        ? r.lp_top_referrers.slice(0, 8).map(function(t, i){
             var rank = i + 1;
+            var mediumLabel = (Array.isArray(t.mediums) && t.mediums.length > 0)
+              ? ' <span style="font-size:9.5px;color:#6b7280;background:#f3f4f6;padding:1px 5px;border-radius:4px;margin-left:5px">' + t.mediums.map(esc).join(' / ') + '</span>'
+              : '';
             return '<div class="mw-row" style="align-items:center">'
               + '<div style="font-size:13px;font-weight:900;color:#7c3aed;width:24px;text-align:center">#' + rank + '</div>'
               + '<div class="mw-row-bd">'
-              +   '<div class="mw-row-ti">' + esc((t.title || t.slug || '').slice(0,70)) + '</div>'
+              +   '<div class="mw-row-ti">' + esc((t.title || t.slug || '').slice(0,70)) + mediumLabel + '</div>'
               +   '<div class="mw-row-mt">🎯 LP 送客 ' + t.sessions + ' sessions</div>'
               + '</div>'
               + '</div>';
           }).join('')
         : '<div style="font-size:11px;color:var(--text3);padding:8px 4px">まだ メディア → LP の 送客 が 0 件 です。 記事 内 CTA を タップ させる 工夫 (= 文脈 fit / 配置) を 増やし ましょう。</div>';
+      // 記事 横断 の inline CTA (= 全 記事 共通 campaign なの で 記事 別 識別 不可) を 別 行 で 表示
+      var inlineRowHTML = '';
+      if(r.lp_inline_aggregate && r.lp_inline_aggregate.sessions > 0){
+        inlineRowHTML = '<div class="mw-row" style="align-items:center;background:#f3f4f6">'
+          + '<div style="font-size:13px;font-weight:900;color:#6b7280;width:24px;text-align:center">∗</div>'
+          + '<div class="mw-row-bd">'
+          +   '<div class="mw-row-ti">記事 中央 inline CTA <span style="font-size:9.5px;color:#6b7280;margin-left:5px">(全 記事 横断)</span></div>'
+          +   '<div class="mw-row-mt">🎯 LP 送客 ' + r.lp_inline_aggregate.sessions + ' sessions · 記事 別 識別 不可</div>'
+          + '</div>'
+          + '</div>';
+      }
       var lpCtaHTML = (r.lp_cta_breakdown && r.lp_cta_breakdown.length > 0)
         ? '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--wire2)"><div style="font-size:10.5px;color:var(--text3);margin-bottom:6px;font-weight:700">CTA 位置 別 (= utm_campaign)</div>'
           + r.lp_cta_breakdown.slice(0, 5).map(function(c){
@@ -12049,7 +12065,7 @@ window._fetchMediaStats = async function(siteId){
         +     ' <span style="opacity:.7">users</span>'
         +   '</div>'
         +   '<div style="font-size:10.5px;color:var(--text3);padding:0 12px 8px">記事 別 送客 ランキング:</div>'
-        +   '<div class="mw-list">' + lpTopHTML + '</div>'
+        +   '<div class="mw-list">' + lpTopHTML + inlineRowHTML + '</div>'
         +   lpCtaHTML
         + '</div>';
       weakHolder.style.display = 'block';

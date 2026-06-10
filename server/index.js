@@ -27429,10 +27429,65 @@ async function handleAPI(req,res,pathname,method,ip){
             });
             out.lp_sessions = lpTotalSess;
             out.lp_users    = lpTotalUsers;
-            out.lp_top_referrers = Object.entries(byReferrerSlug)
-              .map(([slug, sess]) => ({ slug, sessions: sess, title: slugTitle.get(slug) || slug }))
+            // 🎯 2026-06-10: utm_campaign は `<media-slug>_<post-slug>` 形式 で セット される (= 17562 等)。
+            //   campaign 末尾 から post slug を 抽出 → idx から title を 引いて 「記事 タイトル」 を 添付。
+            //   ただし inline CTA は campaign が `<media-slug>_inline` で post 識別 でき ない (= TODO 別 commit)。
+            const mediaSlugPrefix = String(ag.media.slug || '') + '_';
+            const _campaignToPostInfo = (campaign) => {
+              if(!campaign || !campaign.startsWith(mediaSlugPrefix)) return { post_slug: null, post_title: null, label: campaign };
+              const rest = campaign.slice(mediaSlugPrefix.length);
+              if(rest === 'inline' || rest === 'about' || rest === 'about_header' || rest === 'about_footer'){
+                return { post_slug: null, post_title: null, label: campaign };
+              }
+              // rest は post slug
+              return { post_slug: rest, post_title: slugTitle.get(rest) || null, label: campaign };
+            };
+            // campaign × medium で 集計 (= 「どの 記事 × どの CTA 位置 か」)
+            const byCampaignDetailed = {};
+            (lpResp.rows || []).forEach(row => {
+              const medium = (row.dimensionValues || [])[0] && row.dimensionValues[0].value || '';
+              const campaign = (row.dimensionValues || [])[1] && row.dimensionValues[1].value || '';
+              const ss = parseInt((row.metricValues || [])[0] && row.metricValues[0].value || '0', 10) || 0;
+              const key = campaign + '||' + medium;
+              if(!byCampaignDetailed[key]){
+                const info = _campaignToPostInfo(campaign);
+                byCampaignDetailed[key] = {
+                  campaign, medium,
+                  post_slug: info.post_slug,
+                  post_title: info.post_title,
+                  sessions: 0,
+                };
+              }
+              byCampaignDetailed[key].sessions += ss;
+            });
+            // 記事 別 集計 (= post_slug ある もの だけ)、 inline_mid 系 は 「(記事 横断 の inline CTA)」 で 1 行 に
+            const byPostAcc = {};
+            const inlineAcc = { sessions: 0, mediums: new Set() };
+            Object.values(byCampaignDetailed).forEach(r => {
+              if(r.post_slug){
+                if(!byPostAcc[r.post_slug]){
+                  byPostAcc[r.post_slug] = { post_slug: r.post_slug, post_title: r.post_title, sessions: 0, mediums: new Set() };
+                }
+                byPostAcc[r.post_slug].sessions += r.sessions;
+                byPostAcc[r.post_slug].mediums.add(r.medium);
+              } else {
+                inlineAcc.sessions += r.sessions;
+                inlineAcc.mediums.add(r.medium);
+              }
+            });
+            out.lp_top_referrers = Object.values(byPostAcc)
+              .map(r => ({
+                slug: r.post_slug,
+                title: r.post_title || r.post_slug,
+                sessions: r.sessions,
+                mediums: Array.from(r.mediums),
+              }))
               .sort((a, b) => b.sessions - a.sessions)
-              .slice(0, 8);
+              .slice(0, 10);
+            // inline は 「記事 横断」 として 別 枠 で 返す
+            out.lp_inline_aggregate = inlineAcc.sessions > 0
+              ? { sessions: inlineAcc.sessions, mediums: Array.from(inlineAcc.mediums), note: '記事 中 央 inline CTA (= 全 記事 共通 utm_campaign)' }
+              : null;
             out.lp_cta_breakdown = Object.entries(byCampaign)
               .map(([campaign, sess]) => ({ campaign, sessions: sess }))
               .sort((a, b) => b.sessions - a.sessions)

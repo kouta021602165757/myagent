@@ -27313,7 +27313,17 @@ async function handleAPI(req,res,pathname,method,ip){
     if(!ag.media || !ag.media.id) return jres(res, 200, { has_media: false });
 
     const qs = url.parse(req.url, true).query || {};
-    const days = Math.max(1, Math.min(90, parseInt(qs.days, 10) || 30));
+    // 🎯 period 対応 (= Phase 3.3): days を 直接 指定 か period preset か
+    //   period=day → 1日 / week → 7日 / month → 当月1日 から / 90d → 90日
+    let days = parseInt(qs.days, 10) || 30;
+    if(qs.period === 'day') days = 1;
+    else if(qs.period === 'week') days = 7;
+    else if(qs.period === 'month'){
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      days = Math.max(1, Math.ceil((now - start) / 86400000) + 1);
+    } else if(qs.period === '90d') days = 90;
+    days = Math.max(1, Math.min(90, days));
     // 🎯 diagnostic mode (= ?debug=1 で 取れた raw 情報 + 各 step の error も return)
     const debug = qs.debug === '1';
     if(debug) global._mediaStatsDebug = { errors: [], queries: [] };
@@ -27593,6 +27603,79 @@ async function handleAPI(req,res,pathname,method,ip){
       out._debug.idx_posts = _idxPosts.length;
     }
     return jres(res, 200, out);
+  }
+
+  //   GET /api/agents/:id/media/funnel — Phase 3.3 (= mock dashboard 用 FUNNEL 集計)
+  //   query: period=day|week|month|90d (= 既定 month) または days=N (= 1-90)
+  //   返却: { articles, pv, users, lp, conv_pv_per_article, conv_lp_rate, period, days }
+  //   既 stats endpoint と は 独立 = media_visits + agent.media_posts_idx で 完 結 (= 高 速)
+  const mediaFunnelMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/funnel$/);
+  if(mediaFunnelMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaFunnelMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.slug) return jres(res, 200, { has_media: false });
+
+    const qs = url.parse(req.url, true).query || {};
+    let days = parseInt(qs.days, 10) || null;
+    const period = String(qs.period || (days ? '' : 'month'));
+    if(period === 'day') days = 1;
+    else if(period === 'week') days = 7;
+    else if(period === 'month'){
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      days = Math.max(1, Math.ceil((now - start) / 86400000) + 1);
+    } else if(period === '90d') days = 90;
+    days = Math.max(1, Math.min(90, days || 30));
+
+    // articles = 公開 済 記事 数
+    const idxPosts = (ag.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+    const articles = idxPosts.length;
+
+    let pv = 0, users = 0, lp = 0;
+
+    if(USE_SUPA){
+      const sinceIso = new Date(Date.now() - days * 86400000).toISOString();
+      // pv + users (= unique sessions)
+      try {
+        const r = await sbReq('GET', 'media_visits',
+          '?select=session_hash,post_slug,page_type'
+          + '&media_slug=eq.' + encodeURIComponent(ag.media.slug)
+          + '&is_bot=eq.false'
+          + '&visited_at=gte.' + encodeURIComponent(sinceIso)
+          + '&limit=10000');
+        if(r.s < 400 && Array.isArray(r.d)){
+          pv = r.d.length;
+          users = new Set(r.d.map(x => x.session_hash).filter(Boolean)).size;
+        }
+      } catch(e){ console.warn('[funnel] pv/users aggregate failed:', e.message); }
+
+      // lp = LP に 流入 した session 数 (= utm_medium が CTA 系)
+      try {
+        const r = await sbReq('GET', 'media_visits',
+          '?select=session_hash'
+          + '&media_slug=eq.' + encodeURIComponent(ag.media.slug)
+          + '&is_bot=eq.false'
+          + '&visited_at=gte.' + encodeURIComponent(sinceIso)
+          + '&utm_medium=in.(footer,inline,inline_mid,inline_top,sidebar,product_card,article_lp,footer_lp,inline_lp,header,hero)'
+          + '&limit=10000');
+        if(r.s < 400 && Array.isArray(r.d)){
+          lp = new Set(r.d.map(x => x.session_hash).filter(Boolean)).size;
+        }
+      } catch(e){ console.warn('[funnel] lp aggregate failed:', e.message); }
+    }
+
+    return jres(res, 200, {
+      has_media: true,
+      period: period || ('days_' + days),
+      days,
+      articles,
+      pv,
+      users,
+      lp,
+      conv_pv_per_article: articles > 0 ? Math.round(pv / articles) : 0,
+      conv_lp_rate: pv > 0 ? +(lp / pv * 100).toFixed(2) : 0,
+      source: 'media_visits',
+    });
   }
 
   // (DEPRECATED 2026-06-02) /media/research-pick endpoint は削除済。

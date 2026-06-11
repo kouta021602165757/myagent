@@ -934,6 +934,45 @@ input[type="file"]{display:none}
   /* chart */
   .chart-wrap{padding:14px 14px;height:200px}
   .chart-bars{height:150px}
+
+  /* === Phase 7+8+9 mobile === */
+
+  /* welcome modal: scroll 可能 + padding 圧縮 */
+  #welcomeModal .modal{max-width:none;margin:10px;max-height:calc(100vh - 20px);display:flex;flex-direction:column}
+  #welcomeModal .modal-body{overflow-y:auto;padding:18px 16px !important}
+  .welcome-hero{font-size:26px}
+  .welcome-sub{font-size:12.5px}
+  .welcome-stage{padding:4px 2px}
+  .welcome-demo{padding:14px 12px}
+  .wd-row{padding:7px 0;font-size:11px}
+  .wd-row .wd-ic{width:22px;height:22px;font-size:12px}
+  .welcome-result{padding:14px 12px}
+  .welcome-result-num{font-size:22px}
+  .welcome-cta{flex-direction:column}
+  .welcome-cta .btn{width:100%}
+
+  /* upsell modal: 1col + 縮小 */
+  #upsellModal .modal{max-width:none;margin:10px;max-height:calc(100vh - 20px);display:flex;flex-direction:column}
+  #upsellModal .modal-body{overflow-y:auto}
+  .upsell-row{grid-template-columns:1fr;gap:10px}
+  .upsell-col{padding:13px}
+  .upsell-col-price{font-size:22px}
+  .upsell-roi{padding:10px 12px;font-size:11.5px}
+
+  /* churn modal */
+  #churnModal .modal{max-width:none;margin:10px;max-height:calc(100vh - 20px);display:flex;flex-direction:column}
+  #churnModal .modal-body{overflow-y:auto;padding:18px 16px !important}
+  .churn-pause{padding:14px 12px}
+  .churn-pause-title{font-size:13px}
+  .churn-pause-desc{font-size:11.5px}
+  .churn-reason-btn{padding:11px 12px;font-size:12.5px}
+  .churn-offer{padding:18px 14px}
+  .churn-offer-title{font-size:16px}
+  .churn-offer-desc{font-size:11.5px}
+
+  /* plan card (= sidebar 下部) */
+  .plan-card{margin:12px 4px 8px;padding:10px 11px}
+  .plan-card-name{font-size:10.5px}
 }
 
 /* smaller (= 480px 以下) */
@@ -945,6 +984,13 @@ input[type="file"]{display:none}
   .primary-cta-l{font-size:11.5px}
   .funnel-pane{padding:14px 12px}
   .law-footer{font-size:9.5px}
+
+  /* Phase 7+8+9 細部 */
+  .welcome-hero{font-size:22px;letter-spacing:-.5px}
+  .welcome-sub{font-size:12px}
+  .welcome-result-num{font-size:20px}
+  .upsell-col-price{font-size:20px}
+  .churn-offer-title{font-size:15px}
 }
 </style>
 </head>
@@ -3819,7 +3865,9 @@ function welcomeAutoPublish(){
 }
 function fireConfetti(){
   const colors = ['#0e5a55','#dca27e','#fff1c2','#7c9e6e','#c45c5c'];
-  for(let i=0;i<60;i++){
+  const isMobile = window.innerWidth <= 880;
+  const n = isMobile ? 28 : 60;
+  for(let i=0;i<n;i++){
     const c = document.createElement('div');
     c.className = 'confetti';
     c.style.left = (Math.random()*100) + '%';

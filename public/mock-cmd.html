@@ -32,9 +32,29 @@
   --sans:'Inter',-apple-system,'Hiragino Sans','Yu Gothic',system-ui,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;background:var(--cream);color:var(--text);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;background:var(--cream);color:var(--text);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;overflow-wrap:break-word;word-break:normal}
 button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
 button:active{transform:scale(.98)}
+
+/* === Text overflow 防御 (= 全 域) === */
+.modal-p,.modal-h,.set-p,.set-row-d,.help-q,.welcome-sub,.welcome-result-title,.churn-pause-desc,.churn-offer-desc,.upsell-roi,.feed-msg,.art-title,.work-l,.tour-d,.cookie-bn-bd{overflow-wrap:break-word;word-break:normal;hyphens:none}
+/* 長 連続 文字 列 (= URL / token / hash / 長 メアド) は 必ず 折り 返す */
+.qr-key,.backup-codes,#emailVerifyTarget,.code-token,.set-input,.gen-kw-title{word-break:break-all;overflow-wrap:anywhere}
+/* email / URL の input 値 が overflow し ない */
+input.set-input{max-width:100%;min-width:0}
+/* flex / grid 子 が 内容 で 親 を 押し 拡げ ない */
+.fstep,.feed-row,.work-row,.art-row,.upsell-col,.churn-reason-btn,.sug-card,.team-card,.gen-kw,.help-q,.pop-row,.user-menu-row,.site-opt{min-width:0}
+.fstep > *,.feed-row > *,.upsell-col > *,.gen-kw > *{min-width:0}
+/* 強制 縦 折 り 返し (= モバイル の break-word 補強) */
+.welcome-result > div,.churn-offer{min-width:0}
+/* flex item 内 の text span を 拡張 抑制 */
+.wd-row > span:not(.wd-ic){min-width:0;flex:1;overflow-wrap:break-word}
+.churn-reason-btn > span:not(.churn-reason-ic){min-width:0;flex:1;overflow-wrap:break-word}
+.tour-d,.tour-t{overflow-wrap:break-word;word-break:normal}
+/* チェック リスト の li が 長 文 で 折り返し */
+.upsell-col li{overflow-wrap:break-word}
+/* 通知 / ヘルプ row の説明 */
+.pop-body,.help-q-body{overflow-wrap:break-word}
 
 /* === Grid bg === */
 .grid-bg{position:fixed;inset:0;pointer-events:none;z-index:0;
@@ -45,10 +65,10 @@ button:active{transform:scale(.98)}
 }
 
 /* === Layout === */
-.app{position:relative;z-index:1;display:grid;grid-template-columns:240px 1fr 380px;grid-template-rows:56px 1fr;height:100vh;gap:0}
+.app{position:relative;z-index:1;display:grid;grid-template-columns:240px minmax(0,1fr) 380px;grid-template-rows:56px 1fr;height:100vh;gap:0}
 .topbar{grid-column:1/-1;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid var(--wire);background:rgba(255,255,255,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:5;gap:14px}
 .sidebar{border-right:1px solid var(--wire);background:rgba(255,255,255,.6);display:flex;flex-direction:column;padding:14px 12px;gap:6px;z-index:4;overflow-y:auto}
-.main{overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:18px;scrollbar-width:thin;scrollbar-color:var(--wire2) transparent}
+.main{overflow-y:auto;overflow-x:hidden;padding:20px 24px;display:flex;flex-direction:column;gap:18px;scrollbar-width:thin;scrollbar-color:var(--wire2) transparent;min-width:0}
 .main::-webkit-scrollbar{width:8px}
 .main::-webkit-scrollbar-thumb{background:var(--wire2);border-radius:4px}
 .chat{border-left:1px solid var(--wire);background:rgba(255,255,255,.7);display:flex;flex-direction:column;z-index:3;transition:width .25s ease;position:relative}

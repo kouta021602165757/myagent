@@ -57,7 +57,7 @@ button:active{transform:scale(.98)}
 
 /* === Topbar === */
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:14px}
-.brand-mark{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--teal),var(--peach));display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:900}
+.brand-mark{width:28px;height:28px;border-radius:6px;background:var(--cream);border:1px solid var(--wire);padding:1px;flex-shrink:0}
 .brand-name{color:var(--teal);letter-spacing:-.01em}
 .brand-sub{color:var(--text3);font-size:10px;letter-spacing:.16em;padding:3px 7px;border:1px solid var(--wire);border-radius:4px;margin-left:4px;font-family:var(--mono);background:rgba(255,255,255,.5)}
 .plan-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,var(--peach-soft),#fff8e1);border:1px solid var(--peach);color:var(--peach-dark);font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:5px;letter-spacing:.04em}
@@ -131,17 +131,34 @@ button:active{transform:scale(.98)}
 .stat::after{content:'';position:absolute;top:0;left:-50%;width:200%;height:1px;background:linear-gradient(90deg,transparent,var(--teal-line),transparent);animation:scan 5s linear infinite}
 @keyframes scan{0%{transform:translateX(-50%)}100%{transform:translateX(50%)}}
 
-/* === Funnel === */
-.funnel-pane{padding:18px 20px}
-.funnel-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0}
-.funnel-step{display:flex;align-items:center;gap:12px;flex:1}
-.funnel-icon{width:32px;height:32px;border-radius:8px;background:var(--teal-soft);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0}
-.funnel-info{flex:1;min-width:0}
-.funnel-lbl{font-size:13px;font-weight:700;margin-bottom:2px}
-.funnel-meta{font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.04em}
-.funnel-val{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--teal)}
-.funnel-arrow{display:flex;align-items:center;justify-content:center;padding:4px 0;color:var(--text3);font-size:16px}
-.funnel-conv{font-family:var(--mono);font-size:10.5px;color:var(--text2);background:var(--cream2);padding:3px 8px;border-radius:4px;margin-left:8px}
+/* === Funnel (v4 redesign) === */
+.funnel-pane{padding:22px 24px 24px;background:linear-gradient(180deg,var(--paper) 0%,var(--cream) 100%)}
+.fstep{position:relative;padding:18px 20px;border-radius:12px;background:#fff;border:1px solid var(--wire);display:flex;align-items:center;gap:18px;transition:all .2s;overflow:hidden}
+.fstep:hover{border-color:var(--teal-line);transform:translateX(2px);box-shadow:0 6px 18px rgba(13,79,74,.06)}
+.fstep::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--teal);border-radius:4px 0 0 4px}
+.fstep.pv::before{background:var(--purple)}
+.fstep.lp::before{background:var(--peach-dark)}
+.fstep-ic{width:48px;height:48px;border-radius:12px;background:var(--teal-soft);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;position:relative}
+.fstep-ic::after{content:'';position:absolute;inset:-4px;border-radius:14px;background:radial-gradient(circle,var(--teal-soft) 0%,transparent 70%);z-index:-1;opacity:.6}
+.fstep.pv .fstep-ic{background:var(--purple-soft);color:var(--purple)}
+.fstep.pv .fstep-ic::after{background:radial-gradient(circle,var(--purple-soft) 0%,transparent 70%)}
+.fstep.lp .fstep-ic{background:var(--peach-soft);color:var(--peach-dark)}
+.fstep.lp .fstep-ic::after{background:radial-gradient(circle,var(--peach-soft) 0%,transparent 70%)}
+.fstep-bd{flex:1;min-width:0}
+.fstep-lbl{font-size:11px;font-family:var(--mono);letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:4px;font-weight:700}
+.fstep-h{font-size:15px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:6px}
+.fstep-bar{height:5px;background:var(--cream2);border-radius:3px;overflow:hidden;margin-top:6px}
+.fstep-bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),#28a89e);border-radius:3px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.fstep.pv .fstep-bar-fill{background:linear-gradient(90deg,var(--purple),#a78bfa)}
+.fstep.lp .fstep-bar-fill{background:linear-gradient(90deg,var(--peach-dark),var(--peach))}
+.fstep-meta{font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.04em;margin-top:7px}
+.fstep-val{font-family:var(--mono);font-size:30px;font-weight:800;color:var(--teal);letter-spacing:-.02em;line-height:1;flex-shrink:0;text-align:right}
+.fstep.pv .fstep-val{color:var(--purple)}
+.fstep.lp .fstep-val{color:var(--peach-dark)}
+.fstep-val-sub{display:block;font-size:10px;color:var(--text3);letter-spacing:.06em;font-weight:600;margin-top:4px;text-transform:uppercase}
+.fstep-drop{margin:6px 0 6px 30px;display:flex;align-items:center;gap:10px;padding:8px 14px 8px 18px;border-left:2px dashed var(--wire2);font-family:var(--mono);font-size:11px;color:var(--text2)}
+.fstep-drop .lose{color:var(--rose);font-weight:700}
+.fstep-drop .conv{color:var(--green);font-weight:700;background:var(--green-soft);padding:2px 7px;border-radius:4px;margin-left:auto}
 
 /* === Working / Sug === */
 .work-grid,.sug-grid{padding:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
@@ -279,16 +296,28 @@ button:active{transform:scale(.98)}
 .msg-card{margin-top:8px;border:1px solid var(--wire);border-radius:7px;padding:10px 12px;background:var(--cream);font-size:12px}
 .msg-card .ti{font-weight:700;margin-bottom:3px}
 .msg-card .mt{font-family:var(--mono);font-size:10.5px;color:var(--text2)}
-.chat-foot{padding:12px 14px;border-top:1px solid var(--wire);background:rgba(255,255,255,.6)}
-.chat-input-wrap{border:1px solid var(--wire);border-radius:8px;background:#fff;padding:10px 12px;display:flex;align-items:flex-end;gap:8px;transition:border-color .15s}
-.chat-input-wrap:focus-within{border-color:var(--teal)}
-.chat-input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:inherit;font-size:13px;resize:none;line-height:1.5;max-height:120px}
+.chat-foot{padding:10px 14px 12px;border-top:1px solid var(--wire);background:rgba(255,255,255,.6)}
+.chat-composer{border:1px solid var(--wire);border-radius:12px;background:#fff;padding:8px 10px 8px;transition:border-color .15s;display:flex;flex-direction:column;gap:6px}
+.chat-composer:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,79,74,.06)}
+.chat-attach-strip{display:none;gap:6px;flex-wrap:wrap;padding:2px}
+.chat-attach-strip.has{display:flex}
+.chat-attach-chip{display:inline-flex;align-items:center;gap:6px;background:var(--cream2);border:1px solid var(--wire);border-radius:6px;padding:4px 9px;font-size:11px;color:var(--text2)}
+.chat-attach-chip .x{cursor:pointer;color:var(--text3);font-weight:700;font-size:13px;line-height:1;padding-left:4px}
+.chat-attach-chip .x:hover{color:var(--rose)}
+.chat-input{width:100%;background:transparent;border:0;outline:0;color:var(--text);font-family:inherit;font-size:13.5px;resize:none;line-height:1.5;max-height:140px;padding:6px 4px}
 .chat-input::placeholder{color:var(--text3)}
-.chat-send{width:30px;height:30px;border-radius:6px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex-shrink:0;transition:all .15s}
-.chat-send:hover{background:var(--teal2)}
+.chat-tools{display:flex;align-items:center;gap:2px;padding-top:4px;border-top:1px dashed var(--wire)}
+.tool-btn{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--text3);transition:all .15s;flex-shrink:0;position:relative}
+.tool-btn:hover{background:var(--cream2);color:var(--teal)}
+.tool-btn.on{background:var(--teal-soft);color:var(--teal)}
+.tool-btn svg{width:15px;height:15px;stroke-width:1.9}
+.tool-spacer{flex:1}
+.chat-send{width:32px;height:32px;border-radius:8px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex-shrink:0;transition:all .15s;margin-left:4px}
+.chat-send:hover{background:var(--teal2);box-shadow:0 2px 8px rgba(13,79,74,.25)}
 .chat-suggest{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .chat-suggest button{font-family:var(--mono);font-size:10.5px;padding:5px 10px;border:1px solid var(--wire);border-radius:5px;color:var(--text2);transition:all .15s;background:#fff}
 .chat-suggest button:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+input[type="file"]{display:none}
 
 /* === Toast === */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 22px;background:var(--text);border-radius:9px;font-family:var(--mono);font-size:12px;color:#fff;box-shadow:0 8px 32px rgba(13,79,74,.2);z-index:1000;opacity:0;transition:all .3s;pointer-events:none}
@@ -338,9 +367,14 @@ button:active{transform:scale(.98)}
   <!-- ━━━ TOPBAR ━━━ -->
   <div class="topbar">
     <div class="brand">
-      <div class="brand-mark">M</div>
-      <span class="brand-name">MY AI AGENT</span>
-      <span class="brand-sub">v0.3 · MOCK</span>
+      <svg class="brand-mark" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#fafaf7"/>
+        <rect x="8" y="7" width="4" height="18" rx="2" fill="#0d4f4a"/>
+        <rect x="14" y="11" width="4" height="14" rx="2" fill="#0d4f4a" opacity=".65"/>
+        <rect x="20" y="15" width="4" height="10" rx="2" fill="#0d4f4a" opacity=".35"/>
+      </svg>
+      <span class="brand-name">MY AI Agent</span>
+      <span class="brand-sub">v0.4 · MOCK</span>
     </div>
     <span class="plan-badge">⚡ BUSINESS</span>
     <div class="top-time">
@@ -435,30 +469,45 @@ button:active{transform:scale(.98)}
       </div>
 
       <div class="block">
-        <div class="block-head"><span class="dot"></span> FUNNEL · 記事 公開 → LP 流入<span class="right">過去 30 日</span></div>
+        <div class="block-head"><span class="dot"></span> FUNNEL · 記事 → PV → LP<span class="right">過去 30 日</span></div>
         <div class="funnel-pane">
-          <div class="funnel-row">
-            <div class="funnel-step">
-              <div class="funnel-icon">📝</div>
-              <div class="funnel-info"><div class="funnel-lbl">記事 公開</div><div class="funnel-meta" id="funArt">48 articles · AI 自動 生成</div></div>
+          <div class="fstep">
+            <div class="fstep-ic">📝</div>
+            <div class="fstep-bd">
+              <div class="fstep-lbl">▶ STEP 1 · 入力</div>
+              <div class="fstep-h">記事 公開</div>
+              <div class="fstep-bar"><div class="fstep-bar-fill" style="width:100%"></div></div>
+              <div class="fstep-meta" id="funArt">AI 自動 生成 · 月 100 cap 中 48 本 公開</div>
             </div>
-            <div class="funnel-val" id="funArtV">48</div>
+            <div class="fstep-val"><span id="funArtV">48</span><span class="fstep-val-sub">articles</span></div>
           </div>
-          <div class="funnel-arrow">↓ <span class="funnel-conv" id="funC1">conv 36.8x</span></div>
-          <div class="funnel-row">
-            <div class="funnel-step">
-              <div class="funnel-icon" style="background:var(--purple-soft);color:var(--purple)">👁</div>
-              <div class="funnel-info"><div class="funnel-lbl">記事 PV</div><div class="funnel-meta" id="funPv">1,768 views · 473 unique</div></div>
-            </div>
-            <div class="funnel-val" style="color:var(--purple)" id="funPvV">1,768</div>
+          <div class="fstep-drop">
+            <span>↓ 1 記事 = 平均 <span class="lose" id="funC1A">37 PV</span> を 生む</span>
+            <span class="conv" id="funC1">conv 37x</span>
           </div>
-          <div class="funnel-arrow">↓ <span class="funnel-conv" id="funC2">conv 0.62%</span></div>
-          <div class="funnel-row">
-            <div class="funnel-step">
-              <div class="funnel-icon" style="background:var(--peach-soft);color:var(--peach-dark)">🎯</div>
-              <div class="funnel-info"><div class="funnel-lbl">LP 流入</div><div class="funnel-meta" id="funLp">11 sessions · footer 10 / inline 1</div></div>
+          <div class="fstep pv">
+            <div class="fstep-ic">👁</div>
+            <div class="fstep-bd">
+              <div class="fstep-lbl">▶ STEP 2 · 拡散</div>
+              <div class="fstep-h">記事 PV</div>
+              <div class="fstep-bar"><div class="fstep-bar-fill" id="funPvBar" style="width:80%"></div></div>
+              <div class="fstep-meta" id="funPv">1,768 views · 473 unique users</div>
             </div>
-            <div class="funnel-val" style="color:var(--peach-dark)" id="funLpV">11</div>
+            <div class="fstep-val"><span id="funPvV">1,768</span><span class="fstep-val-sub">page views</span></div>
+          </div>
+          <div class="fstep-drop">
+            <span>↓ <span class="lose" id="funC2A">99.4%</span> は 記事 内 で 離脱</span>
+            <span class="conv" id="funC2">conv 0.62%</span>
+          </div>
+          <div class="fstep lp">
+            <div class="fstep-ic">🎯</div>
+            <div class="fstep-bd">
+              <div class="fstep-lbl">▶ STEP 3 · 成果</div>
+              <div class="fstep-h">LP 流入</div>
+              <div class="fstep-bar"><div class="fstep-bar-fill" id="funLpBar" style="width:1%"></div></div>
+              <div class="fstep-meta" id="funLp">11 sessions · footer CTA 8 / inline CTA 3</div>
+            </div>
+            <div class="fstep-val"><span id="funLpV">11</span><span class="fstep-val-sub">sessions</span></div>
           </div>
         </div>
       </div>
@@ -695,10 +744,6 @@ button:active{transform:scale(.98)}
             <div class="set-row-info"><div class="set-row-l">Google Search Console</div><div class="set-row-d">検索 順位 / impressions / CTR が 取得 可能 に</div></div>
             <button class="btn-sm" onclick="showToast('GSC 連携 (mock)')">連携 する</button>
           </div>
-          <div class="set-row">
-            <div class="set-row-info"><div class="set-row-l">X / Threads / Buffer</div><div class="set-row-d">公開 直後 に AI 文 案 で 自動 投稿</div></div>
-            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
-          </div>
         </div>
       </div>
     </div>
@@ -729,12 +774,34 @@ button:active{transform:scale(.98)}
       </div>
     </div>
     <div class="chat-foot">
-      <div class="chat-input-wrap">
-        <textarea class="chat-input" id="chatInput" rows="1" placeholder="AI に 頼む… (例: 今週 の 数字 まとめて)" onkeydown="onChatKey(event)"></textarea>
-        <button class="chat-send" onclick="sendChat()">↑</button>
+      <input type="file" id="chatFile" multiple accept="image/*,application/pdf,.txt,.md,.js,.ts,.py,.json,.csv" onchange="onChatFile(event)">
+      <div class="chat-composer">
+        <div class="chat-attach-strip" id="chatAttachStrip"></div>
+        <textarea class="chat-input" id="chatInput" rows="1" placeholder="AI に 頼む… (例: この 画像 から KW 抽出 して / 今週 の 数字 まとめ て)" onkeydown="onChatKey(event)"></textarea>
+        <div class="chat-tools">
+          <button class="tool-btn" onclick="document.getElementById('chatFile').click()" title="ファイルを添付 (画像 / PDF / テキスト / コード)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <button class="tool-btn" onclick="openUrlAttach()" title="URL を 読み込んで 添付">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </button>
+          <button class="tool-btn" id="micBtn" onclick="toggleMic()" title="音声入力">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+          <button class="tool-btn" onclick="insertCodeBlock()" title="コードブロック 挿入">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          </button>
+          <button class="tool-btn" onclick="openLibrary()" title="作った 成果物 の 一覧">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          </button>
+          <div class="tool-spacer"></div>
+          <button class="chat-send" onclick="sendChat()" title="送信">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+        </div>
       </div>
       <div class="chat-suggest">
-        <button onclick="quickChat('今週 の 数字 まとめて')">数字</button>
+        <button onclick="quickChat('今週 の 数字 まとめて')">数字 まとめ</button>
         <button onclick="quickChat('競合 分析 やって')">競合 分析</button>
         <button onclick="quickChat('新 記事 5 件 提案 して')">記事 提案</button>
       </div>
@@ -850,10 +917,21 @@ function loadActiveSite(){
   document.getElementById('funArtV').textContent = site.art;
   document.getElementById('funPv').textContent = site.pv.toLocaleString() + ' views · ' + site.users + ' unique';
   document.getElementById('funPvV').textContent = site.pv.toLocaleString();
-  document.getElementById('funLp').textContent = site.lp + ' sessions · footer ' + Math.round(site.lp*.7) + ' / inline ' + Math.round(site.lp*.3);
+  document.getElementById('funLp').textContent = site.lp + ' sessions · footer CTA ' + Math.round(site.lp*.7) + ' / inline CTA ' + Math.round(site.lp*.3);
   document.getElementById('funLpV').textContent = site.lp;
-  document.getElementById('funC1').textContent = 'conv ' + Math.round(site.pv/Math.max(1,site.art)) + 'x';
-  document.getElementById('funC2').textContent = 'conv ' + ((site.lp/site.pv)*100).toFixed(2) + '%';
+  const pvPerArt = Math.round(site.pv / Math.max(1, site.art));
+  const lossPct = ((1 - site.lp / Math.max(1, site.pv)) * 100).toFixed(1);
+  document.getElementById('funC1').textContent = 'conv ' + pvPerArt + 'x';
+  document.getElementById('funC1A').textContent = pvPerArt + ' PV';
+  document.getElementById('funC2').textContent = 'conv ' + ((site.lp / site.pv) * 100).toFixed(2) + '%';
+  document.getElementById('funC2A').textContent = lossPct + '%';
+  // Funnel bars proportional (PV bar relative to article-count target, LP bar small)
+  setTimeout(() => {
+    const pvBar = document.getElementById('funPvBar');
+    const lpBar = document.getElementById('funLpBar');
+    if(pvBar) pvBar.style.width = Math.min(100, (site.pv / (site.art * 100)) * 100) + '%';
+    if(lpBar) lpBar.style.width = Math.max(2, (site.lp / Math.max(1, site.pv)) * 100 * 30) + '%';
+  }, 100);
   // Article list
   renderArtList(site.posts);
   renderRank(site.posts);
@@ -1064,6 +1142,68 @@ function toggleChat(){
 }
 function onChatKey(e){ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); } }
 function quickChat(text){ document.getElementById('chatInput').value = text; sendChat(); }
+
+// === Chat composer tools (mock) ===
+const ATT = []; // attachments
+function renderAtt(){
+  const strip = document.getElementById('chatAttachStrip');
+  if(ATT.length === 0){ strip.classList.remove('has'); strip.innerHTML = ''; return; }
+  strip.classList.add('has');
+  strip.innerHTML = ATT.map((a,i) => `
+    <span class="chat-attach-chip">
+      <span>${a.icon}</span><span>${esc(a.name)}</span>
+      <span class="x" onclick="removeAtt(${i})">×</span>
+    </span>
+  `).join('');
+}
+function removeAtt(i){ ATT.splice(i, 1); renderAtt(); }
+function onChatFile(e){
+  const files = Array.from(e.target.files || []);
+  files.forEach(f => {
+    const ic = f.type.startsWith('image/') ? '🖼' : f.type === 'application/pdf' ? '📄' : '📎';
+    ATT.push({ name: f.name, icon: ic });
+  });
+  renderAtt();
+  e.target.value = '';
+  if(files.length) showToast('📎 ' + files.length + ' 件 添付 (mock)');
+}
+function openUrlAttach(){
+  const url = prompt('URL を 入力 (= ページ 内 容 を AI に 読 ま せる):');
+  if(!url) return;
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    ATT.push({ name: host, icon: '🔗' });
+    renderAtt();
+    showToast('🔗 URL 添付 (mock): ' + host);
+  } catch(_){
+    showToast('URL 形式 不正');
+  }
+}
+function toggleMic(){
+  const btn = document.getElementById('micBtn');
+  btn.classList.toggle('on');
+  const on = btn.classList.contains('on');
+  showToast(on ? '🎤 録音 開始 (mock)' : '🎤 録音 停止 (mock)');
+  if(on){
+    setTimeout(()=>{
+      btn.classList.remove('on');
+      const inp = document.getElementById('chatInput');
+      inp.value = inp.value + (inp.value ? ' ' : '') + '(音声 入力 sample text)';
+      inp.focus();
+    }, 1800);
+  }
+}
+function insertCodeBlock(){
+  const inp = document.getElementById('chatInput');
+  const tpl = '\n```\n\n```\n';
+  const pos = inp.selectionStart || inp.value.length;
+  inp.value = inp.value.slice(0, pos) + tpl + inp.value.slice(pos);
+  inp.focus();
+  inp.selectionStart = inp.selectionEnd = pos + 5;
+}
+function openLibrary(){
+  showModal('LIBRARY', '成果物 ライブラリ', 'AI チーム が 作った 過去 成果物 (= 記事 / hero 画像 / SNS 投稿 文案 / SEO レポート 等) の 一覧。 過去 30 日 で 48 記事 + 48 画像 + 96 SNS 投稿。', '開く');
+}
 function sendChat(){
   const input = document.getElementById('chatInput');
   const text = input.value.trim();

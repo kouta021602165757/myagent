@@ -472,6 +472,51 @@ button:active{transform:scale(.98)}
 .cookie-bn a{color:var(--teal);text-decoration:none;font-weight:700}
 .cookie-bn-acts{display:flex;gap:8px;flex-shrink:0}
 
+/* === Empty / Error / Loading states === */
+.empty-state{padding:40px 28px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px}
+.empty-illu{width:88px;height:88px;border-radius:50%;background:radial-gradient(circle at 50% 50%,var(--cream2),var(--paper));border:1px solid var(--wire);display:flex;align-items:center;justify-content:center;font-size:36px;position:relative}
+.empty-illu::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:1px dashed var(--wire2);animation:spinSlow 24s linear infinite}
+@keyframes spinSlow{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.empty-h{font-size:17px;font-weight:800;color:var(--text);letter-spacing:-.01em;margin-top:4px}
+.empty-d{font-size:12.5px;color:var(--text2);line-height:1.65;max-width:380px}
+.empty-cta-row{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;justify-content:center}
+.btn-cta{padding:11px 18px;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;font-family:var(--mono);letter-spacing:.04em;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .15s}
+.btn-cta:hover{background:var(--teal2);box-shadow:0 4px 14px rgba(13,79,74,.25);transform:translateY(-1px)}
+.btn-cta.ghost{background:#fff;color:var(--teal);border:1px solid var(--wire)}
+.btn-cta.ghost:hover{border-color:var(--teal);background:var(--teal-soft);box-shadow:none;transform:none}
+
+.error-state{padding:32px 22px;display:flex;align-items:flex-start;gap:14px;background:linear-gradient(135deg,var(--rose-soft),var(--paper));border:1px solid #fecaca;border-radius:10px;margin:14px}
+.error-ic{width:42px;height:42px;border-radius:9px;background:#fff;color:var(--rose);font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #fecaca}
+.error-bd{flex:1;min-width:0}
+.error-h{font-size:14px;font-weight:700;color:var(--rose);margin-bottom:4px}
+.error-d{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px}
+.error-meta{font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--cream2);padding:6px 10px;border-radius:5px;margin-bottom:10px;letter-spacing:.04em}
+.btn-retry{padding:7px 14px;border-radius:6px;background:var(--rose);color:#fff;font-size:11.5px;font-weight:700;font-family:var(--mono);letter-spacing:.04em;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.btn-retry:hover{background:#b91c1c}
+
+/* skeleton shimmer */
+.sk{background:linear-gradient(90deg,var(--cream2) 0%,#f8f6f0 50%,var(--cream2) 100%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;border-radius:5px;display:block}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.sk-h{height:14px;width:140px;margin-bottom:8px}
+.sk-line{height:10px;margin-bottom:6px}
+.sk-line.short{width:60%}
+.sk-line.long{width:90%}
+.sk-num{height:30px;width:90px;margin-bottom:8px}
+.sk-card{padding:18px;border:1px solid var(--wire);border-radius:9px;margin-bottom:10px}
+.sk-stat{padding:18px;border-right:1px solid var(--wire)}
+.sk-stat:last-child{border-right:0}
+.sk-row{display:grid;grid-template-columns:1fr auto auto auto auto;gap:14px;padding:14px 20px;border-bottom:1px solid rgba(13,79,74,.04);align-items:center}
+.sk-row > div:first-child{flex:1}
+.sk-circle{width:40px;height:40px;border-radius:50%}
+.sk-img{height:130px;width:100%;border-radius:8px;margin-bottom:10px}
+
+/* Demo state badge (= mock 専用、 リリース 削除 想定) */
+.demo-badge{position:fixed;bottom:78px;right:22px;background:#1a1f2e;color:#fff;font-family:var(--mono);font-size:10px;padding:6px 12px;border-radius:6px;z-index:75;display:flex;align-items:center;gap:8px;letter-spacing:.04em;box-shadow:0 4px 14px rgba(0,0,0,.2);opacity:0;transition:opacity .25s}
+.demo-badge.show{opacity:1}
+.demo-badge .x{cursor:pointer;color:#9ca3af;font-weight:700}
+.demo-badge .x:hover{color:#fff}
+@media (max-width:880px){ .demo-badge{bottom:140px;right:16px} }
+
 /* === Footer law links === */
 .law-footer{padding:18px 24px;border-top:1px solid var(--wire);background:var(--cream);font-family:var(--mono);font-size:10.5px;color:var(--text3);display:flex;gap:18px;flex-wrap:wrap;align-items:center}
 .law-footer a{color:var(--text2);text-decoration:none;transition:color .15s}
@@ -828,6 +873,63 @@ input[type="file"]{display:none}
         <span class="crumb" id="crumb-home">▌ myaiagents.agency · 24h LIVE</span>
       </div>
 
+      <!-- demo state: empty -->
+      <div class="state-empty" data-state="empty">
+        <div class="block"><div class="empty-state">
+          <div class="empty-illu">🚀</div>
+          <div class="empty-h">この サイト に 最初 の 記事 を 書 こう</div>
+          <div class="empty-d">AI チーム 24 名 が 待機 中。 1 click で 「ブログ 立ち 上げ → KW 調査 → 執筆 → 公開 → 改善」 まで 自動 で 進めます。 月 100 記事 まで OK。</div>
+          <div class="empty-cta-row">
+            <button class="btn-cta" onclick="openGenModal()">⚡ 記事 を AI に 書か せる</button>
+            <button class="btn-cta ghost" onclick="openHelp()">使い方 を 見る</button>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- demo state: error -->
+      <div class="state-error" data-state="error">
+        <div class="error-state">
+          <div class="error-ic">⚠️</div>
+          <div class="error-bd">
+            <div class="error-h">データ を 取得 でき ません でし た</div>
+            <div class="error-d">サーバ と の 接続 に 失敗 し まし た。 数 分 待って から 再 試行 し て ください。 続く 場合 は ヘルプ から お問い 合わせ を。</div>
+            <div class="error-meta">ERROR_CODE: STATS_FETCH_FAILED · req_id: req_a1b2c3d4 · 04:42</div>
+            <button class="btn-retry" onclick="showToast('再 試行 中…');setTimeout(()=>setDemoState('normal'),600)">↻ 再 試行</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- demo state: loading -->
+      <div class="state-loading" data-state="loading">
+        <div class="block">
+          <div class="block-head"><span class="dot"></span> LIVE METRICS · 自前 計測<span class="right"><span class="sk" style="width:80px;height:10px;display:inline-block"></span></span></div>
+          <div class="stats">
+            <div class="sk-stat"><span class="sk sk-h"></span><span class="sk sk-num"></span><span class="sk sk-line short"></span></div>
+            <div class="sk-stat"><span class="sk sk-h"></span><span class="sk sk-num"></span><span class="sk sk-line short"></span></div>
+            <div class="sk-stat"><span class="sk sk-h"></span><span class="sk sk-num"></span><span class="sk sk-line short"></span></div>
+          </div>
+        </div>
+        <div class="block">
+          <div class="block-head"><span class="dot"></span> FUNNEL · 記事 → PV → LP<span class="right"><span class="sk" style="width:60px;height:10px;display:inline-block"></span></span></div>
+          <div style="padding:18px 20px">
+            <div class="sk-card"><span class="sk sk-h"></span><span class="sk sk-line long"></span><span class="sk sk-line short"></span></div>
+            <div class="sk-card"><span class="sk sk-h"></span><span class="sk sk-line long"></span><span class="sk sk-line short"></span></div>
+            <div class="sk-card"><span class="sk sk-h"></span><span class="sk sk-line long"></span><span class="sk sk-line short"></span></div>
+          </div>
+        </div>
+        <div class="block">
+          <div class="block-head"><span class="dot"></span> RECOMMENDED ACTIONS</div>
+          <div class="sug-grid">
+            <div class="sk-card"><span class="sk sk-line short"></span><span class="sk sk-h"></span><span class="sk sk-line long"></span><span class="sk sk-line long"></span></div>
+            <div class="sk-card"><span class="sk sk-line short"></span><span class="sk sk-h"></span><span class="sk sk-line long"></span><span class="sk sk-line long"></span></div>
+            <div class="sk-card"><span class="sk sk-line short"></span><span class="sk sk-h"></span><span class="sk sk-line long"></span><span class="sk sk-line long"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- demo state: normal (= 既存) -->
+      <div class="state-normal" data-state="normal">
+
       <div class="block">
         <div class="block-head">
           <span class="dot"></span> LIVE METRICS · 自前 計測
@@ -951,6 +1053,7 @@ input[type="file"]{display:none}
         <div class="block-head"><span class="dot"></span> ACTIVITY FEED · system_log<span class="right" id="feedCount">— events</span></div>
         <div class="feed" id="feed"></div>
       </div>
+      </div><!-- /state-normal -->
     </div>
 
     <!-- ============ MEDIA (= 記事 一覧) ============ -->
@@ -958,9 +1061,50 @@ input[type="file"]{display:none}
       <div class="view-title">
         <h1>メディア</h1>
         <span class="crumb" id="crumb-media">▌ media-blog.myaiagents.agency · 48 記事</span>
-        <button class="btn-sm primary" style="margin-left:auto" onclick="openSug('hot')">+ 新規 記事 を AI に 書か せる</button>
+        <button class="btn-sm primary" style="margin-left:auto" onclick="openGenModal()">+ 新規 記事 を AI に 書か せる</button>
       </div>
 
+      <!-- demo state: empty -->
+      <div class="state-empty" data-state="empty">
+        <div class="block"><div class="empty-state">
+          <div class="empty-illu">📝</div>
+          <div class="empty-h">まだ 記事 が ない</div>
+          <div class="empty-d">最初 の 1 本 から、 AI チーム が 全 自動 で 書 い て 公開 し ます。 KW を 入れる だけ で 8,000 字 級 の 記事 が 90 秒 で 完成。</div>
+          <div class="empty-cta-row">
+            <button class="btn-cta" onclick="openGenModal()">⚡ 最初 の 記事 を 書か せる</button>
+            <button class="btn-cta ghost" onclick="navTo('analytics',document.querySelector('.nav-btn[data-view=analytics]'))">分析 を 見る</button>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- demo state: error -->
+      <div class="state-error" data-state="error">
+        <div class="error-state">
+          <div class="error-ic">⚠️</div>
+          <div class="error-bd">
+            <div class="error-h">記事 一覧 を 取得 でき ません</div>
+            <div class="error-d">DB 側 で 一時 的 な 遅延 が 発生 し て い ます。 既 に 公開 された 記事 は 影響 を 受け ません。</div>
+            <div class="error-meta">ERROR_CODE: ARTICLE_LIST_TIMEOUT · req_id: req_e5f6a7b8</div>
+            <button class="btn-retry" onclick="showToast('再 試行 中…');setTimeout(()=>setDemoState('normal'),600)">↻ 再 試行</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- demo state: loading -->
+      <div class="state-loading" data-state="loading">
+        <div class="block">
+          <div class="block-head"><span class="dot"></span> 公開 済 記事<span class="right"><span class="sk" style="width:60px;height:10px;display:inline-block"></span></span></div>
+          <div>
+            <div class="sk-row"><div><span class="sk sk-line long"></span><span class="sk sk-line short"></span></div><span class="sk" style="width:36px;height:14px"></span><span class="sk" style="width:46px;height:14px"></span><span class="sk" style="width:20px;height:14px"></span><span class="sk" style="width:80px;height:24px"></span></div>
+            <div class="sk-row"><div><span class="sk sk-line long"></span><span class="sk sk-line short"></span></div><span class="sk" style="width:36px;height:14px"></span><span class="sk" style="width:46px;height:14px"></span><span class="sk" style="width:20px;height:14px"></span><span class="sk" style="width:80px;height:24px"></span></div>
+            <div class="sk-row"><div><span class="sk sk-line long"></span><span class="sk sk-line short"></span></div><span class="sk" style="width:36px;height:14px"></span><span class="sk" style="width:46px;height:14px"></span><span class="sk" style="width:20px;height:14px"></span><span class="sk" style="width:80px;height:24px"></span></div>
+            <div class="sk-row"><div><span class="sk sk-line long"></span><span class="sk sk-line short"></span></div><span class="sk" style="width:36px;height:14px"></span><span class="sk" style="width:46px;height:14px"></span><span class="sk" style="width:20px;height:14px"></span><span class="sk" style="width:80px;height:24px"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- demo state: normal (= 既存) -->
+      <div class="state-normal" data-state="normal">
       <div class="block">
         <div class="block-head">
           <span class="dot"></span> 公開 済 記事
@@ -990,6 +1134,7 @@ input[type="file"]{display:none}
           </div>
         </div>
       </div>
+      </div><!-- /state-normal -->
     </div>
 
     <!-- ============ ANALYTICS ============ -->
@@ -1004,6 +1149,53 @@ input[type="file"]{display:none}
         </div>
       </div>
 
+      <!-- demo state: empty -->
+      <div class="state-empty" data-state="empty">
+        <div class="block"><div class="empty-state">
+          <div class="empty-illu">📊</div>
+          <div class="empty-h">まだ データ が ない</div>
+          <div class="empty-d">記事 を 1 本 でも 公開 する と、 PV / Users / LP 流入 数 が 自動 で 計測 開始 さ れ ます。 GA4 / GSC 連携 は 不要。</div>
+          <div class="empty-cta-row">
+            <button class="btn-cta" onclick="openGenModal()">⚡ 記事 を 書か せる</button>
+            <button class="btn-cta ghost" onclick="navTo('media',document.querySelector('.nav-btn[data-view=media]'))">メディア を 見る</button>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- demo state: error -->
+      <div class="state-error" data-state="error">
+        <div class="error-state">
+          <div class="error-ic">⚠️</div>
+          <div class="error-bd">
+            <div class="error-h">統計 が 取得 でき ません</div>
+            <div class="error-d">計測 用 テーブル へ の 接続 に 失敗 し ま し た。 計測 自体 は 継続 中 で、 数 分 後 に 再 表示 し て ください。</div>
+            <div class="error-meta">ERROR_CODE: METRICS_DB_TIMEOUT · req_id: req_c9d0a1b2</div>
+            <button class="btn-retry" onclick="showToast('再 試行 中…');setTimeout(()=>setDemoState('normal'),600)">↻ 再 試行</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- demo state: loading -->
+      <div class="state-loading" data-state="loading">
+        <div class="block">
+          <div class="block-head"><span class="dot"></span> PV 推移 · daily<span class="right"><span class="sk" style="width:50px;height:10px;display:inline-block"></span></span></div>
+          <div style="padding:18px 20px">
+            <div class="sk" style="width:100%;height:170px;border-radius:6px;margin-bottom:10px"></div>
+            <div style="display:flex;justify-content:space-between"><span class="sk sk-line short" style="width:60px"></span><span class="sk sk-line short" style="width:60px"></span><span class="sk sk-line short" style="width:60px"></span></div>
+          </div>
+        </div>
+        <div class="block">
+          <div class="block-head"><span class="dot"></span> 流入 多い 記事 TOP 8</div>
+          <div>
+            <div class="sk-row" style="grid-template-columns:24px 1fr auto auto auto"><span class="sk sk-circle" style="width:20px;height:20px"></span><div><span class="sk sk-line long"></span></div><span class="sk" style="width:60px;height:14px"></span><span class="sk" style="width:60px;height:14px"></span><span class="sk" style="width:30px;height:14px"></span></div>
+            <div class="sk-row" style="grid-template-columns:24px 1fr auto auto auto"><span class="sk sk-circle" style="width:20px;height:20px"></span><div><span class="sk sk-line long"></span></div><span class="sk" style="width:60px;height:14px"></span><span class="sk" style="width:60px;height:14px"></span><span class="sk" style="width:30px;height:14px"></span></div>
+            <div class="sk-row" style="grid-template-columns:24px 1fr auto auto auto"><span class="sk sk-circle" style="width:20px;height:20px"></span><div><span class="sk sk-line long"></span></div><span class="sk" style="width:60px;height:14px"></span><span class="sk" style="width:60px;height:14px"></span><span class="sk" style="width:30px;height:14px"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- demo state: normal -->
+      <div class="state-normal" data-state="normal">
       <div class="block">
         <div class="block-head"><span class="dot"></span> PV 推移 · daily<span class="right" id="periodLbl">30 days</span></div>
         <div class="chart-wrap">
@@ -1025,6 +1217,7 @@ input[type="file"]{display:none}
           <div class="rank-row"><span class="rank-num">3</span><span class="rank-title">end_card (= 末尾 大型 CTA)</span><span class="rank-pv">1</span><span class="rank-lp">9.1%</span><span class="rank-trend">—</span></div>
         </div>
       </div>
+      </div><!-- /state-normal -->
     </div>
 
     <!-- ============ TEAM ============ -->
@@ -1100,6 +1293,7 @@ input[type="file"]{display:none}
             <button class="set-tab" data-st="noti" onclick="setTab('noti',this)"><span class="ic">🔔</span> 通知</button>
             <button class="set-tab" data-st="integ" onclick="setTab('integ',this)"><span class="ic">🔌</span> 連携</button>
             <button class="set-tab" data-st="data" onclick="setTab('data',this)"><span class="ic">📦</span> データ</button>
+            <button class="set-tab" data-st="demo" onclick="setTab('demo',this)" style="color:#7c3aed"><span class="ic">🎬</span> Demo Mode</button>
             <button class="set-tab danger" data-st="danger" onclick="setTab('danger',this)"><span class="ic">⚠️</span> 危険 区域</button>
           </div>
 
@@ -1299,6 +1493,30 @@ input[type="file"]{display:none}
             </div>
           </div>
 
+          <div class="set-panel" id="st-demo">
+            <div class="set-h" style="color:#7c3aed">🎬 Demo Mode</div>
+            <div class="set-p"><b>mock 専用</b> · リリース 時 に 削除 想定。 dashboard / メディア / 分析 view の 「初 ログイン 」 「ロード 中」 「サーバ エラー」 状態 を 切り 替え て 確認 できます。</div>
+            <div class="set-row" style="border-top:0">
+              <div class="set-row-info"><div class="set-row-l">▶ 通常 (= sample data)</div><div class="set-row-d">既 公開 48 記事 / PV 1,768 / LP 11 の フル sample data で 表示</div></div>
+              <button class="btn-sm primary" onclick="setDemoState('normal')">適用</button>
+            </div>
+            <div class="set-row">
+              <div class="set-row-info"><div class="set-row-l">🚀 空 状態 (= 初 ログイン user)</div><div class="set-row-d">新規 登録 直後 (= 記事 0 件 / 数字 0) で 「最初 の 記事 を 書こ う」 大型 CTA</div></div>
+              <button class="btn-sm" onclick="setDemoState('empty')">適用</button>
+            </div>
+            <div class="set-row">
+              <div class="set-row-info"><div class="set-row-l">⏳ Loading skeleton</div><div class="set-row-d">初回 fetch 中 の skeleton placeholder 表示</div></div>
+              <button class="btn-sm" onclick="setDemoState('loading')">適用</button>
+            </div>
+            <div class="set-row">
+              <div class="set-row-info"><div class="set-row-l">⚠️ エラー 状態</div><div class="set-row-d">API 失敗 時 の inline error + retry button</div></div>
+              <button class="btn-sm" onclick="setDemoState('error')">適用</button>
+            </div>
+            <div style="margin-top:20px;padding:14px 16px;background:var(--cream2);border-radius:8px;font-size:11.5px;color:var(--text2);line-height:1.6">
+              💡 mode は <b>localStorage</b> に 保存 され、 ページ リロード 後 も 維持 さ れ ます。 解除 する に は 「通常」 を 適用。
+            </div>
+          </div>
+
           <div class="set-panel" id="st-danger">
             <div class="set-h" style="color:var(--rose)">⚠️ 危険 区域</div>
             <div class="danger-banner">
@@ -1442,6 +1660,12 @@ input[type="file"]{display:none}
     </div>
     <div class="cmdk-body" id="cmdkBody"></div>
   </div>
+</div>
+
+<!-- ━━ Demo state badge ━━ -->
+<div class="demo-badge" id="demoBadge">
+  <span>🎬 DEMO: <span id="demoBadgeMode">normal</span></span>
+  <span class="x" onclick="setDemoState('normal')">×</span>
 </div>
 
 <!-- ━━ Cookie banner ━━ -->
@@ -2319,6 +2543,33 @@ window.toggleChat = function(){
     _origToggleChat();
   }
 };
+
+// === Demo state (= empty / error / loading / normal) ===
+let DEMO_STATE = 'normal';
+try { DEMO_STATE = localStorage.getItem('mock-demo-state') || 'normal'; } catch(_){}
+
+function applyDemoState(){
+  document.querySelectorAll('[data-state]').forEach(el => {
+    el.style.display = (el.getAttribute('data-state') === DEMO_STATE) ? '' : 'none';
+  });
+  const badge = document.getElementById('demoBadge');
+  if(DEMO_STATE === 'normal'){
+    badge.classList.remove('show');
+  } else {
+    document.getElementById('demoBadgeMode').textContent = DEMO_STATE;
+    badge.classList.add('show');
+  }
+}
+
+function setDemoState(mode){
+  DEMO_STATE = mode;
+  try { localStorage.setItem('mock-demo-state', mode); } catch(_){}
+  applyDemoState();
+  const lbl = mode === 'normal' ? '通常' : mode === 'empty' ? '空 状態' : mode === 'loading' ? 'Loading' : 'エラー';
+  showToast('🎬 mode: ' + lbl);
+}
+
+applyDemoState();
 
 // resize: モバイル → デスクトップ 切替 時 に state リセット
 let _lastIsMobile = window.matchMedia('(max-width:880px)').matches;

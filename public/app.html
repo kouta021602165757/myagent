@@ -2369,6 +2369,49 @@ function _cookieDecide(level){
 }
 </script>
 
+<!-- ══ Phase 4: 記事 生成 modal (= AI 推 薦 KW + 複数 選 択 + 一 括 生 成) ══ -->
+<div class="modal-bg" id="mbGenModal" onclick="if(event.target===this)closeMbGenModal()">
+  <div class="modal gen-modal">
+    <div class="modal-head"><span>⚡</span> <span>記事 を AI に 書 か せる</span><button class="modal-x" onclick="closeMbGenModal()">×</button></div>
+    <div class="modal-body">
+      <div class="gen-sect">
+        <div class="gen-sect-h">
+          <span class="gen-sect-dot"></span> AI が 提 案 する 今 旬 の 記事 タイトル
+          <span style="margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--text3);letter-spacing:.04em;text-transform:none">☐ チェック で 複 数 · ⚡ で 1 件 即 起 動</span>
+        </div>
+        <div class="gen-kw-list" id="mbGenKwList">
+          <div style="padding:24px;text-align:center;color:var(--text3);font-family:var(--mono);font-size:11px">読み込み 中...</div>
+        </div>
+      </div>
+      <div class="gen-sect">
+        <div class="gen-sect-h"><span class="gen-sect-dot" style="background:var(--text3)"></span> または、 自分 で 指 定</div>
+        <div class="gen-or">OR</div>
+        <div class="gen-input-wrap">
+          <input class="gen-input" id="mbGenKwInput" placeholder="KW を 入 力 (例: スマホ で 記事 生 成)" onkeydown="if(event.key==='Enter')mbGenStartCustom()">
+          <button class="gen-go" onclick="mbGenStartCustom()">⚡ 起 動</button>
+        </div>
+        <div class="gen-opts">
+          <label class="gen-opt"><input type="checkbox" id="mbGenOptAeo"> AEO モード <span class="gen-opt-tag">AI 検 索 最適 化</span></label>
+          <label class="gen-opt"><input type="checkbox" id="mbGenOptEnd" checked> end_card 強 化 <span class="gen-opt-tag">LP 流 入 +30%</span></label>
+        </div>
+      </div>
+    </div>
+    <div class="gen-summary" id="mbGenSummary">
+      <div class="gen-summary-info">
+        <div class="gen-summary-h">
+          <span class="gen-summary-count" id="mbGenSumCount">0 件 選 択</span> まとめ て 生 成
+        </div>
+        <div class="gen-summary-rows">
+          <span>月 cap 残 <b id="mbGenSumCap">— / —</b></span>
+          <span>·</span>
+          <span>推 定 完了 <b id="mbGenSumTime">約 — 分</b></span>
+        </div>
+      </div>
+      <button class="gen-batch-go" id="mbGenBatchGo" onclick="mbGenStartBatch()">⚡ <span id="mbGenBatchLbl">一 括 生 成</span></button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ Sentry (env-gated) ════════════════════════════════════ -->
 <script>
 (function _initSentry(){

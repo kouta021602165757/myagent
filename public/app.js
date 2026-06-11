@@ -28022,19 +28022,201 @@ function navTo(view, btn){
   }
 }
 
-// Primary CTA = 記事 生成 modal (= 既 機 能 へ redirect)
+// Primary CTA = 記事 生成 modal (= Phase 4 実装)
+// 既 keyword-batch-publish endpoint と 接続
 function openArticleGenModal(){
-  // Phase 4 で mock の gen modal を 実 装。 今 は 既 機 能 を 起 動
-  if(typeof _generateArticleDraft === 'function'){
-    // 既 関 数 が ある 場合 = activate active agent
-    const activeAg = (typeof _activeAgent !== 'undefined') ? _activeAgent : null;
-    if(activeAg && activeAg.id){
-      _generateArticleDraft(activeAg.id);
+  const allAg = (typeof agents !== 'undefined' && agents) ? agents : [];
+  const siteAgents = allAg.filter(a => typeof _isSiteAgent === 'function' ? _isSiteAgent(a) : true);
+  if(siteAgents.length === 0){
+    showToast('まず 「+ 新しい サイト を 追加」 から サイト を 作 ろう', 'ok');
+    if(typeof openAddSiteModal === 'function') openAddSiteModal();
+    return;
+  }
+  const activeAg = siteAgents.find(a => a.id === activeId) || siteAgents[0];
+  if(!activeAg.media || !activeAg.media.id){
+    showToast('この サイト で は まだ メディア が 未 作成 です', 'ng');
+    return;
+  }
+  window._mbGenAgent = activeAg;
+  window._mbGenSelected = new Set();
+  window._mbGenSuggestions = [];
+  document.getElementById('mbGenModal').classList.add('show');
+  mbUpdateSummary();
+  mbLoadKwSuggestions(activeAg);
+}
+function closeMbGenModal(){
+  document.getElementById('mbGenModal').classList.remove('show');
+}
+
+async function mbLoadKwSuggestions(agent){
+  const list = document.getElementById('mbGenKwList');
+  if(!list) return;
+  list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-family:var(--mono);font-size:11px">🔍 AI が KW 候補 を 生成 中...</div>';
+  try {
+    const r = await api('GET', '/api/agents/' + agent.id + '/keyword-suggestions').catch(()=>null);
+    let items = [];
+    if(r && Array.isArray(r.suggestions)){
+      items = r.suggestions.slice(0, 10);
+    } else if(r && Array.isArray(r.items)){
+      items = r.items.slice(0, 10);
+    } else if(Array.isArray(r)){
+      items = r.slice(0, 10);
+    }
+    if(items.length === 0){
+      list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-family:var(--mono);font-size:11px">候補 が 見つから な かった。 下 の 入力 欄 か ら 自分 で KW を 指 定 し て く だ さ い。</div>';
       return;
     }
+    window._mbGenSuggestions = items;
+    list.innerHTML = items.map((kw, i) => {
+      const title = kw.title || kw.headline || kw.keyword || ('候補 ' + (i+1));
+      const keyword = kw.keyword || kw.kw || '';
+      const vol = kw.search_volume || kw.volume || null;
+      const intent = kw.intent || '';
+      return `
+        <div class="gen-kw" data-idx="${i}" onclick="mbToggleKw(${i})">
+          <div class="gen-kw-chk">✓</div>
+          <div class="gen-kw-rank">${i+1}</div>
+          <div class="gen-kw-bd">
+            <div class="gen-kw-title">${_mbEsc(title)}</div>
+            <div class="gen-kw-meta">
+              ${keyword ? '<span class="gen-kw-meta-kw">' + _mbEsc(keyword) + '</span>' : ''}
+              ${vol ? '<span>· 月間 検索 ' + (+vol).toLocaleString() + '</span>' : ''}
+              ${intent ? '<span>· ' + _mbEsc(intent) + '</span>' : ''}
+            </div>
+          </div>
+          <div class="gen-kw-side">
+            <button class="gen-kw-instant" onclick="event.stopPropagation();mbGenStartInstant(${i})" title="この 1 件 を 即 起 動">⚡</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch(e){
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--rose);font-family:var(--mono);font-size:11px">候補 取得 失敗: ' + (e.message||e) + '</div>';
   }
-  showToast('⚡ 記事 生成 modal (= Phase 4 で 実 装)', 'ok');
 }
+function _mbEsc(s){ return String(s||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
+function mbToggleKw(idx){
+  const sel = window._mbGenSelected;
+  if(!sel) return;
+  if(sel.has(idx)) sel.delete(idx); else sel.add(idx);
+  const el = document.querySelector('.gen-kw[data-idx="'+idx+'"]');
+  if(el) el.classList.toggle('checked', sel.has(idx));
+  mbUpdateSummary();
+}
+
+function mbUpdateSummary(){
+  const sel = window._mbGenSelected || new Set();
+  const n = sel.size;
+  const sum = document.getElementById('mbGenSummary');
+  if(sum) sum.classList.toggle('show', n > 0);
+  const cnt = document.getElementById('mbGenSumCount');
+  if(cnt) cnt.textContent = n + ' 件 選 択';
+  const time = document.getElementById('mbGenSumTime');
+  if(time) time.textContent = '約 ' + (n * 90) + ' 秒';
+  // cap = me.plan
+  let cap = 20;
+  if(typeof me === 'object' && me){
+    if(me.plan === 'business') cap = 100;
+    else if(me.plan === 'pro') cap = 50;
+  }
+  const agent = window._mbGenAgent;
+  let used = 0;
+  if(agent && agent.media_posts_idx){
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    used = agent.media_posts_idx.filter(p => p && p.status !== 'draft' && new Date(p.published_at || p.created_at || 0).getTime() >= monthStart).length;
+  }
+  const capEl = document.getElementById('mbGenSumCap');
+  if(capEl) capEl.textContent = (cap - used) + ' / ' + cap;
+  const goEl = document.getElementById('mbGenBatchGo');
+  if(goEl){
+    goEl.disabled = (n === 0) || (n + used > cap);
+    const lbl = document.getElementById('mbGenBatchLbl');
+    if(lbl) lbl.textContent = n > 0 ? n + ' 件 一 括 生 成' : '一 括 生 成';
+  }
+}
+
+async function mbGenStartInstant(idx){
+  const kw = (window._mbGenSuggestions || [])[idx];
+  if(!kw) return;
+  const agent = window._mbGenAgent;
+  if(!agent) return;
+  closeMbGenModal();
+  showToast('⚡ 1 件 生 成 開 始: ' + (kw.title || kw.keyword), 'ok');
+  try {
+    const aeo = document.getElementById('mbGenOptAeo') && document.getElementById('mbGenOptAeo').checked;
+    const body = {
+      items: [{ title: kw.title || kw.headline, keyword: kw.keyword || kw.kw || '', mode: aeo ? 'aeo' : 'standard' }],
+    };
+    await api('POST', '/api/agents/' + agent.id + '/keyword-batch-publish', body);
+    showToast('✓ 公 開 ジョブ を 起 動 し まし た', 'ok');
+  } catch(e){
+    showToast('生 成 失 敗: ' + (e.message||e), 'ng');
+  }
+}
+
+async function mbGenStartCustom(){
+  const input = document.getElementById('mbGenKwInput');
+  if(!input) return;
+  const kw = (input.value || '').trim();
+  if(!kw){ showToast('KW を 入 力 し て く だ さ い', 'ng'); return; }
+  const agent = window._mbGenAgent;
+  if(!agent) return;
+  closeMbGenModal();
+  showToast('⚡ 自分 で 指 定 し た KW で 生 成 開 始: ' + kw, 'ok');
+  try {
+    const aeo = document.getElementById('mbGenOptAeo') && document.getElementById('mbGenOptAeo').checked;
+    const body = {
+      items: [{ title: kw, keyword: kw, mode: aeo ? 'aeo' : 'standard' }],
+    };
+    await api('POST', '/api/agents/' + agent.id + '/keyword-batch-publish', body);
+    showToast('✓ 公 開 ジョブ を 起 動 し まし た', 'ok');
+  } catch(e){
+    showToast('生 成 失 敗: ' + (e.message||e), 'ng');
+  }
+}
+
+async function mbGenStartBatch(){
+  const sel = window._mbGenSelected || new Set();
+  if(sel.size === 0) return;
+  const suggestions = window._mbGenSuggestions || [];
+  const agent = window._mbGenAgent;
+  if(!agent) return;
+  const items = Array.from(sel).map(idx => {
+    const kw = suggestions[idx];
+    if(!kw) return null;
+    return { title: kw.title || kw.headline || kw.keyword, keyword: kw.keyword || kw.kw || '', mode: 'standard' };
+  }).filter(Boolean);
+  if(items.length === 0) return;
+  const aeo = document.getElementById('mbGenOptAeo') && document.getElementById('mbGenOptAeo').checked;
+  if(aeo) items.forEach(it => it.mode = 'aeo');
+  closeMbGenModal();
+  showToast('⚡ ' + items.length + ' 件 一 括 生 成 開 始', 'ok');
+  try {
+    const r = await api('POST', '/api/agents/' + agent.id + '/keyword-batch-publish', { items });
+    if(r && r.jobs){
+      showToast('✓ ' + r.jobs.length + ' 件 の 公 開 ジョブ を 起 動', 'ok');
+    } else {
+      showToast('✓ 一 括 生 成 完 了', 'ok');
+    }
+  } catch(e){
+    if(e && /plan_cap_reached/.test(String(e.message||''))){
+      showToast('⚠ プラン の 月 cap に 達 し まし た。 プラン アップ を 検 討 し て く だ さ い', 'ng');
+      if(typeof openUpsellModal === 'function') openUpsellModal();
+    } else {
+      showToast('生 成 失 敗: ' + (e.message||e), 'ng');
+    }
+  }
+}
+
+// Esc で 閉じる
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){
+    const m = document.getElementById('mbGenModal');
+    if(m && m.classList.contains('show')) closeMbGenModal();
+  }
+});
 
 // Plan upsell modal stub (= Phase 6 で 実 装)
 function openUpsellModal(){

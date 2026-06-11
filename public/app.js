@@ -28866,3 +28866,68 @@ setTimeout(() => {
     if(isNew) mbOpenWelcome();
   } catch(_){}
 }, 3000);
+
+// ═════════════════════════════════════════════════════════════════
+// 🚀 Phase 3 polish: renderHomeDashboard を hook し て mock 自動 表示
+//   - 既 init で renderHomeDashboard が 呼 ばれる たび に mock dashboard が 出る
+//   - agent 0 件 (= 新 規 user) なら 既 home (= welcome + サイト 作成 CTA)
+//   - エラー時 は 既 home に fallback
+// ═════════════════════════════════════════════════════════════════
+(function _mbHookRenderHome(){
+  if(typeof window.renderHomeDashboard !== 'function'){
+    setTimeout(_mbHookRenderHome, 300);
+    return;
+  }
+  if(window._mbHomeHooked) return;
+  window._mbHomeHooked = true;
+  const _origRenderHome = window.renderHomeDashboard;
+  window.renderHomeDashboard = function(){
+    try {
+      const allAg = (typeof agents !== 'undefined' && agents) ? agents : [];
+      const siteAgents = allAg.filter(a => typeof _isSiteAgent === 'function' ? _isSiteAgent(a) : true);
+      if(siteAgents.length === 0){
+        return _origRenderHome.apply(this, arguments);
+      }
+      if(typeof _renderMockDashboard === 'function'){
+        _renderMockDashboard();
+        return;
+      }
+    } catch(e){
+      console.warn('[mb] mock dashboard fail, fallback', e);
+    }
+    return _origRenderHome.apply(this, arguments);
+  };
+  // hook 完了 直後 に 1 回 描画
+  setTimeout(() => { try { window.renderHomeDashboard(); } catch(_){} }, 100);
+})();
+
+// navTo を 既 機能 と redirect 接続 (= 28525 行 を 上書き)
+function navTo(view, btn){
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  switch(view){
+    case 'home':
+      // mock dashboard を 表示 (= renderHomeDashboard hook 経由)
+      if(typeof window.renderHomeDashboard === 'function') window.renderHomeDashboard();
+      else if(typeof _renderMockDashboard === 'function') _renderMockDashboard();
+      break;
+    case 'media':
+      // 既 site dashboard の 'stats' tab (= メディア / GA4 関連)
+      if(typeof goSiteDashboard === 'function') goSiteDashboard('stats');
+      else if(typeof _renderMockDashboard === 'function') _renderMockDashboard();
+      break;
+    case 'analytics':
+      // 既 site dashboard の 'grow' tab (= growth report)
+      if(typeof goSiteDashboard === 'function') goSiteDashboard('grow');
+      else if(typeof _renderMockDashboard === 'function') _renderMockDashboard();
+      break;
+    case 'team':
+      // 既 site dashboard の 'overview' (= agent / team 表示)
+      if(typeof goSiteDashboard === 'function') goSiteDashboard('overview');
+      else if(typeof _renderMockDashboard === 'function') _renderMockDashboard();
+      break;
+    case 'settings':
+      if(typeof openSettings === 'function') openSettings();
+      break;
+  }
+}

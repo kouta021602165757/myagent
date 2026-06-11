@@ -19,7 +19,6 @@
   --peach-dark:#e69500;
   --green:#15803d;
   --green-soft:#dcfce7;
-  --green-dim:#bbf7d0;
   --rose:#dc2626;
   --rose-soft:#fee2e2;
   --purple:#7c3aed;
@@ -37,21 +36,18 @@ html,body{height:100%;overflow:hidden;background:var(--cream);color:var(--text);
 button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
 button:active{transform:scale(.98)}
 
-/* === Grid bg (subtle) === */
+/* === Grid bg === */
 .grid-bg{position:fixed;inset:0;pointer-events:none;z-index:0;
-  background-image:
-    linear-gradient(rgba(13,79,74,.025) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(13,79,74,.025) 1px,transparent 1px);
-  background-size:56px 56px;
-  background-position:-1px -1px;
+  background-image:linear-gradient(rgba(13,79,74,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(13,79,74,.025) 1px,transparent 1px);
+  background-size:56px 56px;background-position:-1px -1px;
   mask-image:radial-gradient(circle at 40% 30%,#000 0%,#000 50%,transparent 100%);
   -webkit-mask-image:radial-gradient(circle at 40% 30%,#000 0%,#000 50%,transparent 100%);
 }
 
 /* === Layout === */
-.app{position:relative;z-index:1;display:grid;grid-template-columns:64px 1fr 380px;grid-template-rows:56px 1fr;height:100vh;gap:0}
+.app{position:relative;z-index:1;display:grid;grid-template-columns:240px 1fr 380px;grid-template-rows:56px 1fr;height:100vh;gap:0}
 .topbar{grid-column:1/-1;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid var(--wire);background:rgba(255,255,255,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:5;gap:14px}
-.sidebar{border-right:1px solid var(--wire);background:rgba(255,255,255,.5);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;z-index:4}
+.sidebar{border-right:1px solid var(--wire);background:rgba(255,255,255,.6);display:flex;flex-direction:column;padding:14px 12px;gap:6px;z-index:4;overflow-y:auto}
 .main{overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:18px;scrollbar-width:thin;scrollbar-color:var(--wire2) transparent}
 .main::-webkit-scrollbar{width:8px}
 .main::-webkit-scrollbar-thumb{background:var(--wire2);border-radius:4px}
@@ -71,13 +67,38 @@ button:active{transform:scale(.98)}
 .top-btn{padding:6px 12px;border:1px solid var(--wire);border-radius:6px;font-family:var(--mono);font-size:11px;color:var(--text2);transition:all .15s;background:#fff}
 .top-btn:hover{border-color:var(--teal);color:var(--teal)}
 
-/* === Sidebar === */
-.nav-btn{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:9px;font-size:18px;color:var(--text3);transition:all .15s;position:relative}
+/* === Sidebar: site switcher + nav === */
+.site-switch{position:relative;margin-bottom:8px}
+.site-btn{width:100%;padding:12px 12px;border-radius:9px;background:var(--paper);border:1px solid var(--wire);display:flex;align-items:center;gap:10px;text-align:left;transition:all .15s;cursor:pointer}
+.site-btn:hover{border-color:var(--teal-line);background:var(--teal-soft)}
+.site-btn.open{border-color:var(--teal);background:var(--teal-soft)}
+.site-logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0}
+.site-logo.purple{background:linear-gradient(135deg,var(--purple),#a78bfa)}
+.site-info{flex:1;min-width:0;overflow:hidden}
+.site-name{font-size:12.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.site-url{font-family:var(--mono);font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+.site-caret{color:var(--text3);font-size:10px;transition:transform .2s}
+.site-btn.open .site-caret{transform:rotate(180deg)}
+
+.site-dd{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--paper);border:1px solid var(--wire);border-radius:10px;box-shadow:0 8px 28px rgba(13,79,74,.12);padding:6px;z-index:20;display:none}
+.site-dd.show{display:block;animation:fadeDown .18s ease}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.site-opt{padding:9px 10px;border-radius:7px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .12s}
+.site-opt:hover{background:var(--cream)}
+.site-opt.active{background:var(--teal-soft)}
+.site-opt-check{margin-left:auto;color:var(--teal);font-weight:900;opacity:0}
+.site-opt.active .site-opt-check{opacity:1}
+.site-dd-sep{height:1px;background:var(--wire);margin:5px 6px}
+.site-dd-add{padding:9px 10px;border-radius:7px;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--teal);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em}
+.site-dd-add:hover{background:var(--teal-soft)}
+
+.nav-section{margin-top:6px}
+.nav-section-h{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;color:var(--text3);text-transform:uppercase;padding:8px 12px 4px}
+.nav-btn{display:flex;align-items:center;gap:11px;width:100%;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--text2);transition:all .12s;text-align:left}
 .nav-btn:hover{background:var(--cream2);color:var(--text)}
 .nav-btn.active{background:var(--teal-soft);color:var(--teal)}
-.nav-btn.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--teal);border-radius:0 2px 2px 0}
-.nav-tip{position:absolute;left:54px;background:var(--text);color:#fff;padding:5px 10px;border-radius:5px;font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;font-family:var(--mono);z-index:10}
-.nav-btn:hover .nav-tip{opacity:1}
+.nav-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;font-family:var(--mono);font-size:9.5px;background:var(--peach);color:#fff;padding:2px 6px;border-radius:4px;font-weight:800;letter-spacing:.04em}
 
 /* === Block === */
 .block{border:1px solid var(--wire);border-radius:10px;background:var(--paper);overflow:hidden;box-shadow:0 1px 2px rgba(13,79,74,.03)}
@@ -85,14 +106,14 @@ button:active{transform:scale(.98)}
 .block-head .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
 .block-head .right{margin-left:auto;color:var(--text3);font-size:10px}
 
-/* === Section view === */
+/* === View === */
 .view{display:none;flex-direction:column;gap:18px}
 .view.active{display:flex}
 .view-title{display:flex;align-items:center;gap:14px;margin-bottom:-4px;padding:0 2px}
 .view-title h1{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--text)}
 .view-title .crumb{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
 
-/* === Live stats === */
+/* === Stats === */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:0}
 .stat{padding:20px 20px 18px;border-right:1px solid var(--wire);position:relative;overflow:hidden}
 .stat:last-child{border-right:0}
@@ -122,9 +143,9 @@ button:active{transform:scale(.98)}
 .funnel-arrow{display:flex;align-items:center;justify-content:center;padding:4px 0;color:var(--text3);font-size:16px}
 .funnel-conv{font-family:var(--mono);font-size:10.5px;color:var(--text2);background:var(--cream2);padding:3px 8px;border-radius:4px;margin-left:8px}
 
-/* === Working === */
-.work-grid{padding:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.work-card{border:1px solid var(--wire);border-radius:9px;padding:14px;background:var(--cream);position:relative;overflow:hidden;cursor:pointer;transition:all .15s}
+/* === Working / Sug === */
+.work-grid,.sug-grid{padding:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.work-card{border:1px solid var(--wire);border-radius:9px;padding:14px;background:var(--cream);cursor:pointer;transition:all .15s}
 .work-card:hover{border-color:var(--teal-line);transform:translateY(-1px);box-shadow:0 4px 12px rgba(13,79,74,.06)}
 .work-state{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;color:var(--teal);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
 .work-card.purple .work-state{color:var(--purple)}
@@ -133,21 +154,18 @@ button:active{transform:scale(.98)}
 .work-card.purple .pulse{background:var(--purple);box-shadow:0 0 8px var(--purple)}
 .work-card.amber .pulse{background:var(--peach);box-shadow:0 0 8px var(--peach)}
 @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.4}}
-.work-title{font-size:13px;font-weight:600;line-height:1.45;margin-bottom:8px;color:var(--text)}
+.work-title{font-size:13px;font-weight:600;line-height:1.45;margin-bottom:8px}
 .work-meta{font-family:var(--mono);font-size:10.5px;color:var(--text2);display:flex;align-items:center;gap:10px}
 .work-bar{margin-top:10px;height:3px;background:var(--wire);border-radius:2px;overflow:hidden}
 .work-bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--peach));border-radius:2px;width:0%;transition:width .8s ease}
 .work-card.purple .work-bar-fill{background:linear-gradient(90deg,var(--purple),#a78bfa)}
 .work-card.amber .work-bar-fill{background:linear-gradient(90deg,var(--peach-dark),var(--peach))}
-
-/* === Suggestions === */
-.sug-grid{padding:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .sug{border:1px solid var(--wire);border-radius:9px;padding:16px;background:var(--paper);cursor:pointer;transition:all .2s}
 .sug:hover{border-color:var(--teal);background:var(--teal-soft);transform:translateY(-2px);box-shadow:0 6px 18px rgba(13,79,74,.08)}
 .sug-prio{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;color:var(--purple);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:5px}
 .sug.hot .sug-prio{color:var(--rose)}
 .sug.hot .sug-prio::before{content:'🔥'}
-.sug-title{font-size:14px;font-weight:700;line-height:1.45;margin-bottom:8px;color:var(--text)}
+.sug-title{font-size:14px;font-weight:700;line-height:1.45;margin-bottom:8px}
 .sug-why{font-size:11.5px;color:var(--text2);line-height:1.65;margin-bottom:14px}
 .sug-cta{font-family:var(--mono);font-size:11px;color:var(--teal);display:flex;align-items:center;gap:6px;font-weight:700}
 .sug-cta::after{content:'→';transition:transform .2s}
@@ -171,39 +189,35 @@ button:active{transform:scale(.98)}
 .feed-row.new{animation:slideIn .4s ease;background:var(--teal-soft)}
 @keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
 
-/* === MEDIA view === */
-.media-list{display:flex;flex-direction:column;gap:0}
-.media-card{padding:18px 20px;border-bottom:1px solid var(--wire);display:flex;gap:18px;align-items:center}
-.media-card:last-child{border-bottom:0}
-.media-card:hover{background:var(--cream)}
-.media-logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0}
-.media-info{flex:1;min-width:0}
-.media-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px}
-.media-url{font-family:var(--mono);font-size:11px;color:var(--text3)}
-.media-stats{display:flex;gap:18px;font-family:var(--mono);font-size:12px}
-.media-stat{display:flex;flex-direction:column;align-items:flex-end}
-.media-stat-v{color:var(--teal);font-weight:700;font-size:14px}
-.media-stat-l{color:var(--text3);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
-.media-act{display:flex;gap:8px}
-.btn-sm{padding:7px 14px;font-size:11.5px;font-weight:700;border-radius:6px;font-family:var(--mono);letter-spacing:.04em;transition:all .15s;border:1px solid var(--wire);background:#fff;color:var(--text)}
+/* === Article list (in MEDIA view) === */
+.art-row{padding:14px 20px;display:grid;grid-template-columns:1fr auto auto auto auto;gap:16px;align-items:center;border-bottom:1px solid rgba(13,79,74,.06)}
+.art-row:last-child{border-bottom:0}
+.art-row:hover{background:var(--cream)}
+.art-title{font-size:13px;font-weight:600;line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.art-meta{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:3px}
+.art-pv{font-family:var(--mono);font-size:13px;color:var(--teal);font-weight:700;text-align:right}
+.art-lp{font-family:var(--mono);font-size:11px;color:var(--peach-dark);font-weight:700;text-align:right}
+.art-trend{font-family:var(--mono);font-size:11px;text-align:right;width:36px}
+.art-act{display:flex;gap:6px}
+.btn-sm{padding:7px 12px;font-size:11.5px;font-weight:700;border-radius:6px;font-family:var(--mono);letter-spacing:.04em;transition:all .15s;border:1px solid var(--wire);background:#fff;color:var(--text)}
 .btn-sm:hover{border-color:var(--teal);color:var(--teal)}
 .btn-sm.primary{background:var(--teal);color:#fff;border-color:var(--teal)}
 .btn-sm.primary:hover{background:var(--teal2)}
 
-/* === ANALYTICS view === */
+/* === Analytics chart === */
 .period-tabs{display:flex;gap:4px;padding:4px;background:var(--cream2);border-radius:8px;width:fit-content}
 .period-tabs button{padding:6px 14px;font-family:var(--mono);font-size:11.5px;border-radius:6px;color:var(--text2);transition:all .15s;font-weight:700}
 .period-tabs button.active{background:#fff;color:var(--teal);box-shadow:0 1px 2px rgba(13,79,74,.06)}
-.chart-wrap{padding:18px 20px;height:220px;position:relative}
+.chart-wrap{padding:18px 20px;height:220px}
 .chart-bars{display:flex;align-items:flex-end;gap:8px;height:170px;padding:0 10px;border-bottom:1px solid var(--wire)}
 .chart-bar{flex:1;background:linear-gradient(180deg,var(--teal) 0%,var(--peach) 100%);border-radius:4px 4px 0 0;min-height:8px;position:relative;cursor:pointer;transition:opacity .15s}
 .chart-bar:hover{opacity:.7}
-.chart-bar .label{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:10.5px;color:var(--text);font-weight:700;opacity:0;transition:opacity .15s;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--wire);white-space:nowrap}
+.chart-bar .label{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:10.5px;color:var(--text);font-weight:700;opacity:0;background:#fff;padding:2px 6px;border-radius:4px;border:1px solid var(--wire);white-space:nowrap}
 .chart-bar:hover .label{opacity:1}
 .chart-axis{display:flex;justify-content:space-between;padding:8px 10px 0;font-family:var(--mono);font-size:10px;color:var(--text3)}
 
 .rank-list{padding:8px}
-.rank-row{display:grid;grid-template-columns:28px 1fr auto auto auto;gap:12px;align-items:center;padding:12px 14px;border-radius:7px;transition:background .15s}
+.rank-row{display:grid;grid-template-columns:28px 1fr auto auto auto;gap:12px;align-items:center;padding:12px 14px;border-radius:7px}
 .rank-row:hover{background:var(--cream2)}
 .rank-num{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text3);text-align:center}
 .rank-row:nth-child(1) .rank-num{color:var(--peach-dark);font-size:16px}
@@ -211,10 +225,10 @@ button:active{transform:scale(.98)}
 .rank-row:nth-child(3) .rank-num{color:#b45309;font-size:14px}
 .rank-title{font-size:12.5px;font-weight:600;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rank-pv{font-family:var(--mono);font-size:13px;color:var(--teal);font-weight:700;width:60px;text-align:right}
-.rank-lp{font-family:var(--mono);font-size:11px;color:var(--purple);font-weight:700;width:80px;text-align:right}
+.rank-lp{font-family:var(--mono);font-size:11px;color:var(--peach-dark);font-weight:700;width:80px;text-align:right}
 .rank-trend{font-family:var(--mono);font-size:10.5px;color:var(--green);width:50px;text-align:right}
 
-/* === TEAM view === */
+/* === Team === */
 .team-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:14px}
 .team-card{padding:16px;border:1px solid var(--wire);border-radius:9px;background:var(--paper)}
 .team-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
@@ -230,7 +244,7 @@ button:active{transform:scale(.98)}
 .team-stat-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--text3);padding-top:8px;border-top:1px dashed var(--wire)}
 .team-stat-row b{color:var(--teal);font-weight:700}
 
-/* === SETTINGS view === */
+/* === Settings === */
 .set-block{padding:18px 20px}
 .set-h{font-size:14px;font-weight:700;margin-bottom:4px}
 .set-p{font-size:11.5px;color:var(--text2);margin-bottom:14px;line-height:1.55}
@@ -271,7 +285,7 @@ button:active{transform:scale(.98)}
 .chat-input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:inherit;font-size:13px;resize:none;line-height:1.5;max-height:120px}
 .chat-input::placeholder{color:var(--text3)}
 .chat-send{width:30px;height:30px;border-radius:6px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex-shrink:0;transition:all .15s}
-.chat-send:hover{background:var(--teal2);box-shadow:0 2px 8px rgba(13,79,74,.25)}
+.chat-send:hover{background:var(--teal2)}
 .chat-suggest{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .chat-suggest button{font-family:var(--mono);font-size:10.5px;padding:5px 10px;border:1px solid var(--wire);border-radius:5px;color:var(--text2);transition:all .15s;background:#fff}
 .chat-suggest button:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
@@ -289,26 +303,30 @@ button:active{transform:scale(.98)}
 .modal-x{margin-left:auto;color:var(--text3);font-size:18px;font-weight:700}
 .modal-x:hover{color:var(--text)}
 .modal-body{padding:22px}
-.modal-h{font-size:18px;font-weight:700;margin-bottom:14px;color:var(--text)}
+.modal-h{font-size:18px;font-weight:700;margin-bottom:14px}
 .modal-p{font-size:13.5px;color:var(--text2);line-height:1.7;margin-bottom:18px}
 .modal-foot{padding:14px 22px;border-top:1px solid var(--wire);display:flex;gap:10px;justify-content:flex-end;background:var(--cream)}
 .btn{padding:10px 18px;border-radius:7px;font-size:12.5px;font-weight:700;font-family:var(--mono);letter-spacing:.04em;transition:all .15s;border:1px solid var(--wire);background:#fff;color:var(--text)}
 .btn-ghost:hover{border-color:var(--text3);color:var(--text)}
 .btn-go{background:var(--teal);color:#fff;border-color:var(--teal)}
-.btn-go:hover{background:var(--teal2);box-shadow:0 2px 8px rgba(13,79,74,.25)}
+.btn-go:hover{background:var(--teal2)}
 
 /* === Mobile === */
 @media (max-width: 880px){
-  .app{grid-template-columns:48px 1fr;grid-template-rows:52px 1fr auto}
-  .chat{grid-column:1/-1;grid-row:3/4;border-left:0;border-top:1px solid var(--wire);width:100%;height:auto;max-height:50vh}
+  .app{grid-template-columns:1fr;grid-template-rows:56px auto 1fr auto}
+  .sidebar{grid-column:1;border-right:0;border-bottom:1px solid var(--wire);padding:10px;flex-direction:row;overflow-x:auto;gap:8px}
+  .site-switch{margin-bottom:0;min-width:200px}
+  .nav-section{margin-top:0;display:flex;gap:6px}
+  .nav-section-h{display:none}
+  .nav-btn{padding:8px 12px;white-space:nowrap}
+  .chat{grid-column:1;border-left:0;border-top:1px solid var(--wire);max-height:50vh}
   .chat.collapsed{height:48px}
   .stats{grid-template-columns:1fr}
   .stat{border-bottom:1px solid var(--wire);border-right:0}
   .stat:last-child{border-bottom:0}
   .work-grid,.sug-grid,.team-grid{grid-template-columns:1fr}
   .main{padding:14px}
-  .brand-sub{display:none}
-  .plan-badge{display:none}
+  .brand-sub,.plan-badge{display:none}
 }
 </style>
 </head>
@@ -322,7 +340,7 @@ button:active{transform:scale(.98)}
     <div class="brand">
       <div class="brand-mark">M</div>
       <span class="brand-name">MY AI AGENT</span>
-      <span class="brand-sub">v0.2 · MOCK</span>
+      <span class="brand-sub">v0.3 · MOCK</span>
     </div>
     <span class="plan-badge">⚡ BUSINESS</span>
     <div class="top-time">
@@ -334,26 +352,61 @@ button:active{transform:scale(.98)}
 
   <!-- ━━━ SIDEBAR ━━━ -->
   <div class="sidebar">
-    <button class="nav-btn active" data-view="home" onclick="navTo('home',this)">⌂<span class="nav-tip">HOME</span></button>
-    <button class="nav-btn" data-view="media" onclick="navTo('media',this)">📰<span class="nav-tip">MEDIA</span></button>
-    <button class="nav-btn" data-view="analytics" onclick="navTo('analytics',this)">📊<span class="nav-tip">ANALYTICS</span></button>
-    <button class="nav-btn" data-view="team" onclick="navTo('team',this)">🤖<span class="nav-tip">AI TEAM</span></button>
-    <div style="flex:1"></div>
-    <button class="nav-btn" data-view="settings" onclick="navTo('settings',this)">⚙<span class="nav-tip">SETTINGS</span></button>
+    <!-- Site switcher -->
+    <div class="site-switch">
+      <button class="site-btn" id="siteBtn" onclick="toggleSiteDD()">
+        <div class="site-logo" id="siteLogo">M</div>
+        <div class="site-info">
+          <div class="site-name" id="siteName">myaiagents.agency</div>
+          <div class="site-url" id="siteUrl">48 記事 · ¥4,950 plan</div>
+        </div>
+        <span class="site-caret">▼</span>
+      </button>
+      <div class="site-dd" id="siteDD">
+        <div class="site-opt active" data-site="0" onclick="pickSite(0,this)">
+          <div class="site-logo">M</div>
+          <div class="site-info">
+            <div class="site-name">myaiagents.agency</div>
+            <div class="site-url">media-blog · 48 記事</div>
+          </div>
+          <span class="site-opt-check">✓</span>
+        </div>
+        <div class="site-opt" data-site="1" onclick="pickSite(1,this)">
+          <div class="site-logo purple">P</div>
+          <div class="site-info">
+            <div class="site-name">lp.pico-app.com</div>
+            <div class="site-url">pico · 3 記事</div>
+          </div>
+          <span class="site-opt-check">✓</span>
+        </div>
+        <div class="site-dd-sep"></div>
+        <div class="site-dd-add" onclick="showToast('+ 新規 サイト 追加 (mock)');toggleSiteDD()">
+          <span>＋</span> 新しい サイト を 追加
+        </div>
+      </div>
+    </div>
+
+    <!-- Nav (= within active site) -->
+    <div class="nav-section">
+      <div class="nav-section-h">この サイト で</div>
+      <button class="nav-btn active" data-view="home" onclick="navTo('home',this)"><span class="nav-icon">🏠</span> ダッシュ ボード</button>
+      <button class="nav-btn" data-view="media" onclick="navTo('media',this)"><span class="nav-icon">📰</span> メディア <span class="nav-badge">48</span></button>
+      <button class="nav-btn" data-view="analytics" onclick="navTo('analytics',this)"><span class="nav-icon">📊</span> 分析</button>
+      <button class="nav-btn" data-view="team" onclick="navTo('team',this)"><span class="nav-icon">🤖</span> AI チーム</button>
+      <button class="nav-btn" data-view="settings" onclick="navTo('settings',this)"><span class="nav-icon">⚙</span> 設定</button>
+    </div>
   </div>
 
   <!-- ━━━ MAIN ━━━ -->
   <div class="main">
 
-    <!-- ============ VIEW: HOME ============ -->
+    <!-- ============ DASHBOARD ============ -->
     <div class="view active" id="view-home">
-
       <div class="view-title">
-        <h1>Command Center</h1>
-        <span class="crumb">▌ HOME · 24h LIVE</span>
+        <h1>ダッシュ ボード</h1>
+        <span class="crumb" id="crumb-home">▌ myaiagents.agency · 24h LIVE</span>
       </div>
 
-      <!-- LIVE STATS (3 main) -->
       <div class="block">
         <div class="block-head">
           <span class="dot"></span> LIVE METRICS · 自前 計測
@@ -381,54 +434,37 @@ button:active{transform:scale(.98)}
         </div>
       </div>
 
-      <!-- FUNNEL -->
       <div class="block">
-        <div class="block-head">
-          <span class="dot"></span> FUNNEL · 記事 公開 → LP 流入
-          <span class="right">過去 30 日</span>
-        </div>
+        <div class="block-head"><span class="dot"></span> FUNNEL · 記事 公開 → LP 流入<span class="right">過去 30 日</span></div>
         <div class="funnel-pane">
           <div class="funnel-row">
             <div class="funnel-step">
               <div class="funnel-icon">📝</div>
-              <div class="funnel-info">
-                <div class="funnel-lbl">記事 公開</div>
-                <div class="funnel-meta">48 articles · AI 自動 生成</div>
-              </div>
+              <div class="funnel-info"><div class="funnel-lbl">記事 公開</div><div class="funnel-meta" id="funArt">48 articles · AI 自動 生成</div></div>
             </div>
-            <div class="funnel-val">48</div>
+            <div class="funnel-val" id="funArtV">48</div>
           </div>
-          <div class="funnel-arrow">↓ <span class="funnel-conv">conv 36.8x</span></div>
+          <div class="funnel-arrow">↓ <span class="funnel-conv" id="funC1">conv 36.8x</span></div>
           <div class="funnel-row">
             <div class="funnel-step">
               <div class="funnel-icon" style="background:var(--purple-soft);color:var(--purple)">👁</div>
-              <div class="funnel-info">
-                <div class="funnel-lbl">記事 PV</div>
-                <div class="funnel-meta">1,768 views · 内 473 unique</div>
-              </div>
+              <div class="funnel-info"><div class="funnel-lbl">記事 PV</div><div class="funnel-meta" id="funPv">1,768 views · 473 unique</div></div>
             </div>
-            <div class="funnel-val" style="color:var(--purple)">1,768</div>
+            <div class="funnel-val" style="color:var(--purple)" id="funPvV">1,768</div>
           </div>
-          <div class="funnel-arrow">↓ <span class="funnel-conv">conv 0.62%</span></div>
+          <div class="funnel-arrow">↓ <span class="funnel-conv" id="funC2">conv 0.62%</span></div>
           <div class="funnel-row">
             <div class="funnel-step">
               <div class="funnel-icon" style="background:var(--peach-soft);color:var(--peach-dark)">🎯</div>
-              <div class="funnel-info">
-                <div class="funnel-lbl">LP 流入 (= utm_source=media)</div>
-                <div class="funnel-meta">11 sessions · footer 10 / inline 1</div>
-              </div>
+              <div class="funnel-info"><div class="funnel-lbl">LP 流入</div><div class="funnel-meta" id="funLp">11 sessions · footer 10 / inline 1</div></div>
             </div>
-            <div class="funnel-val" style="color:var(--peach-dark)">11</div>
+            <div class="funnel-val" style="color:var(--peach-dark)" id="funLpV">11</div>
           </div>
         </div>
       </div>
 
-      <!-- WORKING NOW -->
       <div class="block">
-        <div class="block-head">
-          <span class="dot"></span> AI TEAM · NOW WORKING
-          <span class="right">3 TASKS · 自動 実行 中</span>
-        </div>
+        <div class="block-head"><span class="dot"></span> AI チーム · 今 動いて る<span class="right">3 TASKS · 自動 実行 中</span></div>
         <div class="work-grid">
           <div class="work-card" onclick="openTask('write')">
             <div class="work-state"><span class="pulse"></span> WRITING · 42s</div>
@@ -438,7 +474,7 @@ button:active{transform:scale(.98)}
           </div>
           <div class="work-card purple" onclick="openTask('research')">
             <div class="work-state"><span class="pulse"></span> RESEARCHING · 17s</div>
-            <div class="work-title">competitor: rewards-app.jp の 直近 30 KW を 分析</div>
+            <div class="work-title">rewards-app.jp の 直近 30 KW を 分析</div>
             <div class="work-meta">🔍 Researcher-1 · scanning…</div>
             <div class="work-bar"><div class="work-bar-fill" id="bar2" style="width:72%"></div></div>
           </div>
@@ -451,23 +487,19 @@ button:active{transform:scale(.98)}
         </div>
       </div>
 
-      <!-- SUGGESTIONS -->
       <div class="block">
-        <div class="block-head">
-          <span class="dot"></span> RECOMMENDED ACTIONS · 今 やる べき 3 つ
-          <span class="right">AI 提案 · 自動 更新</span>
-        </div>
+        <div class="block-head"><span class="dot"></span> RECOMMENDED ACTIONS · 今 やる べき 3 つ<span class="right">AI 提案 · 自動 更新</span></div>
         <div class="sug-grid">
           <div class="sug hot" onclick="openSug('hot')">
             <div class="sug-prio">HOT · 24H 以内</div>
             <div class="sug-title">競合 が 「AI 記事 ツール 比較」 で 1 位 → 12h 以内 に 抜く 案</div>
-            <div class="sug-why">同 KW で あなた #4。 競合 5,400 字、 構造 比較 表 弱い。 8,500 字 + AI 制作 比較 で 抜け る 見込み。</div>
+            <div class="sug-why">同 KW で あなた #4。 競合 5,400 字、 比較 表 弱い。 8,500 字 + AI 制作 比較 で 抜け る 見込み。</div>
             <div class="sug-cta">⚡ AI チーム を 起動</div>
           </div>
           <div class="sug" onclick="openSug('medium')">
             <div class="sug-prio">▌ HIGH · 今週</div>
             <div class="sug-title">「LP 流入」 を 11 → 100 sessions に 伸ばす 3 手</div>
-            <div class="sug-why">記事 末尾 CTA は OK、 でも 記事 中 inline CTA が 0 件。 inline 3 箇所 追加 で +60-80 sess 見込み。</div>
+            <div class="sug-why">記事 末尾 CTA は OK、 でも inline CTA が 0 件。 inline 3 箇所 追加 で +60-80 sess 見込み。</div>
             <div class="sug-cta">📊 詳細 を 見る</div>
           </div>
           <div class="sug" onclick="openSug('low')">
@@ -479,78 +511,55 @@ button:active{transform:scale(.98)}
         </div>
       </div>
 
-      <!-- FEED -->
       <div class="block">
-        <div class="block-head">
-          <span class="dot"></span> ACTIVITY FEED · system_log
-          <span class="right" id="feedCount">— events</span>
-        </div>
+        <div class="block-head"><span class="dot"></span> ACTIVITY FEED · system_log<span class="right" id="feedCount">— events</span></div>
         <div class="feed" id="feed"></div>
       </div>
-
     </div>
 
-    <!-- ============ VIEW: MEDIA ============ -->
+    <!-- ============ MEDIA (= 記事 一覧) ============ -->
     <div class="view" id="view-media">
       <div class="view-title">
         <h1>メディア</h1>
-        <span class="crumb">▌ MEDIA · 2 サイト 運営 中</span>
+        <span class="crumb" id="crumb-media">▌ media-blog.myaiagents.agency · 48 記事</span>
+        <button class="btn-sm primary" style="margin-left:auto" onclick="openSug('hot')">+ 新規 記事 を AI に 書か せる</button>
       </div>
 
       <div class="block">
         <div class="block-head">
-          <span class="dot"></span> サイト 一覧
-          <button class="btn-sm primary" style="margin-left:auto;padding:6px 12px" onclick="showToast('+ 新規 サイト 追加 (mock)')">+ サイト 追加</button>
+          <span class="dot"></span> 公開 済 記事
+          <span class="right" id="artCnt">48 / 100 cap</span>
         </div>
-        <div class="media-list">
-          <div class="media-card">
-            <div class="media-logo">M</div>
-            <div class="media-info">
-              <div class="media-name">myaiagents.agency Blog</div>
-              <div class="media-url">media-blog.myaiagents.agency · 48 記事</div>
-            </div>
-            <div class="media-stats">
-              <div class="media-stat"><span class="media-stat-v">1,768</span><span class="media-stat-l">PV / 月</span></div>
-              <div class="media-stat"><span class="media-stat-v">473</span><span class="media-stat-l">USERS / 月</span></div>
-              <div class="media-stat" style="color:var(--peach-dark)"><span class="media-stat-v" style="color:var(--peach-dark)">11</span><span class="media-stat-l">LP 流入</span></div>
-            </div>
-            <div class="media-act">
-              <button class="btn-sm" onclick="showToast('開く: media-blog')">開く</button>
-              <button class="btn-sm primary" onclick="openSug('hot')">⚡ 新規 記事</button>
-            </div>
-          </div>
-          <div class="media-card">
-            <div class="media-logo" style="background:linear-gradient(135deg,var(--purple),#a78bfa)">P</div>
-            <div class="media-info">
-              <div class="media-name">lp.pico-app.com Blog</div>
-              <div class="media-url">pico.myaiagents.agency · 3 記事</div>
-            </div>
-            <div class="media-stats">
-              <div class="media-stat"><span class="media-stat-v">815</span><span class="media-stat-l">PV / 月</span></div>
-              <div class="media-stat"><span class="media-stat-v">87</span><span class="media-stat-l">USERS / 月</span></div>
-              <div class="media-stat" style="color:var(--peach-dark)"><span class="media-stat-v" style="color:var(--peach-dark)">3</span><span class="media-stat-l">LP 流入</span></div>
-            </div>
-            <div class="media-act">
-              <button class="btn-sm" onclick="showToast('開く: pico')">開く</button>
-              <button class="btn-sm primary" onclick="showToast('⚡ 新規 記事 起動')">⚡ 新規 記事</button>
-            </div>
-          </div>
-        </div>
+        <div id="artList"></div>
       </div>
 
       <div class="block">
-        <div class="block-head">
-          <span class="dot"></span> 直近 公開 記事 TOP 5
-          <span class="right">過去 7 日</span>
+        <div class="block-head"><span class="dot"></span> メディア 設定<span class="right">サイト デザイン</span></div>
+        <div class="set-block">
+          <div class="set-row" style="border-top:0">
+            <div class="set-row-info"><div class="set-row-l">サイト 名</div><div class="set-row-d">myaiagents.agency Blog</div></div>
+            <button class="btn-sm" onclick="showToast('変更 (mock)')">変更</button>
+          </div>
+          <div class="set-row">
+            <div class="set-row-info"><div class="set-row-l">サブ ドメイン</div><div class="set-row-d">media-blog.myaiagents.agency</div></div>
+            <button class="btn-sm" onclick="showToast('変更 (mock)')">変更</button>
+          </div>
+          <div class="set-row">
+            <div class="set-row-info"><div class="set-row-l">カテゴリ (4)</div><div class="set-row-d">AI×メディア / ノウハウ / 比較 / 業界 動向</div></div>
+            <button class="btn-sm" onclick="showToast('編集 (mock)')">編集</button>
+          </div>
+          <div class="set-row">
+            <div class="set-row-info"><div class="set-row-l">テーマ / 配色</div><div class="set-row-d">teal + cream</div></div>
+            <button class="btn-sm" onclick="showToast('テーマ 編集 (mock)')">編集</button>
+          </div>
         </div>
-        <div class="rank-list" id="postRank"></div>
       </div>
     </div>
 
-    <!-- ============ VIEW: ANALYTICS ============ -->
+    <!-- ============ ANALYTICS ============ -->
     <div class="view" id="view-analytics">
       <div class="view-title">
-        <h1>アナリティクス</h1>
+        <h1>分析</h1>
         <span class="crumb">▌ ANALYTICS · 自前 計測</span>
         <div class="period-tabs" style="margin-left:auto">
           <button onclick="setPeriod(this,'7d')">7d</button>
@@ -560,10 +569,7 @@ button:active{transform:scale(.98)}
       </div>
 
       <div class="block">
-        <div class="block-head">
-          <span class="dot"></span> PV 推移 · daily
-          <span class="right" id="periodLbl">30 days</span>
-        </div>
+        <div class="block-head"><span class="dot"></span> PV 推移 · daily<span class="right" id="periodLbl">30 days</span></div>
         <div class="chart-wrap">
           <div class="chart-bars" id="chartBars"></div>
           <div class="chart-axis"><span>30d ago</span><span>15d</span><span>today</span></div>
@@ -571,18 +577,12 @@ button:active{transform:scale(.98)}
       </div>
 
       <div class="block">
-        <div class="block-head">
-          <span class="dot"></span> 流入 多い 記事 TOP 8
-          <span class="right">PV 順</span>
-        </div>
+        <div class="block-head"><span class="dot"></span> 流入 多い 記事 TOP 8<span class="right">PV 順</span></div>
         <div class="rank-list" id="rankList"></div>
       </div>
 
       <div class="block">
-        <div class="block-head">
-          <span class="dot"></span> LP 流入 内訳
-          <span class="right">utm_medium 別</span>
-        </div>
+        <div class="block-head"><span class="dot"></span> LP 流入 内訳<span class="right">utm_medium 別</span></div>
         <div class="rank-list">
           <div class="rank-row"><span class="rank-num">1</span><span class="rank-title">footer (= 記事 末尾 CTA)</span><span class="rank-pv">7</span><span class="rank-lp">63.6%</span><span class="rank-trend">↑</span></div>
           <div class="rank-row"><span class="rank-num">2</span><span class="rank-title">inline_mid (= 記事 中 CTA)</span><span class="rank-pv">3</span><span class="rank-lp">27.3%</span><span class="rank-trend">↑</span></div>
@@ -591,7 +591,7 @@ button:active{transform:scale(.98)}
       </div>
     </div>
 
-    <!-- ============ VIEW: TEAM ============ -->
+    <!-- ============ TEAM ============ -->
     <div class="view" id="view-team">
       <div class="view-title">
         <h1>AI チーム</h1>
@@ -599,53 +599,36 @@ button:active{transform:scale(.98)}
       </div>
 
       <div class="block">
-        <div class="block-head">
-          <span class="dot"></span> 今 動 い てる メンバー
-          <span class="right">3 active · 21 idle</span>
-        </div>
+        <div class="block-head"><span class="dot"></span> 今 動 い て る メンバー<span class="right">3 active · 21 idle</span></div>
         <div class="team-grid">
           <div class="team-card">
-            <div class="team-head">
-              <div class="team-av">W</div>
-              <div><div class="team-name">Writer-3</div><div class="team-role">RECORD · SEO LIBRARIAN</div></div>
-            </div>
+            <div class="team-head"><div class="team-av">W</div><div><div class="team-name">Writer-3</div><div class="team-role">RECORD · SEO LIBRARIAN</div></div></div>
             <div class="team-status"><span class="pulse"></span> WRITING · 42s</div>
-            <div class="team-bd">「スマホ で ポイ活 始めたい 人 向け 完全 ガイド」 8,200 字 を 執筆 中。 構造 解析 完了、 本文 生成 中。</div>
+            <div class="team-bd">「スマホ で ポイ活 始めたい 人 向け 完全 ガイド」 8,200 字 を 執筆 中。</div>
             <div class="team-stat-row"><span>今月 公開</span><b>14 本</b></div>
           </div>
-
           <div class="team-card purple">
-            <div class="team-head">
-              <div class="team-av">R</div>
-              <div><div class="team-name">Researcher-1</div><div class="team-role">RECORD · KW SCOUT</div></div>
-            </div>
+            <div class="team-head"><div class="team-av">R</div><div><div class="team-name">Researcher-1</div><div class="team-role">RECORD · KW SCOUT</div></div></div>
             <div class="team-status"><span class="pulse"></span> RESEARCHING · 17s</div>
-            <div class="team-bd">rewards-app.jp の 直近 30 日 KW を 分析、 競合 ギャップ 5 件 抽出 中。</div>
+            <div class="team-bd">rewards-app.jp の 直近 30 KW を 分析、 競合 ギャップ 5 件 抽出 中。</div>
             <div class="team-stat-row"><span>今月 KW 提案</span><b>87 件</b></div>
           </div>
-
           <div class="team-card amber">
-            <div class="team-head">
-              <div class="team-av">E</div>
-              <div><div class="team-name">Editor-2</div><div class="team-role">RECORD · REWRITE SPECIALIST</div></div>
-            </div>
+            <div class="team-head"><div class="team-av">E</div><div><div class="team-name">Editor-2</div><div class="team-role">RECORD · REWRITE</div></div></div>
             <div class="team-status"><span class="pulse"></span> REWRITING · 5s</div>
-            <div class="team-bd">「AI 記事 自動 化」 を GSC data + 上位 競合 構造 を 元 に SEO 改修 中。</div>
+            <div class="team-bd">「AI 記事 自動 化」 を GSC data + 上位 競合 構造 で SEO 改修 中。</div>
             <div class="team-stat-row"><span>今月 リライト</span><b>21 本</b></div>
           </div>
         </div>
       </div>
 
       <div class="block">
-        <div class="block-head">
-          <span class="dot" style="background:var(--text3);box-shadow:none"></span> 待機 中 メンバー
-          <span class="right">21 idle</span>
-        </div>
+        <div class="block-head"><span class="dot" style="background:var(--text3);box-shadow:none"></span> 待機 中 メンバー<span class="right">21 idle</span></div>
         <div class="team-grid">
           <div class="team-card">
             <div class="team-head"><div class="team-av">S</div><div><div class="team-name">SEO Strategist</div><div class="team-role">▌ ORCHESTRATOR</div></div></div>
             <div class="team-status idle"><span class="pulse"></span> idle · 23 min ago</div>
-            <div class="team-bd">記事 公開 → SEO 最適 化 → リライト trigger の 全 体 オーケストレーション。</div>
+            <div class="team-bd">記事 公開 → SEO 最適 化 → リライト trigger の オーケストレーション。</div>
             <div class="team-stat-row"><span>今月 タスク</span><b>312 件</b></div>
           </div>
           <div class="team-card purple">
@@ -655,7 +638,7 @@ button:active{transform:scale(.98)}
             <div class="team-stat-row"><span>今月 制作</span><b>48 枚</b></div>
           </div>
           <div class="team-card amber">
-            <div class="team-head"><div class="team-av">X</div><div><div class="team-name">Distributor-1</div><div class="team-role">▌ X / SNS POSTER</div></div></div>
+            <div class="team-head"><div class="team-av">X</div><div><div class="team-name">Distributor-1</div><div class="team-role">▌ X / SNS</div></div></div>
             <div class="team-status idle"><span class="pulse"></span> idle · 1 h ago</div>
             <div class="team-bd">公開 直後 に AI 文 案 で X / Threads / Buffer に 自動 投稿。</div>
             <div class="team-stat-row"><span>今月 投稿</span><b>96 件</b></div>
@@ -664,11 +647,11 @@ button:active{transform:scale(.98)}
       </div>
     </div>
 
-    <!-- ============ VIEW: SETTINGS ============ -->
+    <!-- ============ SETTINGS ============ -->
     <div class="view" id="view-settings">
       <div class="view-title">
         <h1>設定</h1>
-        <span class="crumb">▌ SETTINGS</span>
+        <span class="crumb" id="crumb-set">▌ myaiagents.agency · プラン / 通知 / 連携</span>
       </div>
 
       <div class="block">
@@ -676,7 +659,7 @@ button:active{transform:scale(.98)}
         <div class="set-block">
           <div class="set-h">⚡ BUSINESS</div>
           <div class="set-p">月 100 記事 まで AI チーム 24 名 利用 可能。 ¥4,950 / 月。</div>
-          <button class="btn-sm primary" onclick="showToast('プラン 管理 を 開く (mock)')">プラン 管理 →</button>
+          <button class="btn-sm primary" onclick="showToast('プラン 管理 (mock)')">プラン 管理 →</button>
         </div>
       </div>
 
@@ -688,7 +671,7 @@ button:active{transform:scale(.98)}
             <div class="toggle on" onclick="this.classList.toggle('on')"></div>
           </div>
           <div class="set-row">
-            <div class="set-row-info"><div class="set-row-l">朝 の レポート (= 07:00)</div><div class="set-row-d">昨日 の PV / LP 流入 を 毎朝 まとめ て 通知</div></div>
+            <div class="set-row-info"><div class="set-row-l">朝 の レポート (= 07:00)</div><div class="set-row-d">昨日 の PV / LP 流入 を 毎朝 通知</div></div>
             <div class="toggle on" onclick="this.classList.toggle('on')"></div>
           </div>
           <div class="set-row">
@@ -705,12 +688,12 @@ button:active{transform:scale(.98)}
         </div>
         <div class="set-block" style="padding-top:0">
           <div class="set-row">
-            <div class="set-row-info"><div class="set-row-l">Google Analytics 4</div><div class="set-row-d">サブドメイン data stream 追加 で 「LP 自体 の PV」 も 統合 表示</div></div>
+            <div class="set-row-info"><div class="set-row-l">Google Analytics 4</div><div class="set-row-d">「LP 自体 の PV」 も 統合 表示</div></div>
             <button class="btn-sm" onclick="showToast('GA4 連携 開始 (mock)')">連携 する</button>
           </div>
           <div class="set-row">
             <div class="set-row-info"><div class="set-row-l">Google Search Console</div><div class="set-row-d">検索 順位 / impressions / CTR が 取得 可能 に</div></div>
-            <button class="btn-sm" onclick="showToast('GSC 連携 開始 (mock)')">連携 する</button>
+            <button class="btn-sm" onclick="showToast('GSC 連携 (mock)')">連携 する</button>
           </div>
           <div class="set-row">
             <div class="set-row-info"><div class="set-row-l">X / Threads / Buffer</div><div class="set-row-d">公開 直後 に AI 文 案 で 自動 投稿</div></div>
@@ -722,36 +705,32 @@ button:active{transform:scale(.98)}
 
   </div>
 
-  <!-- ━━━ CHAT PANEL ━━━ -->
+  <!-- ━━━ CHAT ━━━ -->
   <div class="chat" id="chat">
     <div class="chat-head">
-      <span class="dot"></span>
-      <span class="lbl">AI ASSISTANT</span>
-      <button class="chat-toggle" onclick="toggleChat()" title="折りたたみ">⟩</button>
+      <span class="dot"></span><span class="lbl">AI ASSISTANT</span>
+      <button class="chat-toggle" onclick="toggleChat()">⟩</button>
     </div>
     <div class="chat-body" id="chatBody">
       <div class="msg">
         <div class="msg-av">M</div>
         <div class="msg-bd">
           <div class="nm">MY · 04:31</div>
-          <div class="tx">おはよう。 寝 て る 間 に <b>3 記事 公開</b>、 <b>87 人 読 ん だ</b>。 1 件 SNS 反応 良好 だった。</div>
-          <div class="msg-card">
-            <div class="ti">🔥 「スマホ で 記事 生成」</div>
-            <div class="mt">PV 276 · LP 流入 9 sess · X likes 14</div>
-          </div>
+          <div class="tx">おはよう。 寝てる 間 に <b>3 記事 公開</b>、 <b>87 人 読 ん だ</b>。 1 件 SNS 反応 良好 だった。</div>
+          <div class="msg-card"><div class="ti">🔥 「スマホ で 記事 生成」</div><div class="mt">PV 276 · LP 流入 9 sess · X likes 14</div></div>
         </div>
       </div>
       <div class="msg">
         <div class="msg-av">M</div>
         <div class="msg-bd">
           <div class="nm">MY · 04:32</div>
-          <div class="tx"><span class="k">/work</span> で 何 が 動 い てる か 見える、 <span class="k">/sug</span> で 提案 一覧。 困ったら こ こ で 普通 に 話 して。</div>
+          <div class="tx">サイト 切替 は <b>左 上 の サイト 名</b> から。 困ったら ここ で 普通 に 話 して。</div>
         </div>
       </div>
     </div>
     <div class="chat-foot">
       <div class="chat-input-wrap">
-        <textarea class="chat-input" id="chatInput" rows="1" placeholder="AI に 頼 む… (例: 今週 の 数字 まとめ て)" onkeydown="onChatKey(event)"></textarea>
+        <textarea class="chat-input" id="chatInput" rows="1" placeholder="AI に 頼む… (例: 今週 の 数字 まとめて)" onkeydown="onChatKey(event)"></textarea>
         <button class="chat-send" onclick="sendChat()">↑</button>
       </div>
       <div class="chat-suggest">
@@ -764,36 +743,53 @@ button:active{transform:scale(.98)}
 
 </div>
 
-<!-- ━━━ TOAST ━━━ -->
 <div class="toast" id="toast"></div>
 
-<!-- ━━━ MODAL ━━━ -->
 <div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
-    <div class="modal-head">
-      <span>⚡</span> <span id="modalTag">ACTION</span>
-      <button class="modal-x" onclick="closeModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-h" id="modalH">Action</div>
-      <div class="modal-p" id="modalP">Description</div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">キャンセル</button>
-      <button class="btn btn-go" id="modalGo" onclick="modalConfirm()">⚡ 起動 する</button>
-    </div>
+    <div class="modal-head"><span>⚡</span> <span id="modalTag">ACTION</span><button class="modal-x" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><div class="modal-h" id="modalH">Action</div><div class="modal-p" id="modalP">Description</div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">キャンセル</button><button class="btn btn-go" id="modalGo" onclick="modalConfirm()">⚡ 起動 する</button></div>
   </div>
 </div>
 
 <script>
-// ━━━ STATE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const S = {
-  pv:1768, users:473, lp:11, art:48,
-  pvT:1768, usersT:473, lpT:11,
-  feedRows:0, modalAction:null, chatCollapsed:false,
-};
+// ━━━ Site data ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const SITES = [
+  {
+    id:'myaiagents', name:'myaiagents.agency', domain:'media-blog.myaiagents.agency',
+    logoText:'M', logoCls:'',
+    plan:'BUSINESS · ¥4,950',
+    pv:1768, users:473, lp:11, art:48, cap:100,
+    posts:[
+      { ti:'スマホ で 記事 生成 を 完全 マスター | AI 活用 完全 ガイド', date:'06-09', pv:276, lp:9, t:'↑' },
+      { ti:'AI ライター × 自動 ブログ 生成 の 完全 ガイド | 仕組み・導入', date:'06-09', pv:189, lp:5, t:'↑' },
+      { ti:'AI が メディア 作成 から 記事 生成 まで 全 自動 | MY AI Agent 仕組み', date:'06-08', pv:142, lp:3, t:'→' },
+      { ti:'SEO 記事 執筆 自動 化 ツール で 手 作業 を 激減 | 2026 完全 ガイド', date:'06-08', pv:118, lp:2, t:'↑' },
+      { ti:'MY AI Agent とは? スマホ で 記事 を 自動 生成 する AI ブログ 運営', date:'06-07', pv:97, lp:1, t:'↑' },
+      { ti:'ポイ活 アプリ 比較 2026 年版', date:'06-05', pv:84, lp:0, t:'↓' },
+      { ti:'AI 記事 自動 化 ツール 5 選 | コスト と 性能 で 比較', date:'06-04', pv:72, lp:1, t:'↓' },
+      { ti:'メディア 構築 完全 ガイド · ゼロ から 月 100 記事 公開 まで', date:'06-03', pv:58, lp:0, t:'—' },
+    ]
+  },
+  {
+    id:'pico', name:'lp.pico-app.com', domain:'pico.myaiagents.agency',
+    logoText:'P', logoCls:'purple',
+    plan:'BUSINESS · ¥4,950',
+    pv:815, users:87, lp:3, art:3, cap:100,
+    posts:[
+      { ti:'カメラ で 稼ぐ ポイント 活動 アプリ の 始め 方', date:'06-09', pv:412, lp:2, t:'↑' },
+      { ti:'写真 で 副収入 · 初心者 でも できる 5 ステップ', date:'06-08', pv:251, lp:1, t:'↑' },
+      { ti:'スマホ 1 台 で 始める 写真 販売 ベスト 方法', date:'06-07', pv:152, lp:0, t:'→' },
+    ]
+  },
+];
+let activeSiteIdx = 0;
 
-// ━━━ CLOCK ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ State ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const S = { pv:0, users:0, lp:0, pvT:0, usersT:0, lpT:0, feedRows:0, modalAction:null, chatCollapsed:false };
+
+// ━━━ Clock ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function pad(n){ return String(n).padStart(2,'0'); }
 function nowStr(){ const d=new Date(); return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }
 function tick(){
@@ -804,7 +800,7 @@ function tick(){
 }
 setInterval(tick, 1000); tick();
 
-// ━━━ NUMBERS animate up ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ Numbers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function animNum(id, current, target){
   const el = document.getElementById(id);
   if(!el) return;
@@ -814,11 +810,6 @@ function animNum(id, current, target){
   el.textContent = next.toLocaleString();
   setTimeout(()=>animNum(id, next, target), 35);
 }
-animNum('statPv', 0, S.pv);
-animNum('statUsers', 0, S.users);
-animNum('statLp', 0, S.lp);
-
-// ━━━ SPARKLINES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function buildSpark(id, count){
   const el = document.getElementById(id);
   if(!el) return;
@@ -830,16 +821,105 @@ function buildSpark(id, count){
     el.appendChild(b);
   }
 }
-['sparkPv','sparkUsers','sparkLp'].forEach(id => buildSpark(id, 14));
 
-// Ambient bump
+// ━━━ Load site ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function loadActiveSite(){
+  const site = SITES[activeSiteIdx];
+  // Switcher
+  document.getElementById('siteName').textContent = site.name;
+  document.getElementById('siteUrl').textContent = site.art + ' 記事 · ' + site.plan;
+  const logo = document.getElementById('siteLogo');
+  logo.textContent = site.logoText;
+  logo.className = 'site-logo ' + site.logoCls;
+  // Nav badge
+  document.querySelector('.nav-btn[data-view="media"] .nav-badge').textContent = site.art;
+  // Crumbs
+  document.getElementById('crumb-home').textContent = '▌ ' + site.name + ' · 24h LIVE';
+  document.getElementById('crumb-media').textContent = '▌ ' + site.domain + ' · ' + site.art + ' 記事';
+  document.getElementById('crumb-set').textContent = '▌ ' + site.name + ' · プラン / 通知 / 連携';
+  document.getElementById('artCnt').textContent = site.art + ' / ' + site.cap + ' cap';
+  // Numbers animate (from 0)
+  S.pv = 0; S.users = 0; S.lp = 0;
+  S.pvT = site.pv; S.usersT = site.users; S.lpT = site.lp;
+  animNum('statPv', 0, site.pv);
+  animNum('statUsers', 0, site.users);
+  animNum('statLp', 0, site.lp);
+  S.pv = site.pv; S.users = site.users; S.lp = site.lp;
+  // Funnel
+  document.getElementById('funArt').textContent = site.art + ' articles · AI 自動 生成';
+  document.getElementById('funArtV').textContent = site.art;
+  document.getElementById('funPv').textContent = site.pv.toLocaleString() + ' views · ' + site.users + ' unique';
+  document.getElementById('funPvV').textContent = site.pv.toLocaleString();
+  document.getElementById('funLp').textContent = site.lp + ' sessions · footer ' + Math.round(site.lp*.7) + ' / inline ' + Math.round(site.lp*.3);
+  document.getElementById('funLpV').textContent = site.lp;
+  document.getElementById('funC1').textContent = 'conv ' + Math.round(site.pv/Math.max(1,site.art)) + 'x';
+  document.getElementById('funC2').textContent = 'conv ' + ((site.lp/site.pv)*100).toFixed(2) + '%';
+  // Article list
+  renderArtList(site.posts);
+  renderRank(site.posts);
+  ['sparkPv','sparkUsers','sparkLp'].forEach(id => buildSpark(id, 14));
+}
+
+function renderArtList(posts){
+  const el = document.getElementById('artList');
+  if(!el) return;
+  el.innerHTML = posts.map(p => `
+    <div class="art-row">
+      <div>
+        <div class="art-title">${p.ti}</div>
+        <div class="art-meta">${p.date} · ${p.pv} PV · LP ${p.lp} sess</div>
+      </div>
+      <div class="art-pv">${p.pv}</div>
+      <div class="art-lp">LP ${p.lp}</div>
+      <div class="art-trend" style="color:${p.t==='↓'?'var(--rose)':p.t==='→'?'var(--text3)':'var(--green)'}">${p.t}</div>
+      <div class="art-act">
+        <button class="btn-sm" onclick="showToast('開く: ${p.ti.slice(0,20)}…')">開く</button>
+        <button class="btn-sm" onclick="showToast('♻️ リライト 起動 (mock)')">♻️</button>
+      </div>
+    </div>
+  `).join('');
+}
+function renderRank(posts){
+  const el = document.getElementById('rankList');
+  if(!el) return;
+  el.innerHTML = posts.map((p,i) => `
+    <div class="rank-row">
+      <span class="rank-num">${i+1}</span>
+      <span class="rank-title">${p.ti}</span>
+      <span class="rank-pv">${p.pv} PV</span>
+      <span class="rank-lp">LP ${p.lp}</span>
+      <span class="rank-trend" style="color:${p.t==='↓'?'var(--rose)':p.t==='→'?'var(--text3)':'var(--green)'}">${p.t}</span>
+    </div>
+  `).join('');
+}
+
+// Site dropdown
+function toggleSiteDD(){
+  document.getElementById('siteBtn').classList.toggle('open');
+  document.getElementById('siteDD').classList.toggle('show');
+}
+function pickSite(idx, el){
+  activeSiteIdx = idx;
+  document.querySelectorAll('.site-opt').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+  toggleSiteDD();
+  loadActiveSite();
+  showToast('▶ サイト 切替: ' + SITES[idx].name);
+}
+document.addEventListener('click', (e)=>{
+  const sw = document.querySelector('.site-switch');
+  if(sw && !sw.contains(e.target)){
+    document.getElementById('siteBtn').classList.remove('open');
+    document.getElementById('siteDD').classList.remove('show');
+  }
+});
+
+// Ambient bump (only on active site)
 setInterval(()=>{
   if(Math.random() < 0.3){ S.pvT += Math.floor(Math.random()*3)+1; animNum('statPv', S.pv, S.pvT); S.pv = S.pvT; }
   if(Math.random() < 0.15){ S.usersT += 1; animNum('statUsers', S.users, S.usersT); S.users = S.usersT; }
   if(Math.random() < 0.08){ S.lpT += 1; animNum('statLp', S.lp, S.lpT); S.lp = S.lpT; }
 }, 4000);
-
-// Sparkline pulse
 setInterval(()=>{
   ['sparkPv','sparkUsers','sparkLp'].forEach(id => {
     const el = document.getElementById(id);
@@ -847,19 +927,17 @@ setInterval(()=>{
     el.querySelectorAll('.b').forEach(b => b.style.height = (20 + Math.random()*80) + '%');
   });
 }, 3000);
-
-// Working bars
 let barP = { bar1:48, bar2:72, bar3:25 };
 setInterval(()=>{
   Object.keys(barP).forEach(k => {
     barP[k] += Math.random() * 3;
-    if(barP[k] >= 100){ barP[k] = 0; addFeed('publish', '記事 公開: 「AI で 月 100 本 自動 化」', 'open'); }
+    if(barP[k] >= 100){ barP[k] = 0; addFeed('publish', '記事 公開: 「AI で 月 100 本 自動 化」'); }
     const el = document.getElementById(k);
     if(el) el.style.width = barP[k] + '%';
   });
 }, 2000);
 
-// ━━━ FEED ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ Feed ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const FEED_T = [
   ['publish', '', '記事 公開', ['「スマホ で 副業 始める 完全 ガイド」', '「AI ライター 比較 2026 年版」', '「ポイ活 始め 方 初心者 編」']],
   ['rewrite', 'amber', 'AI リライト', ['「メディア 自動 化 入門」 (#11 → 順位 改善 待ち)', '「AI で 100 記事 / 月」 (字数 +1,200)']],
@@ -878,7 +956,6 @@ const SEED = [
   { t:'04:30:19', tag:'WARN', cls:'red', msg:'順位 下落: 「メディア 構築 ツール」 #4 → #9' },
   { t:'04:30:02', tag:'PUBLISH', cls:'', msg:'記事 公開: <span class="v">「AI ライター 完全 比較 2026」</span>' },
 ];
-
 function feedRow(t, tag, cls, msg){
   return `<span class="feed-time">${t}</span><span class="feed-tag ${cls}">▌ ${tag}</span><span class="feed-msg">${msg}</span><a class="feed-link" href="javascript:void(0)" onclick="event.stopPropagation();showToast('開く: ${tag}')">open ↗</a>`;
 }
@@ -910,29 +987,7 @@ setInterval(()=>{
   addFeed(t[0], `${t[2]}: ${s}`);
 }, 6000 + Math.random() * 4000);
 
-// ━━━ MEDIA: post rank ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const POSTS = [
-  { ti:'スマホ で 記事 生成 を 完全 マスター | AI 活用 完全 ガイド', pv:276, lp:9, t:'↑' },
-  { ti:'AI ライター × 自動 ブログ 生成 の 完全 ガイド | 仕組み・導入・注意点', pv:189, lp:5, t:'↑' },
-  { ti:'AI が メディア 作成 から 記事 生成 まで 全 自動 | MY AI Agent の 仕組み', pv:142, lp:3, t:'→' },
-  { ti:'SEO 記事 執筆 自動 化 ツール で 手 作業 を 激減 | 2026 完全 ガイド', pv:118, lp:2, t:'↑' },
-  { ti:'MY AI Agent とは? スマホ で 記事 を 自動 生成 する AI ブログ 運営', pv:97, lp:1, t:'↑' },
-];
-function renderPostRank(){
-  const el = document.getElementById('postRank');
-  if(!el) return;
-  el.innerHTML = POSTS.map((p,i) => `
-    <div class="rank-row">
-      <span class="rank-num">${i+1}</span>
-      <span class="rank-title">${p.ti}</span>
-      <span class="rank-pv">${p.pv} PV</span>
-      <span class="rank-lp">LP ${p.lp}</span>
-      <span class="rank-trend">${p.t}</span>
-    </div>
-  `).join('');
-}
-
-// ━━━ ANALYTICS chart ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ Chart ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function buildChart(){
   const el = document.getElementById('chartBars');
   if(!el) return;
@@ -948,30 +1003,6 @@ function buildChart(){
     el.appendChild(b);
   }
 }
-
-const ANA_RANK = [
-  { ti:'スマホ で 記事 生成 を 完全 マスター', pv:276, lp:9, t:'↑' },
-  { ti:'AI ライター × 自動 ブログ 生成 の 完全 ガイド', pv:189, lp:5, t:'↑' },
-  { ti:'AI が メディア 作成 から 記事 生成 まで 全 自動', pv:142, lp:3, t:'→' },
-  { ti:'SEO 記事 執筆 自動 化 ツール で 手 作業 を 激減', pv:118, lp:2, t:'↑' },
-  { ti:'MY AI Agent とは? スマホ で 記事 を 自動 生成', pv:97, lp:1, t:'↑' },
-  { ti:'ポイ活 アプリ 比較 2026 年版', pv:84, lp:0, t:'↓' },
-  { ti:'AI 記事 自動 化 ツール 5 選', pv:72, lp:1, t:'↓' },
-  { ti:'メディア 構築 完全 ガイド', pv:58, lp:0, t:'—' },
-];
-function renderRank(){
-  const el = document.getElementById('rankList');
-  if(!el) return;
-  el.innerHTML = ANA_RANK.map((p,i) => `
-    <div class="rank-row">
-      <span class="rank-num">${i+1}</span>
-      <span class="rank-title">${p.ti}</span>
-      <span class="rank-pv">${p.pv} PV</span>
-      <span class="rank-lp">LP ${p.lp}</span>
-      <span class="rank-trend" style="color:${p.t==='↓'?'var(--rose)':p.t==='→'?'var(--text3)':'var(--green)'}">${p.t}</span>
-    </div>
-  `).join('');
-}
 function setPeriod(btn, p){
   document.querySelectorAll('.period-tabs button').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -980,7 +1011,7 @@ function setPeriod(btn, p){
   showToast('期間: ' + p);
 }
 
-// ━━━ NAV ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ Nav ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function navTo(view, btn){
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -988,15 +1019,13 @@ function navTo(view, btn){
   const target = document.getElementById('view-' + view);
   if(target) target.classList.add('active');
   document.querySelector('.main').scrollTop = 0;
-  // Lazy render
-  if(view === 'media') renderPostRank();
-  if(view === 'analytics'){ buildChart(); renderRank(); }
+  if(view === 'analytics'){ buildChart(); }
 }
 
-// ━━━ MODAL ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ Modal ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function openTask(kind){
   const m = {
-    write: ['Writing task', 'AI Writer-3 が 「スマホ で ポイ活 始め たい 人 向け 完全 ガイド」 を 執筆 中。 8,200 字 目標。 完了 まで 約 25 秒。'],
+    write: ['Writing task', 'AI Writer-3 が 「スマホ で ポイ活 始め たい 人 向け 完全 ガイド」 を 執筆 中。 8,200 字 目標、 完了 まで 約 25 秒。'],
     research: ['Research task', 'Researcher-1 が rewards-app.jp の 直近 30 KW を 分析。 競合 ギャップ を 5 件 抽出 中。'],
     rewrite: ['Rewrite task', 'Editor-2 が 「AI 記事 自動 化」 を SEO 観点 で 改修。 1,200 字 追加 + 内部 リンク 3 つ 追加 予定。'],
   };
@@ -1005,12 +1034,9 @@ function openTask(kind){
 }
 function openSug(kind){
   const m = {
-    hot: ['緊急: 競合 抜き 案 を 起動 する',
-          'AI チーム 5 名 (Researcher / Writer / Editor / SEO / Image) を 同時 起動 し、 12 時間 以内 に 公開 完了。 月間 cap 残 52 件 から 1 件 消費。 推定 コスト ¥18。'],
-    medium: ['LP 流入 を 11 → 100 sessions に 伸ばす',
-             '記事 中 inline CTA を 直近 10 記事 に 自動 注入。 既存 記事 を 触ら ず、 SSR render 時 に 後 注入 で 安全。 推定 +60-80 sess / 月。'],
-    low: ['「ポイ活 アプリ 比較」 を AI リライト',
-          '上位 競合 構造 を 元 に、 AI が 1,200-1,800 字 追加 + 比較 表 を 改修。 30 日 後 順位 を 再 check。'],
+    hot: ['緊急: 競合 抜き 案 を 起動 する', 'AI チーム 5 名 (Researcher / Writer / Editor / SEO / Image) を 同時 起動、 12 時間 以内 に 公開 完了。 月間 cap 残 52 件 から 1 件 消費。 推定 コスト ¥18。'],
+    medium: ['LP 流入 を 11 → 100 sessions に 伸ばす', '記事 中 inline CTA を 直近 10 記事 に 自動 注入。 既存 記事 を 触ら ず、 SSR render 時 に 後 注入 で 安全。 推定 +60-80 sess / 月。'],
+    low: ['「ポイ活 アプリ 比較」 を AI リライト', '上位 競合 構造 を 元 に、 AI が 1,200-1,800 字 追加 + 比較 表 を 改修。 30 日 後 順位 を 再 check。'],
   };
   const v = m[kind] || m.medium;
   showModal('SUGGESTION', v[0], v[1], '⚡ 起動 する');
@@ -1030,19 +1056,14 @@ function modalConfirm(){
   setTimeout(()=>addFeed('publish', '起動: ' + S.modalAction), 400);
 }
 
-// ━━━ CHAT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ Chat ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function toggleChat(){
   const c = document.getElementById('chat');
   S.chatCollapsed = !S.chatCollapsed;
   c.classList.toggle('collapsed', S.chatCollapsed);
 }
-function onChatKey(e){
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); }
-}
-function quickChat(text){
-  document.getElementById('chatInput').value = text;
-  sendChat();
-}
+function onChatKey(e){ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); } }
+function quickChat(text){ document.getElementById('chatInput').value = text; sendChat(); }
 function sendChat(){
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
@@ -1064,16 +1085,17 @@ function sendChat(){
 }
 function reply(t){
   const x = t.toLowerCase();
+  const site = SITES[activeSiteIdx];
   if(x.includes('数字') || x.includes('まとめ'))
-    return `今週: PV <b>${S.pv.toLocaleString()}</b> · users <b>${S.users.toLocaleString()}</b> · LP <b>${S.lp}</b>。 先週 比 +12%。 詳しく は <span class="k">/analytics</span> へ。`;
-  if(x.includes('競合')) return `Researcher-1 を 起動。 直近 30 KW を 分析 中 (約 90 秒)。 完了 し たら ここ に 通知 する。`;
+    return `${site.name} の 今週: PV <b>${S.pv.toLocaleString()}</b> · users <b>${S.users.toLocaleString()}</b> · LP <b>${S.lp}</b>。 先週 比 +12%。`;
+  if(x.includes('競合')) return `Researcher-1 を 起動。 直近 30 KW を 分析 中 (約 90 秒)。 完了 し たら 通知 する。`;
   if(x.includes('提案') || x.includes('記事'))
     return `KW 候補 5 件 抽出: 「スマホ 副業」「AI ライター 比較」「ポイ活 始め 方」「メディア 自動 化」「SEO 完全 ガイド」。 どれ 進める？`;
   return `了解。 <span class="k">${esc(t).slice(0, 40)}</span> を 処理 中。`;
 }
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// ━━━ TOAST ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ Toast ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let toastTimer = null;
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -1088,8 +1110,9 @@ document.addEventListener('keydown', (e)=>{
   if(e.metaKey && e.key === 'k'){ e.preventDefault(); document.getElementById('chatInput').focus(); }
 });
 
-// Welcome
-setTimeout(()=>showToast('▶ MOCK · サイド バー で 全 ページ 触れ ます'), 800);
+// Init
+loadActiveSite();
+setTimeout(()=>showToast('▶ サイト = workspace。 左 上 から 切替 でき ます'), 800);
 </script>
 </body>
 </html>

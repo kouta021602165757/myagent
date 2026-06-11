@@ -28541,3 +28541,328 @@ function navTo(view, btn){
       break;
   }
 }
+
+// ═════════════════════════════════════════════════════════════════
+// 🚀 Phase 6: 課金 動機 系 (= welcome demo + tour + upsell + churn)
+// ═════════════════════════════════════════════════════════════════
+
+// ── Welcome modal (= 初 ログイン 即 価値 体感)
+function mbOpenWelcome(){
+  ['mbWelStage1','mbWelStage2','mbWelStage3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = (i === 0) ? 'block' : 'none';
+  });
+  for(let i=1; i<=5; i++){
+    const r = document.getElementById('mbWdRow'+i);
+    if(r){ r.classList.remove('done','active'); const ic = document.getElementById('mbWdIc'+i); if(ic) ic.textContent = i; }
+  }
+  document.getElementById('mbWelcomeModal').classList.add('show');
+}
+function mbCloseWelcome(skipTour){
+  document.getElementById('mbWelcomeModal').classList.remove('show');
+  try { localStorage.setItem('mb-welcome-done', '1'); } catch(_){}
+  if(!skipTour){
+    try { if(!localStorage.getItem('mb-tour-seen')) setTimeout(mbTourStart, 400); } catch(_){}
+  }
+}
+function mbWelAutoPublish(){
+  document.getElementById('mbWelStage1').style.display = 'none';
+  document.getElementById('mbWelStage2').style.display = 'block';
+  const steps = [0, 5000, 14000, 19000, 24000];
+  let eta = 28;
+  const etaT = setInterval(()=>{
+    eta--;
+    if(eta>=0){ const el = document.getElementById('mbWelEta'); if(el) el.textContent = eta; }
+  }, 1000);
+  steps.forEach((delay, i) => {
+    setTimeout(()=>{
+      const idx = i + 1;
+      if(idx > 1){
+        const prev = document.getElementById('mbWdRow' + (idx-1));
+        if(prev){ prev.classList.remove('active'); prev.classList.add('done'); }
+        const prevIc = document.getElementById('mbWdIc' + (idx-1));
+        if(prevIc) prevIc.textContent = '✓';
+      }
+      const cur = document.getElementById('mbWdRow' + idx);
+      if(cur) cur.classList.add('active');
+    }, delay);
+  });
+  setTimeout(()=>{
+    clearInterval(etaT);
+    const last = document.getElementById('mbWdRow5');
+    if(last){ last.classList.remove('active'); last.classList.add('done'); }
+    const lastIc = document.getElementById('mbWdIc5');
+    if(lastIc) lastIc.textContent = '✓';
+  }, 27000);
+  setTimeout(()=>{
+    document.getElementById('mbWelStage2').style.display = 'none';
+    document.getElementById('mbWelStage3').style.display = 'block';
+    mbFireConfetti();
+  }, 28000);
+}
+function mbFireConfetti(){
+  const colors = ['#0e5a55','#c0ff5c','#a3e635','#7c9e6e','#dc2626'];
+  const n = window.innerWidth <= 700 ? 28 : 60;
+  for(let i=0; i<n; i++){
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = (Math.random()*100) + '%';
+    c.style.background = colors[i % colors.length];
+    c.style.animationDelay = (Math.random()*1.5) + 's';
+    c.style.animationDuration = (2 + Math.random()*1.5) + 's';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(), 4000);
+  }
+}
+
+// ── Upsell modal (= 既 stub を 実装 に)
+async function openUpsellModal(){
+  // ROI 計算 = me.plan + 月 公開 数 × ¥3,000
+  let cap = 20, plan = 'free';
+  if(typeof me === 'object' && me){
+    plan = me.plan || 'free';
+    cap = plan === 'business' ? 100 : plan === 'pro' ? 50 : 20;
+  }
+  let used = 0;
+  try {
+    const allAg = (typeof agents !== 'undefined' && agents) ? agents : [];
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    allAg.forEach(a => {
+      if(!a || !a.media_posts_idx) return;
+      a.media_posts_idx.forEach(p => {
+        if(p && p.status !== 'draft' && new Date(p.published_at || p.created_at || 0).getTime() >= monthStart) used++;
+      });
+    });
+  } catch(_){}
+  const leftEl = document.getElementById('mbUpsellLeft');
+  const savedEl = document.getElementById('mbUpsellSaved');
+  if(leftEl) leftEl.textContent = Math.max(0, cap - used);
+  if(savedEl) savedEl.textContent = (used * 3000).toLocaleString();
+  document.getElementById('mbUpsellModal').classList.add('show');
+}
+function mbCloseUpsell(){
+  document.getElementById('mbUpsellModal').classList.remove('show');
+}
+// 既 closeUpsellModal stub も 上書き
+function closeUpsellModal(){ mbCloseUpsell(); }
+
+// ── Plan card 更新 (= ROI 拡張、 既 updatePlanCard を 上書き)
+async function updatePlanCard(){
+  try {
+    const meData = (typeof me === 'object' && me) ? me : null;
+    if(!meData) return;
+    const plan = meData.plan || 'free';
+    const planMap = {
+      free:     { name: '🆓 FREE',     cap: 20 },
+      pro:      { name: '✦ PRO',       cap: 50 },
+      business: { name: '⚡ BUSINESS', cap: 100 },
+    };
+    const info = planMap[plan] || planMap.free;
+    // 月 公開 数 = agents の media_posts_idx を 集計
+    let used = 0;
+    const allAg = (typeof agents !== 'undefined' && agents) ? agents : [];
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    allAg.forEach(a => {
+      if(!a || !a.media_posts_idx) return;
+      a.media_posts_idx.forEach(p => {
+        if(p && p.status !== 'draft' && new Date(p.published_at || p.created_at || 0).getTime() >= monthStart) used++;
+      });
+    });
+    const pct = Math.round(used / info.cap * 100);
+    const card = document.getElementById('planCard');
+    if(!card) return;
+    const setT = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+    setT('planCardName', info.name);
+    setT('planCardFrac', used + ' / ' + info.cap);
+    const fill = document.getElementById('planCardFill');
+    if(fill) fill.style.width = pct + '%';
+    setT('planCardMsg', pct >= 80 ? '⚠ あと ' + (info.cap - used) + ' 本 で cap' : '今月 残 ' + (info.cap - used) + ' 本 · 月末 reset');
+    card.classList.toggle('warn', pct >= 80);
+    const upBtn = document.getElementById('planCardUpBtn');
+    if(upBtn) upBtn.style.display = (pct >= 80 && plan !== 'business') ? 'block' : 'none';
+  } catch(e){ console.warn('updatePlanCard fail', e); }
+}
+
+// ── Churn (= 退会 防止) wizard
+let _mbChurnStep = 1, _mbChurnReason = null;
+const _MB_CHURN_OFFERS = {
+  price:   { tag:'価格 オファー', title:'2 ヶ月 半額 で 続け ません か？', desc:'¥4,950 → <b>¥2,475</b> / 月 を 2 ヶ月 提供。 合計 <b>¥4,950 割引</b>。' },
+  quality: { tag:'品質 サポート', title:'1on1 で 記事 品質 を チューニング', desc:'CS マネージャ が <b>無料 で 30 分 セッション</b>。 改 善 し ない 場合 は <b>1 ヶ月 全額 返金</b>。' },
+  usage:   { tag:'ライト プラン',   title:'月 ¥980 の ライト プラン',  desc:'月 5 本 まで の <b>¥980 / 月 ライト</b> に 切替 可能。 サイト と 記事 は そのまま 保持。' },
+  missing: { tag:'機能 リクエスト', title:'欲しい 機能 を 教えて くだ さい', desc:'プロダクト チーム が <b>2 週間 以内 に 検討</b>。 重要 リクエスト は <b>1 ヶ月 無料 + 優先 開発</b>。' },
+  other:   { tag:'柔軟 オファー', title:'1 ヶ月 無料 で もう 一度', desc:'<b>1 ヶ月 完全 無料 + 個別 サポート</b>。 合 わ な けれ ば 即 退会 可能。' },
+};
+function mbOpenChurn(){
+  _mbChurnStep = 1; _mbChurnReason = null;
+  // stat 反映
+  let articles = 0;
+  const allAg = (typeof agents !== 'undefined' && agents) ? agents : [];
+  allAg.forEach(a => {
+    if(a && a.media_posts_idx) articles += a.media_posts_idx.filter(p => p && p.status !== 'draft').length;
+  });
+  const statEl = document.getElementById('mbChurnStat');
+  if(statEl) statEl.textContent = articles + ' 記事 を 公 開';
+  const savedEl = document.getElementById('mbChurnSaved');
+  if(savedEl) savedEl.textContent = '¥' + (articles * 3000).toLocaleString() + ' 相 当';
+  // reset state
+  document.getElementById('mbChurnConfirm').value = '';
+  document.getElementById('mbChurnConfirmStatus').textContent = '— 「退 会 します」 と 入力';
+  document.querySelectorAll('.churn-reason-btn').forEach(b => b.classList.remove('selected'));
+  mbRenderChurn();
+  document.getElementById('mbChurnModal').classList.add('show');
+}
+function mbCloseChurn(){ document.getElementById('mbChurnModal').classList.remove('show'); }
+function mbRenderChurn(){
+  for(let i=1; i<=4; i++){
+    const el = document.getElementById('mbChurnStep'+i);
+    if(el) el.classList.toggle('active', i === _mbChurnStep);
+  }
+  const titles = { 1:'退会 する 前 に', 2:'退会 の 理 由', 3:'特 別 オファー', 4:'最 終 確 認' };
+  const titleEl = document.getElementById('mbChurnTitle');
+  if(titleEl) titleEl.textContent = titles[_mbChurnStep];
+  const back = document.getElementById('mbChurnBack');
+  if(back) back.style.display = _mbChurnStep > 1 ? 'inline-flex' : 'none';
+  const go = document.getElementById('mbChurnGo');
+  if(go) go.style.display = _mbChurnStep === 4 ? 'inline-flex' : 'none';
+}
+function mbChurnNext(step){ _mbChurnStep = step; mbRenderChurn(); }
+function mbChurnBack(){ if(_mbChurnStep > 1){ _mbChurnStep--; mbRenderChurn(); } }
+function mbChurnReason(el, key){
+  document.querySelectorAll('.churn-reason-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  _mbChurnReason = key;
+  const o = _MB_CHURN_OFFERS[key];
+  const tagEl = document.getElementById('mbChurnOfferTag');
+  if(tagEl) tagEl.textContent = o.tag;
+  const titEl = document.getElementById('mbChurnOfferTitle');
+  if(titEl) titEl.textContent = o.title;
+  const descEl = document.getElementById('mbChurnOfferDesc');
+  if(descEl) descEl.innerHTML = o.desc;
+  setTimeout(() => mbChurnNext(3), 400);
+}
+function mbChurnPause(){
+  // /api/billing/pause = 後 phase 実装、 今 は 既 cancel + 30 日 grace 想定 で UI 表示
+  mbCloseChurn();
+  showToast('💤 1 ヶ月 一時 停 止 を 受 付 (= サーバ 実装 後 phase で 接 続)', 'ok');
+}
+function mbChurnAcceptOffer(){
+  mbCloseChurn();
+  showToast('🎉 オファー 適 用 · 引 き 続 き ご 利 用 い た だ け ま す', 'ok');
+}
+function mbChurnOnConfirm(){
+  const v = document.getElementById('mbChurnConfirm').value.trim();
+  const ok = v === '退会 します' || v === '退 会 し ま す' || v === '退 会 します';
+  const go = document.getElementById('mbChurnGo');
+  if(go){
+    go.disabled = !ok;
+    go.style.opacity = ok ? '1' : '.5';
+    go.style.cursor = ok ? 'pointer' : 'not-allowed';
+  }
+  const st = document.getElementById('mbChurnConfirmStatus');
+  if(st){
+    st.textContent = ok ? '✓ 入力 OK' : '— 「退 会 します」 と 入力';
+    st.style.color = ok ? 'var(--green)' : 'var(--text2)';
+  }
+}
+async function mbChurnConfirmDelete(){
+  const go = document.getElementById('mbChurnGo');
+  if(go && go.disabled) return;
+  mbCloseChurn();
+  // 既 DELETE /api/me を 呼 ぶ (= 30 日 grace は 後 phase で server 側 実装)
+  try {
+    await api('DELETE', '/api/me');
+    showToast('🗑 退 会 を 受 付 し まし た', 'ok');
+    setTimeout(() => { localStorage.removeItem('token'); localStorage.removeItem('user'); location.href = '/'; }, 1500);
+  } catch(e){
+    showToast('退 会 失 敗: ' + (e.message||e), 'ng');
+  }
+}
+
+// ── Onboarding tour (= 5 step spotlight)
+const _MB_TOUR_STEPS = [
+  { sel:'.site-switch', t:'まず は サイト を 選 ぼう', d:'左 上 の サイト 名 を click で 切 替。 「+ 新しい サイト」 で 複 数 運営。', placement:'right' },
+  { sel:'.primary-cta', t:'記事 を AI に 書 か せる', d:'1 click で AI チーム が 起 動 し、 8,000 字 級 の 記事 を 90 秒 で 公 開 し ま す。', placement:'right' },
+  { sel:'.mb-stats',    t:'数 字 は 自動 で 計 測',   d:'GA4 / GSC 連 携 が なく ても、 MY AI Agent が 自前 計 測 し て 自動 表 示。', placement:'bottom' },
+  { sel:'#planCard',    t:'プラン を 把 握',         d:'月 cap の 残 と 節約 効果 が ここ に 表 示。 cap 接 近 で アップ動 線 が 自動 出 現。', placement:'top' },
+  { sel:'.nav-btn[data-view="settings"]', t:'設 定 と 退会', d:'⚙ から アカウント / プラン / 通知 / 退会 等 を 操 作。 困 ったら ヘルプ。', placement:'right' },
+];
+let _mbTourIdx = 0;
+function mbTourStart(){
+  _mbTourIdx = 0;
+  document.getElementById('mbTourBg').classList.add('show');
+  mbRenderTour();
+  try { localStorage.setItem('mb-tour-seen', '1'); } catch(_){}
+}
+function mbTourEnd(skipped){
+  document.getElementById('mbTourBg').classList.remove('show');
+  if(skipped) showToast('tour skip · ヘルプ から 再 起 動 可能', 'ok');
+}
+function mbTourNext(){
+  if(_mbTourIdx < _MB_TOUR_STEPS.length - 1){ _mbTourIdx++; mbRenderTour(); }
+  else { mbTourEnd(false); showToast('🎉 tour 完 了', 'ok'); }
+}
+function mbTourBack(){ if(_mbTourIdx > 0){ _mbTourIdx--; mbRenderTour(); } }
+function mbRenderTour(){
+  const step = _MB_TOUR_STEPS[_mbTourIdx];
+  const target = document.querySelector(step.sel);
+  if(!target){
+    if(_mbTourIdx < _MB_TOUR_STEPS.length - 1){ _mbTourIdx++; mbRenderTour(); return; }
+    mbTourEnd(false); return;
+  }
+  const r = target.getBoundingClientRect();
+  const pad = 8;
+  const hole = document.getElementById('mbTourHole');
+  hole.style.left = (r.left - pad) + 'px';
+  hole.style.top = (r.top - pad) + 'px';
+  hole.style.width = (r.width + pad*2) + 'px';
+  hole.style.height = (r.height + pad*2) + 'px';
+  const card = document.getElementById('mbTourCard');
+  const cardW = 320, cardH = 220, gap = 16;
+  let cl = 0, ct = 0;
+  if(step.placement === 'right'){ cl = r.right + gap; ct = r.top; if(cl + cardW > window.innerWidth - 16){ cl = r.left; ct = r.bottom + gap; } }
+  else if(step.placement === 'bottom'){ cl = Math.max(16, r.left + r.width/2 - cardW/2); ct = r.bottom + gap; }
+  else if(step.placement === 'top'){ cl = Math.max(16, r.right - cardW); ct = r.top - cardH - gap; if(ct < 16) ct = r.bottom + gap; }
+  else { cl = r.left; ct = r.bottom + gap; }
+  if(cl + cardW > window.innerWidth - 16) cl = window.innerWidth - cardW - 16;
+  if(ct + cardH > window.innerHeight - 16) ct = Math.max(16, window.innerHeight - cardH - 16);
+  card.style.left = cl + 'px'; card.style.top = ct + 'px';
+  document.getElementById('mbTourT').textContent = step.t;
+  document.getElementById('mbTourD').textContent = step.d;
+  document.getElementById('mbTourStepBadge').textContent = (_mbTourIdx + 1) + ' / ' + _MB_TOUR_STEPS.length;
+  const prog = document.getElementById('mbTourProg');
+  if(prog) prog.innerHTML = _MB_TOUR_STEPS.map((_, i) => '<div class="dot' + (i === _mbTourIdx ? ' active' : '') + '"></div>').join('');
+  const back = document.getElementById('mbTourBack');
+  if(back) back.style.display = _mbTourIdx > 0 ? 'inline-flex' : 'none';
+  const next = document.getElementById('mbTourNext');
+  if(next) next.textContent = _mbTourIdx === _MB_TOUR_STEPS.length - 1 ? '✓ 完 了' : '次 へ →';
+}
+window.addEventListener('resize', () => {
+  if(document.getElementById('mbTourBg') && document.getElementById('mbTourBg').classList.contains('show')) mbRenderTour();
+});
+// Esc で tour も close
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){
+    const tb = document.getElementById('mbTourBg');
+    if(tb && tb.classList.contains('show')) mbTourEnd(true);
+    const m = document.getElementById('mbWelcomeModal');
+    if(m && m.classList.contains('show')) mbCloseWelcome(true);
+    const u = document.getElementById('mbUpsellModal');
+    if(u && u.classList.contains('show')) mbCloseUpsell();
+    const c = document.getElementById('mbChurnModal');
+    if(c && c.classList.contains('show')) mbCloseChurn();
+  }
+});
+
+// ── 初 ログイン 検 出 で welcome 自動 起 動
+// me.created_at が 直 近 5 分 以内 = 新 規 user
+setTimeout(() => {
+  try {
+    if(typeof me !== 'object' || !me) return;
+    if(localStorage.getItem('mb-welcome-done')) return;
+    const createdAt = me.created_at ? new Date(me.created_at).getTime() : 0;
+    const isNew = createdAt > 0 && (Date.now() - createdAt) < 5 * 60 * 1000;
+    if(isNew) mbOpenWelcome();
+  } catch(_){}
+}, 3000);

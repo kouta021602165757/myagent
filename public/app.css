@@ -9863,3 +9863,91 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   .gen-input-wrap{flex-direction:column}
   .gen-go{justify-content:center}
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   🚀 Phase 6: 課金 動機 系 (= welcome demo + tour + upsell + churn)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* keyframes (= 衝 突 回 避 で mb6- prefix) */
+@keyframes mb6-fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes mb6-popIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+@keyframes mb6-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:.5}}
+
+/* Welcome modal (= 初 ログイン 価値 体感) */
+.welcome-stage{padding:8px 4px;text-align:center}
+.welcome-hero{font-size:34px;font-weight:900;letter-spacing:-1px;margin:6px 0 4px;color:var(--teal);line-height:1.1}
+.welcome-sub{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.55}
+.welcome-demo{background:var(--cream2);border-radius:11px;padding:18px 16px;margin:14px 0;border:1px dashed var(--wire)}
+.wd-row{display:flex;align-items:center;gap:12px;padding:8px 0;font-family:var(--mono);font-size:11.5px;text-align:left;opacity:.3;transition:opacity .35s}
+.wd-row.done{opacity:1}
+.wd-row.active{opacity:1;color:var(--teal);font-weight:700}
+.wd-row .wd-ic{width:24px;height:24px;border-radius:50%;background:var(--wire);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-weight:800}
+.wd-row.done .wd-ic{background:var(--green);color:#fff}
+.wd-row.active .wd-ic{background:var(--teal);color:#fff;animation:mb6-pulse 1.4s ease-in-out infinite}
+.welcome-result{background:var(--green-soft);border-radius:11px;padding:18px 16px;margin:14px 0;display:none;border:1px solid var(--green)}
+.welcome-result.show{display:block;animation:mb6-popIn .4s ease}
+.welcome-result-title{font-size:15px;font-weight:800;color:var(--green);margin-bottom:6px}
+.welcome-result-num{font-family:var(--mono);font-size:26px;font-weight:900;color:var(--teal);margin:4px 0;line-height:1.1}
+.welcome-cta{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.confetti{position:fixed;top:-10px;width:8px;height:14px;z-index:300;pointer-events:none;animation:mb6-confetti-fall 3s linear forwards}
+@keyframes mb6-confetti-fall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:.3}}
+
+/* Upsell modal */
+.upsell-roi{background:var(--cream2);border-radius:9px;padding:11px 14px;margin:14px 0;font-size:12.5px;line-height:1.7;color:var(--text)}
+.upsell-roi b{color:var(--teal);font-weight:800}
+.upsell-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.upsell-col{padding:14px;border-radius:11px;border:1px solid var(--wire);background:#fff;min-width:0}
+.upsell-col.pro{border:2px solid var(--teal);background:linear-gradient(180deg,#fff 0%,var(--cream2) 100%);position:relative}
+.upsell-col.pro::before{content:'推 奨';position:absolute;top:-9px;left:14px;background:var(--teal);color:#fff;padding:2px 10px;border-radius:4px;font-size:9.5px;font-weight:800;letter-spacing:.05em;font-family:var(--mono)}
+.upsell-col-name{font-size:12px;font-weight:800;letter-spacing:.05em;color:var(--text);margin-bottom:4px;font-family:var(--mono);text-transform:uppercase}
+.upsell-col-price{font-size:24px;font-weight:900;color:var(--teal);margin-bottom:10px;line-height:1.1}
+.upsell-col-price small{font-size:11px;font-weight:600;color:var(--text2)}
+.upsell-col ul{margin:0;padding:0}
+.upsell-col li{font-size:11.5px;padding:3px 0;color:var(--text);list-style:none;padding-left:18px;position:relative;line-height:1.45}
+.upsell-col li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:800}
+
+/* Churn (= 退会 防止) wizard */
+.churn-step{display:none;padding:6px 4px}
+.churn-step.active{display:block;animation:mb6-fadeIn .25s ease}
+.churn-pause{background:var(--cream2);border-radius:11px;padding:18px 16px;margin:14px 0;border:1px dashed var(--teal)}
+.churn-pause-title{font-size:14px;font-weight:800;color:var(--teal);margin-bottom:6px}
+.churn-pause-desc{font-size:12px;color:var(--text);line-height:1.6;margin-bottom:12px}
+.churn-reasons{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.churn-reason-btn{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--wire);background:#fff;border-radius:9px;cursor:pointer;text-align:left;font-family:var(--sans);font-size:13px;transition:all .2s ease;color:var(--text);min-width:0}
+.churn-reason-btn:hover{border-color:var(--teal);background:var(--cream2)}
+.churn-reason-btn.selected{border-color:var(--teal);background:var(--cream2);font-weight:700}
+.churn-reason-ic{font-size:18px;flex-shrink:0}
+.churn-offer{background:linear-gradient(135deg,var(--teal) 0%,#13635c 100%);color:#fff;border-radius:13px;padding:20px 18px;margin:14px 0;text-align:center}
+.churn-offer-tag{font-family:var(--mono);font-size:10px;letter-spacing:.1em;opacity:.85;text-transform:uppercase}
+.churn-offer-title{font-size:18px;font-weight:900;margin:6px 0 4px;line-height:1.25}
+.churn-offer-desc{font-size:12px;opacity:.9;line-height:1.5;margin-bottom:14px}
+.churn-offer-accept{background:#fff;color:var(--teal);border:0;padding:11px 18px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:var(--sans)}
+.churn-offer-accept:hover{background:var(--peach-soft)}
+
+/* Onboarding tour */
+.tour-bg{position:fixed;inset:0;z-index:200;display:none;animation:mb6-fadeIn .25s ease}
+.tour-bg.show{display:block}
+.tour-hole{position:absolute;border-radius:10px;box-shadow:0 0 0 9999px rgba(13,79,74,.65),0 0 30px rgba(13,79,74,.3);transition:all .4s cubic-bezier(.4,0,.2,1);pointer-events:none;border:2px solid var(--teal)}
+.tour-card{position:absolute;background:#fff;padding:18px 20px;border-radius:11px;max-width:320px;box-shadow:0 20px 60px rgba(0,0,0,.25);transition:all .4s ease;z-index:210}
+.tour-card-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--teal);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.tour-card-h .step{background:var(--teal-soft);padding:2px 8px;border-radius:5px;font-weight:700}
+.tour-card-t{font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px;letter-spacing:-.01em}
+.tour-card-d{font-size:12.5px;color:var(--text2);line-height:1.65;margin-bottom:14px;overflow-wrap:break-word}
+.tour-card-acts{display:flex;align-items:center;gap:8px}
+.tour-card-acts .skip{font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--mono);text-decoration:underline}
+.tour-card-acts .skip:hover{color:var(--text)}
+.tour-card-acts .spacer{flex:1}
+.tour-prog{display:flex;gap:4px;margin-top:14px}
+.tour-prog .dot{width:6px;height:6px;border-radius:50%;background:var(--wire2)}
+.tour-prog .dot.active{background:var(--teal);width:18px;border-radius:3px}
+
+/* mobile */
+@media (max-width: 700px){
+  .welcome-hero{font-size:26px}
+  .welcome-sub{font-size:12.5px}
+  .welcome-cta{flex-direction:column}
+  .welcome-cta .btn{width:100%}
+  .upsell-row{grid-template-columns:1fr;gap:10px}
+  .churn-pause{padding:14px 12px}
+  .churn-reason-btn{padding:11px 12px;font-size:12.5px}
+}

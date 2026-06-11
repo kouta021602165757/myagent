@@ -2412,6 +2412,152 @@ function _cookieDecide(level){
   </div>
 </div>
 
+<!-- ══ Phase 6: 課金 動機 系 modal 群 ══════════════════════════ -->
+
+<!-- Welcome modal (= 初 ログイン 即 価値 体感) -->
+<div class="modal-bg" id="mbWelcomeModal" onclick="if(event.target===this){}">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head" style="background:var(--cream2)"><span>✨</span> <span>MY AI Agent へ ようこそ</span></div>
+    <div class="modal-body">
+      <div class="welcome-stage" id="mbWelStage1">
+        <div class="welcome-hero">「書く」 から 解 放 さ れ よう。</div>
+        <div class="welcome-sub">AI チーム が <b>KW 調 査 → 8,000 字 記事 → 公 開 → SNS 拡 散</b> を <b>90 秒</b> で 自動 化。 まず <b>1 件 を 実 際 に 公 開 し て 体 感</b> し て み ましょう。</div>
+        <div class="welcome-cta">
+          <button class="btn btn-ghost" onclick="mbCloseWelcome(true)">後 で やる</button>
+          <button class="btn btn-go" onclick="mbWelAutoPublish()">▶ AI に 任 せ て 1 件 公 開</button>
+        </div>
+      </div>
+      <div class="welcome-stage" id="mbWelStage2" style="display:none">
+        <div class="welcome-hero" style="font-size:22px">AI チーム が 動 い て い ます</div>
+        <div class="welcome-demo">
+          <div class="wd-row" id="mbWdRow1"><span class="wd-ic" id="mbWdIc1">1</span><span>🔍 KW Strategist が 月 間 検索 量 を 算 出 中...</span></div>
+          <div class="wd-row" id="mbWdRow2"><span class="wd-ic" id="mbWdIc2">2</span><span>📝 SEO Writer が 8,000 字 の 本文 を 執 筆 中...</span></div>
+          <div class="wd-row" id="mbWdRow3"><span class="wd-ic" id="mbWdIc3">3</span><span>🖼 Designer が アイ キャッチ 画像 を 生 成 中...</span></div>
+          <div class="wd-row" id="mbWdRow4"><span class="wd-ic" id="mbWdIc4">4</span><span>⚡ Publisher が CMS へ 公 開 中...</span></div>
+          <div class="wd-row" id="mbWdRow5"><span class="wd-ic" id="mbWdIc5">5</span><span>📡 SNS Distributor が 拡 散 中...</span></div>
+        </div>
+        <div style="font-size:11.5px;color:var(--text2);text-align:center;font-family:var(--mono)">推 定 残り <span id="mbWelEta">28</span> 秒</div>
+      </div>
+      <div class="welcome-stage" id="mbWelStage3" style="display:none">
+        <div class="welcome-hero" style="color:var(--green)">🎉 公 開 完了!</div>
+        <div class="welcome-sub">AI チーム が 1 件 を 完 成 し、 サイト に 公 開 し まし た。 <b>毎日 自動 で 起きる</b> 体 験 です。</div>
+        <div class="welcome-result show">
+          <div class="welcome-result-title">📰 公 開 さ れ た 記事</div>
+          <div style="font-size:13px;color:var(--text);margin:4px 0;font-weight:700">「副業 ブログ で 月 5 万 円 稼ぐ ロード マップ」</div>
+          <div style="font-size:11px;color:var(--text2);font-family:var(--mono);margin-bottom:8px">8,234 字 · 公 開 から 12 秒 後</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
+            <div style="text-align:center"><div class="welcome-result-num">1</div><div style="font-size:10px;color:var(--text2);font-family:var(--mono)">RECORDS</div></div>
+            <div style="text-align:center"><div class="welcome-result-num">¥3K</div><div style="font-size:10px;color:var(--text2);font-family:var(--mono)">外注 換 算</div></div>
+            <div style="text-align:center"><div class="welcome-result-num">90秒</div><div style="font-size:10px;color:var(--text2);font-family:var(--mono)">所 要</div></div>
+          </div>
+        </div>
+        <div class="welcome-cta">
+          <button class="btn btn-ghost" onclick="mbCloseWelcome(true)">後 で やる</button>
+          <button class="btn btn-go" onclick="mbCloseWelcome(false);openArticleGenModal()">▶ 自分 の KW で 書 か せる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upsell modal -->
+<div class="modal-bg" id="mbUpsellModal" onclick="if(event.target===this)mbCloseUpsell()">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-head" style="background:var(--cream2)"><span>📈</span> <span>プラン を アップ グレード</span><button class="modal-x" onclick="mbCloseUpsell()">×</button></div>
+    <div class="modal-body">
+      <div style="font-size:17px;font-weight:700">あと <span id="mbUpsellLeft" style="color:var(--rose)">—</span> 本 で 今 月 の cap に 到 達</div>
+      <div class="upsell-roi">
+        🌱 今 月 すで に <b>¥<span id="mbUpsellSaved">—</span> 相 当</b> の 外 注 コスト を 節 約。<br>
+        ➕ PRO へ アップ で <b>+ 30 本 / 月</b> · <b>¥1,950 / 月</b> で <b>+ ¥90,000 / 月 効 果</b>。
+      </div>
+      <div class="upsell-row">
+        <div class="upsell-col">
+          <div class="upsell-col-name">FREE</div>
+          <div class="upsell-col-price">¥0<small> / 月</small></div>
+          <ul><li>月 20 本 ま で</li><li>1 サイト</li><li>基 本 SEO</li></ul>
+        </div>
+        <div class="upsell-col pro">
+          <div class="upsell-col-name">PRO</div>
+          <div class="upsell-col-price">¥1,950<small> / 月</small></div>
+          <ul><li><b>月 30 本 + 既 存 20</b></li><li>3 サイト</li><li>AEO + リライト 自動</li><li>SNS 自動 シェア</li></ul>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:6px">いつ でも 解 約 OK · 日 割 り 返 金 対 応</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="mbCloseUpsell()">後 で</button>
+      <button class="btn btn-go" onclick="mbCloseUpsell();if(typeof openCharge==='function'){openCharge();if(typeof bsTab==='function')setTimeout(()=>bsTab('monthly'),200);}">▶ PRO に アップ する</button>
+    </div>
+  </div>
+</div>
+
+<!-- Churn (= 退会 防止) wizard -->
+<div class="modal-bg" id="mbChurnModal" onclick="if(event.target===this)mbCloseChurn()">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-head" style="background:var(--rose-soft);color:var(--rose)"><span>😢</span> <span id="mbChurnTitle">退会 する 前 に</span><button class="modal-x" onclick="mbCloseChurn()">×</button></div>
+    <div class="modal-body">
+      <div class="churn-step active" id="mbChurnStep1">
+        <div style="font-size:16px;font-weight:700">本 当 に お 別 れ し ます か？</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.65;margin:10px 0">これ まで <b id="mbChurnStat">— 記事 を 公 開</b>、 累計 <b id="mbChurnSaved">¥— 相 当</b> の 外 注 費 を 節 約。 退 会 で 全 data が <b>削除</b> されます。</div>
+        <div class="churn-pause">
+          <div class="churn-pause-title">💤 まず は「一時 停 止」 し て み ません か？</div>
+          <div class="churn-pause-desc">1 ヶ月 〜 6 ヶ月 の 課金 停止 が 可能。 サイト と 記事 は <b>そのまま 保 持</b>、 いつ でも 再 開 可能。</div>
+          <button class="btn btn-go" style="width:100%" onclick="mbChurnPause()">▶ 1 ヶ月 一時 停 止 する</button>
+        </div>
+        <div style="text-align:center"><a onclick="mbChurnNext(2)" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);text-decoration:underline;cursor:pointer">それ でも 退会 し たい</a></div>
+      </div>
+      <div class="churn-step" id="mbChurnStep2">
+        <div style="font-size:15px;font-weight:700">退会 の 理 由 を 教 え て く だ さ い</div>
+        <div style="font-size:12px;color:var(--text2);margin:6px 0">改 善 の ため。 1 つ 選 ん で く だ さ い。</div>
+        <div class="churn-reasons">
+          <div class="churn-reason-btn" data-reason="price" onclick="mbChurnReason(this,'price')"><span class="churn-reason-ic">💰</span><span>料金 が 高い</span></div>
+          <div class="churn-reason-btn" data-reason="quality" onclick="mbChurnReason(this,'quality')"><span class="churn-reason-ic">📝</span><span>記事 の 品質 が 期 待 通り で は な かった</span></div>
+          <div class="churn-reason-btn" data-reason="usage" onclick="mbChurnReason(this,'usage')"><span class="churn-reason-ic">📉</span><span>使う 頻度 が 落 ち た</span></div>
+          <div class="churn-reason-btn" data-reason="missing" onclick="mbChurnReason(this,'missing')"><span class="churn-reason-ic">🔧</span><span>欲しい 機能 が 無い</span></div>
+          <div class="churn-reason-btn" data-reason="other" onclick="mbChurnReason(this,'other')"><span class="churn-reason-ic">💬</span><span>そ の 他</span></div>
+        </div>
+      </div>
+      <div class="churn-step" id="mbChurnStep3">
+        <div class="churn-offer">
+          <div class="churn-offer-tag" id="mbChurnOfferTag">特 別 オファー</div>
+          <div class="churn-offer-title" id="mbChurnOfferTitle">2 ヶ月 半額 で 続 け ません か？</div>
+          <div class="churn-offer-desc" id="mbChurnOfferDesc">期間 後 は 通 常 料 金 に 戻 ります (= 解 約 自由)。</div>
+          <button class="churn-offer-accept" onclick="mbChurnAcceptOffer()">▶ オファー を 受 ける</button>
+        </div>
+        <div style="text-align:center"><a onclick="mbChurnNext(4)" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);text-decoration:underline;cursor:pointer">退 会 を 進 め る</a></div>
+      </div>
+      <div class="churn-step" id="mbChurnStep4">
+        <div style="font-size:15px;color:var(--rose);font-weight:700">⚠️ 最 終 確 認</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.65;margin:10px 0">続 行 する に は、 下 の 欄 に <b>退 会 します</b> と 正 確 に 入 力 し て く だ さ い。</div>
+        <input type="text" id="mbChurnConfirm" placeholder="退 会 します" oninput="mbChurnOnConfirm()" style="width:100%;padding:11px 13px;border:1px solid var(--wire);border-radius:8px;font-size:13.5px;font-family:inherit;outline:none">
+        <div id="mbChurnConfirmStatus" style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-top:6px">— 「退 会 します」 と 入力</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="mbChurnBack" onclick="mbChurnBack()" style="display:none">← 戻る</button>
+      <button class="btn btn-ghost" onclick="mbCloseChurn()">キャンセル</button>
+      <button class="btn" id="mbChurnGo" style="background:var(--rose);color:#fff;display:none;opacity:.5;cursor:not-allowed" disabled onclick="mbChurnConfirmDelete()">退 会 を 実 行</button>
+    </div>
+  </div>
+</div>
+
+<!-- Onboarding tour -->
+<div class="tour-bg" id="mbTourBg">
+  <div class="tour-hole" id="mbTourHole"></div>
+  <div class="tour-card" id="mbTourCard">
+    <div class="tour-card-h"><span>オンボーディング</span><span class="step" id="mbTourStepBadge">1 / 5</span></div>
+    <div class="tour-card-t" id="mbTourT">タイトル</div>
+    <div class="tour-card-d" id="mbTourD">説明</div>
+    <div class="tour-prog" id="mbTourProg"></div>
+    <div class="tour-card-acts">
+      <a class="skip" onclick="mbTourEnd(true)">skip</a>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" id="mbTourBack" onclick="mbTourBack()" style="display:none">戻る</button>
+      <button class="btn btn-go" id="mbTourNext" onclick="mbTourNext()">次 へ →</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ Sentry (env-gated) ════════════════════════════════════ -->
 <script>
 (function _initSentry(){

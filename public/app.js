@@ -28091,3 +28091,267 @@ async function updatePlanCard(){
 }
 // app.js init 完了 後 に 自動 呼 び 出 し (= 既 init 体 系 を 壊 さ ない)
 setTimeout(updatePlanCard, 2000);
+
+// ═════════════════════════════════════════════════════════════════
+// 🚀 Phase 3: Dashboard 再 設計 (= mock の LIVE METRICS / FUNNEL / FEED)
+// ─────────────────────────────────────────────────────────────────
+// navTo('home') で 既 goHome() の 代 わり に これ を 呼 ぶ。
+// 既 user (= agent 1 件 以 上) = mock dashboard 表示
+// 新 規 user (= agent 0 件) = 既 goHome() の welcome (= 維 持)
+// 数 値 は dummy = Phase 3.3-3.4 で 集 計 API 接 続
+// ═════════════════════════════════════════════════════════════════
+
+function _renderMockDashboard(){
+  const body = document.getElementById('homeBody');
+  if(!body) return;
+  // empty wrap (= ホーム) を 表 示、 chat を 隠 す
+  const ew = document.getElementById('emptyWrap');
+  const cw = document.getElementById('chatWrap');
+  if(ew) ew.style.display = '';
+  if(cw) cw.style.display = 'none';
+
+  // active agent 取得
+  const allAg = (typeof agents !== 'undefined' && agents) ? agents : [];
+  const siteAgents = allAg.filter(a => typeof _isSiteAgent === 'function' ? _isSiteAgent(a) : true);
+
+  // agent 0 件 = 既 goHome() の welcome を そ の まま (= 新 規 user 体 験 維 持)
+  if(siteAgents.length === 0){
+    if(typeof goHome === 'function') goHome();
+    return;
+  }
+
+  // active agent
+  const activeAg = siteAgents.find(a => a.id === activeId) || siteAgents[0];
+  body.innerHTML = _renderMockDashboardHTML(activeAg);
+
+  // site button 反 映
+  if(typeof updateSiteButton === 'function') updateSiteButton(activeAg);
+
+  // 数 値 を 後 で 実 数 で 更 新 (= Phase 3.4 で 実 装)
+  setTimeout(() => _hydrateMockDashboard(activeAg), 200);
+}
+
+function _renderMockDashboardHTML(agent){
+  const siteName = (agent && (agent.name || agent.title || (agent.media && agent.media.slug))) || 'サイト';
+  const siteUrl  = (agent && agent.media && agent.media.slug) ? (agent.media.slug + '.myaiagents.agency') : 'サイト URL 未 設定';
+  const articleCnt = (agent && agent.media && Array.isArray(agent.media.posts)) ? agent.media.posts.length : 0;
+
+  const sparkBars = (n) => {
+    let html = '';
+    for(let i=0; i<n; i++){
+      const h = 15 + Math.floor(Math.random()*80);
+      html += `<div class="b" style="height:${h}%"></div>`;
+    }
+    return html;
+  };
+
+  return `
+    <div class="mb-view" id="mbHomeView">
+      <div class="mb-view-title">
+        <h1>${siteName}</h1>
+        <span class="crumb">▌ ${siteUrl} · 24h LIVE</span>
+      </div>
+
+      <div class="mb-block">
+        <div class="mb-block-head">
+          <span class="dot"></span> LIVE METRICS · 過 去 24h
+          <span class="right" id="mbLiveClock">SYNC --:--</span>
+        </div>
+        <div class="mb-stats">
+          <div class="mb-stat">
+            <div class="mb-stat-lbl">📈 PAGE VIEWS</div>
+            <div class="mb-stat-val" id="mbStatPv">—</div>
+            <div class="mb-stat-delta" id="mbStatPvDelta">取得 中...</div>
+            <div class="mb-stat-spark" id="mbSparkPv">${sparkBars(8)}</div>
+          </div>
+          <div class="mb-stat purple">
+            <div class="mb-stat-lbl">👥 USERS</div>
+            <div class="mb-stat-val" id="mbStatUsers">—</div>
+            <div class="mb-stat-delta" id="mbStatUsersDelta">取得 中...</div>
+            <div class="mb-stat-spark" id="mbSparkUsers">${sparkBars(8)}</div>
+          </div>
+          <div class="mb-stat peach">
+            <div class="mb-stat-lbl">🎯 LP 流 入</div>
+            <div class="mb-stat-val" id="mbStatLp">—</div>
+            <div class="mb-stat-delta" id="mbStatLpDelta">取得 中...</div>
+            <div class="mb-stat-spark" id="mbSparkLp">${sparkBars(8)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-block">
+        <div class="mb-block-head"><span class="dot"></span> FUNNEL · 記事 → PV → LP</div>
+        <div class="mb-funnel-pane">
+
+          <div class="mb-fstep">
+            <div class="mb-fstep-ic">📰</div>
+            <div class="mb-fstep-bd">
+              <div class="mb-fstep-lbl">STEP 1 · ARTICLES</div>
+              <div class="mb-fstep-h">公 開 済 記事</div>
+              <div class="mb-fstep-bar"><div class="mb-fstep-bar-fill" id="mbFunArtBar" style="width:48%"></div></div>
+              <div class="mb-fstep-meta" id="mbFunArt">${articleCnt} 本 公 開 · cap は plan に 依 存</div>
+            </div>
+            <div class="mb-fstep-val"><span id="mbFunArtV">${articleCnt}</span><span class="mb-fstep-val-sub">articles</span></div>
+          </div>
+
+          <div class="mb-fstep-drop">
+            <span>↓ 1 記事 = 平均 <span class="lose" id="mbFunC1A">— PV</span> を 生 む</span>
+            <span class="conv" id="mbFunC1">conv —x</span>
+          </div>
+
+          <div class="mb-fstep pv">
+            <div class="mb-fstep-ic">📈</div>
+            <div class="mb-fstep-bd">
+              <div class="mb-fstep-lbl">STEP 2 · PAGE VIEWS</div>
+              <div class="mb-fstep-h">記事 閲 覧</div>
+              <div class="mb-fstep-bar"><div class="mb-fstep-bar-fill" id="mbFunPvBar" style="width:0%"></div></div>
+              <div class="mb-fstep-meta" id="mbFunPv">— views · 取得 中</div>
+            </div>
+            <div class="mb-fstep-val"><span id="mbFunPvV">—</span><span class="mb-fstep-val-sub">page views</span></div>
+          </div>
+
+          <div class="mb-fstep-drop">
+            <span>↓ <span class="lose" id="mbFunC2A">—</span> は 記事 内 で 離 脱</span>
+            <span class="conv" id="mbFunC2">conv —%</span>
+          </div>
+
+          <div class="mb-fstep lp">
+            <div class="mb-fstep-ic">🎯</div>
+            <div class="mb-fstep-bd">
+              <div class="mb-fstep-lbl">STEP 3 · LP INFLOW</div>
+              <div class="mb-fstep-h">LP 流 入 (= 収 益 直 結)</div>
+              <div class="mb-fstep-bar"><div class="mb-fstep-bar-fill" id="mbFunLpBar" style="width:0%"></div></div>
+              <div class="mb-fstep-meta" id="mbFunLp">— sessions · utm_medium で 計 測</div>
+            </div>
+            <div class="mb-fstep-val"><span id="mbFunLpV">—</span><span class="mb-fstep-val-sub">sessions</span></div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="mb-block">
+        <div class="mb-block-head"><span class="dot"></span> WORKING AGENTS · 今 動 い て いる AI</div>
+        <div class="mb-work-grid" id="mbWorkGrid">
+          <div class="mb-work-card">
+            <div class="mb-work-state"><span class="mb-pulse"></span> WRITING</div>
+            <div class="mb-work-title">SEO Writer が 記事 を 執 筆 中</div>
+            <div class="mb-work-meta">KW: AI ブログ 始 め 方 · 4,820 / 8,000 字</div>
+            <div class="mb-work-bar"><div class="mb-work-bar-fill" style="width:60%"></div></div>
+          </div>
+          <div class="mb-work-card purple">
+            <div class="mb-work-state"><span class="mb-pulse"></span> RESEARCHING</div>
+            <div class="mb-work-title">KW Strategist が 競 合 分 析 中</div>
+            <div class="mb-work-meta">月 間 検索 量 を 算 出 中... 3 / 5 KW</div>
+            <div class="mb-work-bar"><div class="mb-work-bar-fill" style="width:60%"></div></div>
+          </div>
+          <div class="mb-work-card amber">
+            <div class="mb-work-state"><span class="mb-pulse"></span> WAITING</div>
+            <div class="mb-work-title">Designer が 画 像 生成 待 ち</div>
+            <div class="mb-work-meta">queue: 2 件 · 推 定 開 始 12 秒 後</div>
+            <div class="mb-work-bar"><div class="mb-work-bar-fill" style="width:20%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-block">
+        <div class="mb-block-head">
+          <span class="dot"></span> ACTIVITY FEED · system_log
+          <span class="right" id="mbFeedCount">— events</span>
+        </div>
+        <div class="mb-feed" id="mbFeed">
+          <div class="mb-feed-row"><span class="mb-feed-time">--:--</span><span class="mb-feed-tag">SYSTEM</span><span class="mb-feed-msg">ACTIVITY FEED を 取得 中...</span></div>
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
+// 数値 を 実 数 で 更 新 (= Phase 3.4 で 実 装 拡 張)
+async function _hydrateMockDashboard(agent){
+  // SYNC clock
+  const clockEl = document.getElementById('mbLiveClock');
+  if(clockEl){
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    clockEl.textContent = 'SYNC ' + hh + ':' + mm + ':' + ss;
+  }
+
+  if(!agent || !agent.id) return;
+
+  // 既 GA4 snapshot を 流 用 (= Phase 3.3 で 専 用 endpoint と 入 れ 替 え)
+  try {
+    const ga = await api('GET', '/api/agents/' + agent.id + '/ga4').catch(()=>null);
+    if(ga){
+      const pv = ga.totalPv || ga.pageviews || 0;
+      const users = ga.totalUsers || ga.users || 0;
+      const setN = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v||0).toLocaleString(); };
+      setN('mbStatPv', pv);
+      setN('mbStatUsers', users);
+      setN('mbFunPvV', pv);
+      const arts = (agent.media && Array.isArray(agent.media.posts)) ? agent.media.posts.length : 0;
+      if(arts > 0){
+        const perArt = Math.round(pv / arts);
+        const c1El = document.getElementById('mbFunC1A');
+        if(c1El) c1El.textContent = perArt + ' PV';
+        const c1xEl = document.getElementById('mbFunC1');
+        if(c1xEl) c1xEl.textContent = 'conv ' + perArt + 'x';
+        const pvBar = document.getElementById('mbFunPvBar');
+        if(pvBar) pvBar.style.width = Math.min(100, Math.round(pv / (arts * 100) * 100)) + '%';
+        const pvMeta = document.getElementById('mbFunPv');
+        if(pvMeta) pvMeta.textContent = pv.toLocaleString() + ' views · ' + users.toLocaleString() + ' unique users';
+      }
+      // 取得 OK delta
+      const pvDelta = document.getElementById('mbStatPvDelta');
+      if(pvDelta){ pvDelta.textContent = 'GA4 連 携 中'; pvDelta.classList.add('up'); }
+      const usersDelta = document.getElementById('mbStatUsersDelta');
+      if(usersDelta){ usersDelta.textContent = '実 数 反 映'; usersDelta.classList.add('up'); }
+    }
+  } catch(e){ console.warn('ga4 fetch fail', e); }
+
+  // 自前 PV (= /api/admin/media-stats) で LP 流入 取得 (= Phase 3.3 で /funnel に 移 行)
+  try {
+    const stats = await api('GET', '/api/admin/media-stats').catch(()=>null);
+    if(stats && Array.isArray(stats.byAgent)){
+      const mine = stats.byAgent.find(a => a.agentId === agent.id);
+      if(mine){
+        // LP 流入 = utm_medium=*_lp の sessions (= 既 サーバ で 集計)
+        const lp = mine.lpSessions || mine.lp || 0;
+        const setN = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v||0).toLocaleString(); };
+        setN('mbStatLp', lp);
+        setN('mbFunLpV', lp);
+        const lpDelta = document.getElementById('mbStatLpDelta');
+        if(lpDelta){ lpDelta.textContent = '自前 計 測'; lpDelta.classList.add('up'); }
+      }
+    }
+  } catch(e){ console.warn('media-stats fetch fail', e); }
+}
+
+// navTo を 拡 張 (= 既 stub の case 'home' を 上 書 き)
+// 既 navTo は 同 名 で 直前 に 定 義 済 = JS 後 勝 ち で 後 定義 の navTo が active
+function navTo(view, btn){
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+
+  switch(view){
+    case 'home':
+      _renderMockDashboard();
+      break;
+    case 'media':
+      // Phase 4 で mock の メディア view を 実 装、 暫 定 = home + メディア タブ
+      _renderMockDashboard();
+      showToast('📰 メディア (= Phase 4 で 専 用 view)', 'ok');
+      break;
+    case 'analytics':
+      showToast('📊 分 析 (= Phase 3 で 拡 張 予定)', 'ok');
+      break;
+    case 'team':
+      showToast('🤖 AI チーム (= Phase 3 で 拡 張 予定)', 'ok');
+      break;
+    case 'settings':
+      if(typeof openSettings === 'function') openSettings();
+      break;
+  }
+}

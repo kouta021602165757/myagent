@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>コスト適正化サービス — 毎月の支出を、今よりもっと適正に。</title>
+<style>
+  :root{
+    --ink:#1d1d1f;
+    --sub:#6e6e73;
+    --line:#d2d2d7;
+    --hair:#e8e8ed;
+    --bg:#ffffff;
+    --bg2:#f5f5f7;
+    --accent:#0071e3;
+    --accent-d:#0058b0;
+    --easeout:cubic-bezier(.16,1,.3,1);
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro JP","SF Pro Text","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.5;letter-spacing:.01em;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  }
+  img{max-width:100%;display:block}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#cfe6ff}
+  svg{display:block}
+
+  .container{width:100%;max-width:1024px;margin:0 auto;padding:0 clamp(18px,5vw,24px)}
+  .narrow{max-width:760px}
+  .eyebrow{font-size:19px;font-weight:600;color:var(--accent);margin-bottom:8px}
+  h1,h2,h3{letter-spacing:-.02em;font-weight:700;line-height:1.07}
+  .display{font-size:clamp(44px,7vw,88px);font-weight:700;letter-spacing:-.035em;line-height:1.04}
+  .h-xl{font-size:clamp(34px,5.2vw,56px);font-weight:700;letter-spacing:-.03em;line-height:1.08}
+  .lead{font-size:clamp(19px,2.2vw,26px);font-weight:600;color:var(--sub);letter-spacing:-.01em;line-height:1.4}
+  .center{text-align:center}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;font-size:17px;font-weight:500;
+    padding:12px 24px;border-radius:980px;transition:.25s var(--ease);cursor:pointer;border:none;white-space:nowrap}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent-d);transform:scale(1.015)}
+  .btn-ghost{color:var(--accent)}
+  .btn-ghost:hover{text-decoration:underline}
+  .btn-ghost::after{content:" ›";font-weight:400}
+  .btn-lg{font-size:20px;padding:16px 36px}
+
+  nav.bar{position:sticky;top:0;z-index:100;height:52px;
+    background:rgba(255,255,255,.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:1px solid rgba(0,0,0,.06)}
+  .bar .container{height:100%;display:flex;align-items:center;justify-content:space-between}
+  .brand{font-size:18px;font-weight:600;letter-spacing:-.01em}
+  .brand b{font-weight:700}
+  .bar nav{display:flex;gap:30px;align-items:center}
+  .bar nav a{font-size:13px;color:#1d1d1fcc;transition:.2s}
+  .bar nav a:hover{color:var(--ink)}
+  .bar .cta{background:var(--accent);color:#fff;padding:7px 16px;border-radius:980px;font-size:13px;font-weight:500}
+  .bar .cta:hover{background:var(--accent-d);color:#fff}
+  @media(max-width:760px){.bar nav a:not(.cta){display:none}}
+
+  .reveal{opacity:0;transform:translateY(34px);transition:opacity 1s var(--easeout),transform 1s var(--easeout)}
+  .reveal.in{opacity:1;transform:none}
+  .reveal.d1{transition-delay:.08s}.reveal.d2{transition-delay:.16s}
+  .reveal.d3{transition-delay:.24s}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}}
+
+  /* ICONS */
+  .icn{width:30px;height:30px;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .ic{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    background:linear-gradient(150deg,#eef5ff,#dde9fb);position:relative}
+  .ic::after{content:"";position:absolute;inset:0;border-radius:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+  .ic .icn{stroke:url(#gB)}
+  .ic.g .icn{stroke:url(#gG)}
+  .ic.g{background:linear-gradient(150deg,#e9faf0,#d4f3e1)}
+
+  /* HERO */
+  .hero{position:relative;text-align:center;padding:120px 0 96px;overflow:hidden;isolation:isolate;
+    background:radial-gradient(120% 80% at 50% -10%,#eef4fb 0%,#ffffff 55%)}
+  .blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.5;z-index:-1}
+  .blob.b1{width:420px;height:420px;background:radial-gradient(#7db8ff,#0071e300);top:-120px;left:-60px}
+  .blob.b2{width:380px;height:380px;background:radial-gradient(#5fe0a0,#34c77b00);top:40px;right:-80px;opacity:.4}
+  .hero .display{margin-bottom:18px}
+  .hero .grad{background:linear-gradient(96deg,#0071e3,#42a5f5 45%,#34c77b);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .lead{max-width:620px;margin:0 auto 30px}
+  .hero-cta{display:flex;gap:26px;justify-content:center;align-items:center;flex-wrap:wrap}
+
+  .herovis{margin:72px auto 0;max-width:840px;background:#fff;border:1px solid var(--hair);
+    border-radius:28px;padding:40px 44px;box-shadow:0 40px 90px -40px rgba(20,40,80,.32)}
+  .herovis .vtop{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+  .herovis .vk{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:5px;text-align:left}
+  .herovis .vbig{font-size:24px;font-weight:700;letter-spacing:-.025em;text-align:left;line-height:1.2}
+  .herovis .pill{font-size:13px;font-weight:600;color:#1f9e5a;background:#e7f7ee;padding:7px 14px;border-radius:980px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+  .vchart{position:relative;margin-top:26px}
+  .vchart svg{width:100%;height:auto;display:block;overflow:visible}
+  .vgrid line{stroke:#ececf1;stroke-width:1}
+  .varea{opacity:0;transition:opacity 1.1s ease .3s}
+  .in .varea{opacity:1}
+  .vline{fill:none;stroke:url(#lineG);stroke-width:3.5;stroke-linecap:round;
+    stroke-dasharray:760;stroke-dashoffset:760;transition:stroke-dashoffset 1.8s var(--easeout) .25s}
+  .in .vline{stroke-dashoffset:0}
+  .vdot{opacity:0;transition:opacity .5s ease 1.6s}
+  .in .vdot{opacity:1}
+  .vfloat{position:absolute;top:-6px;right:4px;background:#fff;border:1px solid var(--hair);
+    box-shadow:0 12px 28px -10px rgba(20,40,80,.3);border-radius:13px;padding:9px 13px;font-size:12.5px;font-weight:600;
+    color:var(--ink);display:flex;align-items:center;gap:7px;opacity:0;transform:translateY(8px);transition:.7s var(--easeout) 1.4s}
+  .in .vfloat{opacity:1;transform:none}
+  .vfloat .dn{color:#1f9e5a;font-size:11px}
+  .vlabels{display:flex;justify-content:space-between;margin-top:14px;padding:0 4px}
+  .vlabels span{font-size:13px;color:var(--sub);font-weight:600}
+
+  section.block{padding:120px 0}
+  section.gray{background:var(--bg2)}
+  .sec-head{text-align:center;max-width:680px;margin:0 auto 70px}
+  .sec-head .lead{margin-top:16px}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:30px;text-align:center}
+  .stat .n{font-size:clamp(40px,5vw,60px);font-weight:700;letter-spacing:-.04em;line-height:1;
+    background:linear-gradient(180deg,#1d1d1f,#3a3a3c);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .n small{font-size:.42em;font-weight:600;letter-spacing:0}
+  .stat .l{margin-top:12px;font-size:14px;color:var(--sub);font-weight:500}
+  @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr);gap:44px 20px}}
+
+  .grid8{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  .feat{background:#fff;border:1px solid var(--hair);border-radius:22px;padding:36px;
+    display:grid;grid-template-columns:64px 1fr;gap:24px;align-items:start;transition:.4s var(--easeout)}
+  .feat:hover{transform:translateY(-4px);box-shadow:0 30px 60px -30px rgba(20,40,80,.28);border-color:#cfe0f5}
+  .feat .no{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.04em;margin-bottom:6px}
+  .feat h3{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.25;margin-bottom:8px}
+  .feat .t{font-size:14px;font-weight:600;color:var(--accent);margin-bottom:10px}
+  .feat p{font-size:15px;color:var(--sub);line-height:1.6}
+  @media(max-width:760px){.grid8{grid-template-columns:1fr}.feat{padding:30px 26px}}
+
+  .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .fstep{position:relative;padding-top:18px}
+  .fstep .num{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--accent);color:var(--accent);
+    display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;margin-bottom:20px}
+  .fstep h4{font-size:19px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+  .fstep p{font-size:14px;color:var(--sub);line-height:1.6}
+  .fstep:not(:last-child)::before{content:"";position:absolute;top:41px;left:58px;right:-9px;height:1.5px;
+    background:linear-gradient(90deg,var(--accent),#cfe0f5)}
+  @media(max-width:760px){.flow{grid-template-columns:1fr 1fr;gap:40px 18px}.fstep::before{display:none}}
+
+  .effects{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:64px}
+  .eff{background:#fff;border:1px solid var(--hair);border-radius:22px;padding:40px 34px;text-align:center}
+  .eff .ic{width:72px;height:72px;border-radius:20px;margin:0 auto 22px}
+  .eff .ic .icn{width:34px;height:34px}
+  .eff h4{font-size:21px;font-weight:700;letter-spacing:-.02em;margin-bottom:10px}
+  .eff p{font-size:15px;color:var(--sub);line-height:1.65}
+  @media(max-width:760px){.effects{grid-template-columns:1fr}}
+
+  /* CHAOS MAP */
+  .legend{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:54px}
+  .lg{display:inline-flex;align-items:center;gap:9px;border-radius:980px;padding:9px 20px;font-size:14px;font-weight:600;
+    background:#fff;border:1px solid var(--line)}
+  .lg .dot{width:10px;height:10px;border-radius:50%}
+  .lg b{font-weight:700;font-size:16px}
+  .dx{--c:#1d3f73}.sx{--c:#2f7d44}.kj{--c:#c96a14}.ot{--c:#6b4ea8}
+  .lg.dx .dot{background:#1d3f73}.lg.sx .dot{background:#2f7d44}.lg.kj .dot{background:#c96a14}.lg.ot .dot{background:#6b4ea8}
+
+  .maps{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .mbox{background:#fff;border:1px solid var(--hair);border-radius:24px;overflow:hidden}
+  .mbox .mh{padding:24px 28px;display:flex;align-items:center;gap:14px;color:#fff;
+    background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 78%,#000))}
+  .mbox .mh .hi{width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .mbox .mh .hi .icn{width:24px;height:24px;stroke:#fff}
+  .mbox .mh .ttl{font-size:22px;font-weight:700;letter-spacing:-.02em}
+  .mbox .mh .ttl small{display:block;font-size:12px;font-weight:500;opacity:.8;letter-spacing:0;margin-top:2px}
+  .mbox .mh .cnt{margin-left:auto;font-size:14px;font-weight:600;background:rgba(255,255,255,.18);padding:6px 14px;border-radius:980px;white-space:nowrap}
+  .mbody{padding:26px 28px}
+  .scat{padding:16px 0;border-top:1px solid var(--hair)}
+  .scat:first-child{padding-top:0;border-top:none}
+  .scat h5{font-size:15px;font-weight:700;color:var(--c);margin-bottom:13px;letter-spacing:-.01em}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-size:13px;font-weight:500;color:#33404f;background:var(--bg2);border:1px solid #e3e3e8;
+    border-radius:9px;padding:7px 13px;transition:.2s}
+  .chip:hover{background:#fff;border-color:var(--c);color:var(--c);transform:translateY(-1px)}
+  @media(max-width:860px){.maps{grid-template-columns:1fr}}
+
+  .cta-sec{background:#000;color:#fff;text-align:center;padding:130px 0;position:relative;overflow:hidden;isolation:isolate}
+  .cta-sec .glow{position:absolute;width:600px;height:600px;border-radius:50%;z-index:-1;filter:blur(80px);opacity:.35;
+    background:radial-gradient(#0071e3,transparent 70%);top:-200px;left:50%;transform:translateX(-50%)}
+  .cta-sec .h-xl{color:#fff;margin-bottom:18px}
+  .cta-sec .lead{color:#a1a1a6;margin-bottom:40px}
+  .cta-sec .btn-primary{background:var(--accent)}
+  .cta-sec .note{margin-top:30px;font-size:13px;color:#86868b;line-height:1.8}
+
+  footer{background:#f5f5f7;color:#6e6e73;font-size:12px;padding:34px 0;border-top:1px solid var(--line)}
+  footer .container{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+
+  /* ---------- Tablet ---------- */
+  @media(max-width:900px){
+    section.block{padding:92px 0}
+    .sec-head{margin-bottom:54px}
+    .hero{padding:96px 0 76px}
+    .herovis{margin-top:56px;padding:32px 30px}
+  }
+
+  /* ---------- Smartphone ---------- */
+  @media(max-width:600px){
+    .eyebrow{font-size:16px}
+    section.block{padding:64px 0}
+    .sec-head{margin-bottom:40px}
+
+    /* nav */
+    .bar nav{gap:0}
+    .brand{font-size:16px}
+
+    /* hero */
+    .hero{padding:72px 0 56px}
+    .display{font-size:clamp(33px,9vw,42px)}
+    .h-xl{font-size:clamp(28px,7.5vw,38px)}
+    .hero .lead{font-size:17px}
+    .hero .lead br{display:none}
+    .hero-cta{flex-direction:column;gap:14px}
+    .hero-cta .btn{width:100%;justify-content:center}
+    .blob{filter:blur(50px);opacity:.4}
+
+    /* hero chart card */
+    .herovis{margin-top:44px;padding:22px 18px;border-radius:22px}
+    .herovis .vtop{flex-direction:column;gap:12px}
+    .herovis .vbig{font-size:21px}
+    .vfloat{font-size:11.5px;padding:7px 11px;top:-4px}
+
+    /* stats */
+    .stats{gap:36px 18px}
+    .stat .n{font-size:42px}
+    .stat .l{font-size:13px;margin-top:8px}
+
+    /* lineup */
+    .feat{grid-template-columns:52px 1fr;gap:18px;padding:26px 22px;border-radius:18px}
+    .ic{width:52px;height:52px;border-radius:15px}
+    .ic .icn{width:26px;height:26px}
+    .feat h3{font-size:19px}
+    .feat .t{font-size:13px}
+    .feat p{font-size:14px}
+
+    /* flow */
+    .flow{grid-template-columns:1fr;gap:30px}
+    .fstep{padding-top:0;display:grid;grid-template-columns:46px 1fr;gap:16px;align-items:start}
+    .fstep .num{margin-bottom:0}
+    .fstep h4{margin-bottom:6px}
+
+    /* effects */
+    .eff{padding:32px 26px}
+
+    /* cta */
+    .cta-sec{padding:84px 0}
+    .cta-sec .lead br{display:none}
+    .cta-sec .btn{width:100%;justify-content:center}
+
+    footer .container{flex-direction:column;align-items:flex-start;gap:6px}
+  }
+</style>
+</head>
+<body>
+
+<!-- shared gradient defs for icon strokes -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a84ff"/><stop offset="1" stop-color="#5ec2ff"/>
+    </linearGradient>
+    <linearGradient id="gG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1fae5d"/><stop offset="1" stop-color="#54d98a"/>
+    </linearGradient>
+    <linearGradient id="lineG" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0a84ff"/><stop offset="1" stop-color="#34c77b"/>
+    </linearGradient>
+    <linearGradient id="areaG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a84ff" stop-opacity=".20"/><stop offset="1" stop-color="#0a84ff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<nav class="bar">
+  <div class="container">
+    <div class="brand"><b>COST</b>OPT</div>
+    <nav>
+      <a href="#lineup">商品ラインナップ</a>
+      <a href="#flow">導入の流れ</a>
+      <a href="#effect">効果</a>
+      <a href="#contact" class="cta">無料相談</a>
+    </nav>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <span class="blob b1"></span><span class="blob b2"></span>
+  <div class="container">
+    <p class="eyebrow reveal">法人向けコスト適正化サービス</p>
+    <h1 class="display reveal d1">毎月の支出を、<br>今よりもっと<span class="grad">適正</span>に。</h1>
+    <p class="lead reveal d2">販管費を見直し、固定費のムダを可視化・最適化。<br>幅広い商材ラインナップで、企業のコスト最適化と持続的な成長を。</p>
+    <div class="hero-cta reveal d3">
+      <a href="#contact" class="btn btn-primary btn-lg">無料でコスト診断</a>
+      <a href="#lineup" class="btn btn-ghost">商品ラインナップを見る</a>
+    </div>
+
+    <div class="herovis reveal d2">
+      <div class="vtop">
+        <div>
+          <p class="vk">毎月の固定費</p>
+          <h3 class="vbig">見直すほど、軽くなる。</h3>
+        </div>
+        <span class="pill">▼ ムダを最適化</span>
+      </div>
+      <div class="vchart">
+        <svg viewBox="0 0 560 220" aria-hidden="true">
+          <g class="vgrid"><line x1="0" y1="56" x2="560" y2="56"/><line x1="0" y1="110" x2="560" y2="110"/><line x1="0" y1="164" x2="560" y2="164"/></g>
+          <path class="varea" fill="url(#areaG)" d="M22,50 C150,40 205,80 285,94 C365,108 425,158 538,190 L538,212 L22,212 Z"/>
+          <path class="vline" d="M22,50 C150,40 205,80 285,94 C365,108 425,158 538,190"/>
+          <circle class="vdot" cx="22" cy="50" r="5.5" fill="#0a84ff"/>
+          <circle class="vdot" cx="538" cy="190" r="6.5" fill="#34c77b"/>
+        </svg>
+        <span class="vfloat"><span class="dn">▼</span> ムダを可視化し最適化</span>
+      </div>
+      <div class="vlabels"><span>見直し前</span><span>見直し後</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- STATS -->
+<section class="block">
+  <div class="container">
+    <div class="stats">
+      <div class="stat reveal"><div class="n">67<small>商材</small></div><div class="l">幅広い取扱ラインナップ</div></div>
+      <div class="stat reveal d1"><div class="n">8<small>領域</small></div><div class="l">法人コストの見直し対象</div></div>
+      <div class="stat reveal d2"><div class="n">4<small>STEP</small></div><div class="l">かんたん導入フロー</div></div>
+      <div class="stat reveal d3"><div class="n">0<small>円</small></div><div class="l">初回コスト診断は無料</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- LINEUP -->
+<section class="block gray" id="lineup">
+  <div class="container">
+    <div class="sec-head">
+      <p class="eyebrow reveal">PRODUCT LINEUP</p>
+      <h2 class="h-xl reveal d1">8つの領域で、<br>固定費のムダを洗い出す。</h2>
+      <p class="lead reveal d2">御社の課題に応じて、最適なコスト削減領域をご提案します。</p>
+    </div>
+    <div class="grid8">
+      <div class="feat reveal"><div class="ic"><svg class="icn" viewBox="0 0 24 24"><path d="M5 12.5a9 9 0 0 1 14 0"/><path d="M8 15.3a5 5 0 0 1 8 0"/><circle cx="12" cy="18.4" r=".9" fill="url(#gB)" stroke="none"/></svg></div><div><div class="no">01</div><h3>通信費の見直し</h3><div class="t">携帯・回線・ネットワーク費用を最適化</div><p>通信プランや契約内容を整理し、ムダなコストを削減します。</p></div></div>
+      <div class="feat reveal d1"><div class="ic"><svg class="icn" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M6 21V7l6-4 6 4v14"/><path d="M10 21v-4h4v4"/><path d="M9 9.5h.01M15 9.5h.01M9 13h.01M15 13h.01"/></svg></div><div><div class="no">02</div><h3>家賃の適正化</h3><div class="t">オフィス・店舗の賃料を適正水準へ</div><p>賃料条件の見直しや交渉支援により、固定費の圧縮を図ります。</p></div></div>
+      <div class="feat reveal"><div class="ic"><svg class="icn" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 10-13h-6l1-7z"/></svg></div><div><div class="no">03</div><h3>光熱費の最適化</h3><div class="t">電気・ガスなどエネルギーコストを見直し</div><p>契約プランや使用状況を分析し、光熱費の削減余地を診断します。</p></div></div>
+      <div class="feat reveal d1"><div class="ic"><svg class="icn" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="3.5" y="9" width="17" height="8" rx="2"/><path d="M7 17h10v4H7z"/><circle cx="17" cy="12.5" r=".9" fill="url(#gB)" stroke="none"/></svg></div><div><div class="no">04</div><h3>複合機・OA機器コストの見直し</h3><div class="t">コピー機・プリンター・周辺機器を最適化</div><p>機器契約や保守費用を確認し、適切な構成へ見直します。</p></div></div>
+      <div class="feat reveal"><div class="ic"><svg class="icn" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4.2"/></svg></div><div><div class="no">05</div><h3>保険料の見直し</h3><div class="t">法人保険・各種補償を最適化</div><p>補償内容と保険料のバランスを見直し、過不足を整えます。</p></div></div>
+      <div class="feat reveal d1"><div class="ic"><svg class="icn" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19"/><path d="M6 14.5h4"/></svg></div><div><div class="no">06</div><h3>決済・手数料コストの最適化</h3><div class="t">カード決済・各種手数料を見直し</div><p>決済方法や手数料体系を比較し、利益を圧迫するコストを整理します。</p></div></div>
+      <div class="feat reveal"><div class="ic"><svg class="icn" viewBox="0 0 24 24"><path d="M5 11l1.6-4.6A2 2 0 0 1 8.5 5h7a2 2 0 0 1 1.9 1.4L19 11"/><path d="M3.5 11h17v4.5a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1V15H7v.5a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V11z"/><circle cx="7.2" cy="13" r="1" fill="url(#gB)" stroke="none"/><circle cx="16.8" cy="13" r="1" fill="url(#gB)" stroke="none"/></svg></div><div><div class="no">07</div><h3>社用車・カーリース費用の見直し</h3><div class="t">車両関連コストを適正化</div><p>リース料、保険、維持費などを総合的にチェックします。</p></div></div>
+      <div class="feat reveal d1"><div class="ic"><svg class="icn" viewBox="0 0 24 24"><path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7z"/><circle cx="6" cy="17.5" r="1.6"/><circle cx="16.5" cy="17.5" r="1.6"/></svg></div><div><div class="no">08</div><h3>物流・配送費の見直し</h3><div class="t">配送関連コストを最適化</div><p>配送条件や契約内容を整理し、運用コストの改善を支援します。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FLOW -->
+<section class="block" id="flow">
+  <div class="container">
+    <div class="sec-head">
+      <p class="eyebrow reveal">HOW IT WORKS</p>
+      <h2 class="h-xl reveal d1">導入は、4ステップ。</h2>
+      <p class="lead reveal d2">ヒアリングから切替の定着まで、すべて伴走します。</p>
+    </div>
+    <div class="flow">
+      <div class="fstep reveal"><div class="num">1</div><h4>現状ヒアリング</h4><p>現在の契約内容や利用状況を丁寧にヒアリングします。</p></div>
+      <div class="fstep reveal d1"><div class="num">2</div><h4>コスト診断</h4><p>データを分析し、ムダや改善余地を可視化します。</p></div>
+      <div class="fstep reveal d2"><div class="num">3</div><h4>改善提案</h4><p>最適なプラン・条件をご提案し、効果をシミュレーションします。</p></div>
+      <div class="fstep reveal d3"><div class="num">4</div><h4>導入・切替支援</h4><p>契約手続きや切替までスムーズに支援し、定着までフォローします。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- EFFECTS -->
+<section class="block gray" id="effect">
+  <div class="container">
+    <div class="sec-head">
+      <p class="eyebrow reveal">RESULTS</p>
+      <h2 class="h-xl reveal d1">見直しが、<br>経営の余力を生む。</h2>
+    </div>
+    <div class="effects">
+      <div class="eff reveal"><div class="ic g"><svg class="icn" viewBox="0 0 24 24"><polyline points="3 7 9 13 13 9 21 17"/><polyline points="15 17 21 17 21 11"/></svg></div><h4>固定費削減</h4><p>ムダな支出を適正化し、毎月の固定費を削減します。</p></div>
+      <div class="eff reveal d1"><div class="ic g"><svg class="icn" viewBox="0 0 24 24"><path d="M4 9a8 8 0 0 1 13.5-3.3L20 8"/><path d="M20 15a8 8 0 0 1-13.5 3.3L4 16"/><path d="M20 4v4h-4M4 20v-4h4"/></svg></div><h4>キャッシュフロー改善</h4><p>支出の最適化により、資金繰りの安定化と余力を創出します。</p></div>
+      <div class="eff reveal d2"><div class="ic g"><svg class="icn" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="url(#gG)" stroke="none"/></svg></div><h4>本業への集中</h4><p>煩雑な見直し業務をお任せいただき、本業に集中できます。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-sec" id="contact">
+  <span class="glow"></span>
+  <div class="container narrow">
+    <h2 class="h-xl reveal">適正化のプロが、御社のコストを<br>最適バランスへ。</h2>
+    <p class="lead reveal d1">企業の課題に応じて最適な商材をご提案。まずは無料のコスト診断から。</p>
+    <div class="reveal d2"><a href="#" class="btn btn-primary btn-lg">無料でコスト診断を申し込む</a></div>
+    <p class="note reveal d3">※ 削減効果は企業の契約状況・利用状況により異なります。<br>※ 2026年5月時点の取扱商材一覧をもとに整理しています。</p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <span>COSTOPT — コスト適正化サービス</span>
+    <span>© 2026 All rights reserved.</span>
+  </div>
+</footer>
+
+<script>
+  const io=new IntersectionObserver((es)=>{
+    es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+  },{threshold:.18,rootMargin:'0px 0px -8% 0px'});
+  document.querySelectorAll('.reveal,.herovis,.chart').forEach(el=>io.observe(el));
+  requestAnimationFrame(()=>document.querySelectorAll('.hero .reveal,.herovis').forEach(el=>el.classList.add('in')));
+</script>
+</body>
+</html>

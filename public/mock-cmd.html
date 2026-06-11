@@ -109,19 +109,43 @@ button:active{transform:scale(.98)}
 .gen-sect:last-child{border-bottom:0}
 .gen-sect-h{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:14px;font-weight:700}
 .gen-sect-h .gen-sect-dot{width:6px;height:6px;border-radius:50%;background:var(--teal)}
-.gen-kw-list{display:flex;flex-direction:column;gap:8px}
-.gen-kw{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--wire);border-radius:9px;background:var(--paper);cursor:pointer;transition:all .15s;text-align:left}
-.gen-kw:hover{border-color:var(--teal);background:var(--teal-soft);transform:translateX(2px)}
-.gen-kw.hot{border-color:#fecaca;background:linear-gradient(135deg,var(--rose-soft),var(--paper))}
-.gen-kw.hot:hover{border-color:var(--rose);background:linear-gradient(135deg,var(--rose-soft),#fff5f5)}
-.gen-kw-rank{width:24px;height:24px;border-radius:50%;background:var(--cream2);color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.gen-kw-list{display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;padding-right:4px;margin-right:-4px}
+.gen-kw-list::-webkit-scrollbar{width:6px}
+.gen-kw-list::-webkit-scrollbar-thumb{background:var(--wire2);border-radius:3px}
+.gen-kw{display:flex;align-items:flex-start;gap:11px;padding:12px 13px;border:1px solid var(--wire);border-radius:10px;background:var(--paper);cursor:pointer;transition:all .15s;text-align:left;position:relative}
+.gen-kw:hover{border-color:var(--teal-line);background:var(--cream);transform:translateX(1px)}
+.gen-kw.hot{border-color:#fecaca;background:linear-gradient(135deg,var(--rose-soft) 0%,var(--paper) 60%)}
+.gen-kw.hot:hover{border-color:var(--rose)}
+.gen-kw.checked{border-color:var(--teal);background:var(--teal-soft);box-shadow:0 0 0 3px rgba(13,79,74,.06)}
+.gen-kw-chk{width:18px;height:18px;border:2px solid var(--wire2);border-radius:5px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .15s;background:#fff}
+.gen-kw.checked .gen-kw-chk{background:var(--teal);border-color:var(--teal)}
+.gen-kw-chk svg{width:11px;height:11px;color:#fff;opacity:0;transition:opacity .15s}
+.gen-kw.checked .gen-kw-chk svg{opacity:1}
+.gen-kw-rank{width:22px;height:22px;border-radius:50%;background:var(--cream2);color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:0}
 .gen-kw.hot .gen-kw-rank{background:var(--rose);color:#fff}
 .gen-kw-bd{flex:1;min-width:0}
-.gen-kw-t{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:6px}
-.gen-kw-hot-pill{background:var(--rose);color:#fff;font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.08em;padding:1px 6px;border-radius:3px;text-transform:uppercase}
-.gen-kw-meta{font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.04em}
-.gen-kw-go{font-family:var(--mono);font-size:10.5px;color:var(--teal);font-weight:700;flex-shrink:0;opacity:.5;transition:opacity .15s}
-.gen-kw:hover .gen-kw-go{opacity:1}
+.gen-kw-title{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:6px;line-height:1.4;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.gen-kw-hot-pill{background:var(--rose);color:#fff;font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.08em;padding:2px 6px;border-radius:3px;text-transform:uppercase}
+.gen-kw-meta{font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.04em;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gen-kw-meta-kw{color:var(--teal);font-weight:700}
+.gen-kw-meta-sep{color:var(--wire2)}
+.gen-kw-expect{font-family:var(--mono);font-size:10.5px;color:var(--green);font-weight:700;margin-top:5px}
+.gen-kw-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.gen-kw-instant{width:30px;height:30px;border-radius:7px;background:var(--cream2);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;cursor:pointer;border:1px solid transparent}
+.gen-kw-instant:hover{background:var(--teal);color:#fff;border-color:var(--teal);transform:scale(1.05)}
+.gen-kw-instant svg{width:14px;height:14px}
+
+/* selected summary bar */
+.gen-summary{padding:16px 22px;background:linear-gradient(135deg,var(--teal-soft) 0%,var(--paper) 100%);border-top:1px solid var(--wire);display:none;align-items:center;gap:16px}
+.gen-summary.show{display:flex}
+.gen-summary-info{flex:1}
+.gen-summary-h{font-size:13.5px;font-weight:700;color:var(--teal);margin-bottom:6px;display:flex;align-items:center;gap:7px}
+.gen-summary-count{background:var(--teal);color:#fff;font-family:var(--mono);font-size:11px;font-weight:800;padding:2px 9px;border-radius:5px;letter-spacing:.04em}
+.gen-summary-rows{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;color:var(--text2)}
+.gen-summary-rows b{color:var(--teal);font-weight:700}
+.gen-batch-go{padding:12px 18px;border-radius:9px;background:var(--teal);color:#fff;font-weight:800;font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;transition:all .15s;display:flex;align-items:center;gap:8px;flex-shrink:0;cursor:pointer;border:0}
+.gen-batch-go:hover{background:var(--teal2);box-shadow:0 4px 12px rgba(13,79,74,.25)}
+.gen-batch-go:disabled{background:var(--wire2);cursor:not-allowed;box-shadow:none}
 .gen-or{text-align:center;padding:8px 0 12px;font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--text3);text-transform:uppercase;position:relative}
 .gen-or::before,.gen-or::after{content:'';position:absolute;top:50%;width:38%;height:1px;background:var(--wire)}
 .gen-or::before{left:0}
@@ -880,7 +904,10 @@ input[type="file"]{display:none}
     <div class="modal-body">
 
       <div class="gen-sect">
-        <div class="gen-sect-h"><span class="gen-sect-dot"></span> AI が 提案 する 今 旬 の KW · click で 即 起動</div>
+        <div class="gen-sect-h">
+          <span class="gen-sect-dot"></span> AI が 提案 する 今 旬 の 記事 タイトル
+          <span style="margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--text3);letter-spacing:.04em;text-transform:none">☐ チェック で 複数 · ⚡ で 1 件 即 起動</span>
+        </div>
         <div class="gen-kw-list" id="genKwList"></div>
       </div>
 
@@ -897,6 +924,22 @@ input[type="file"]{display:none}
         </div>
       </div>
 
+    </div>
+    <!-- selected summary (= bottom, fixed) -->
+    <div class="gen-summary" id="genSummary">
+      <div class="gen-summary-info">
+        <div class="gen-summary-h">
+          <span class="gen-summary-count" id="genSumCount">3 件 選択</span> まとめ て 生成
+        </div>
+        <div class="gen-summary-rows">
+          <span>月 cap 残 <b id="genSumCap">49 / 52</b></span>
+          <span class="gen-summary-sep">·</span>
+          <span>推定 完了 <b id="genSumTime">約 8 分</b></span>
+          <span class="gen-summary-sep">·</span>
+          <span>推定 LP 流入 <b id="genSumLp">+6 sess / mo</b></span>
+        </div>
+      </div>
+      <button class="gen-batch-go" id="genBatchGo" onclick="genStartBatch()">⚡ <span id="genBatchLbl">一括 生成</span></button>
     </div>
   </div>
 </div>
@@ -1288,27 +1331,99 @@ function openLibrary(){
 
 // === Gen modal (= 記事 生成) ===
 const KW_SUGGESTIONS = [
-  { hot:true, t:'AI 記事 ツール 比較 2026', meta:'検索 数 8,100 / 月 · 競合 #1 を 12h で 抜ける 見込み', go:'+ 2-3 LP / mo' },
-  { hot:false, t:'スマホ で SEO を 完全 自動 化 する 方法', meta:'検索 数 5,400 / 月 · 関連 KW 8 個 一括 もOK', go:'+ 1-2 LP / mo' },
-  { hot:false, t:'AI ライター × メディア 自動 運営 入門', meta:'検索 数 3,200 / 月 · 内部 リンク 5 件 推奨', go:'+ 1 LP / mo' },
-  { hot:false, t:'ブログ 月 100 記事 量産 ハック', meta:'検索 数 2,800 / 月 · 競合 弱い', go:'+ 1 LP / mo' },
-  { hot:false, t:'WordPress vs サブドメイン 配信 比較', meta:'検索 数 1,900 / 月 · 上位 が 古い (= 抜ける)', go:'+ 0-1 LP / mo' },
+  {
+    hot:true,
+    title:'AI 記事 ツール を 完全 比較 ！ 2026 年 おすすめ ベスト 10',
+    kw:'AI 記事 ツール 比較',
+    sv:8100, comp:'競合 #1 を 12h で 抜ける 見込み', lp:'+ 2-3 LP / mo', expectLp:2.5,
+  },
+  {
+    hot:false,
+    title:'スマホ 1 台 で SEO 記事 を 完全 自動 化 する 方法 | 2026 完全 ガイド',
+    kw:'スマホ SEO 自動 化',
+    sv:5400, comp:'関連 KW 8 個 一括 も OK', lp:'+ 1-2 LP / mo', expectLp:1.5,
+  },
+  {
+    hot:false,
+    title:'AI ライター × メディア 自動 運営 入門 | 月 100 記事 公開 まで',
+    kw:'AI ライター メディア',
+    sv:3200, comp:'内部 リンク 5 件 推奨', lp:'+ 1 LP / mo', expectLp:1,
+  },
+  {
+    hot:false,
+    title:'ブログ で 月 100 記事 量産 する 7 つ の AI ハック',
+    kw:'ブログ 量産 AI',
+    sv:2800, comp:'競合 弱い · 抜き やすい', lp:'+ 1 LP / mo', expectLp:1,
+  },
+  {
+    hot:false,
+    title:'WordPress vs サブドメイン 配信 を 徹底 比較 | SEO に 強い の は どっち？',
+    kw:'WordPress サブドメイン 比較',
+    sv:1900, comp:'上位 が 古い (= 抜ける)', lp:'+ 0-1 LP / mo', expectLp:0.5,
+  },
 ];
+const GEN_CHECK = new Set();
+
 function renderGenKw(){
   const el = document.getElementById('genKwList');
   if(!el) return;
   el.innerHTML = KW_SUGGESTIONS.map((k, i) => `
-    <button class="gen-kw ${k.hot ? 'hot' : ''}" onclick="genStartKw(${i})">
+    <div class="gen-kw ${k.hot ? 'hot' : ''} ${GEN_CHECK.has(i) ? 'checked' : ''}" onclick="genToggle(${i})">
+      <span class="gen-kw-chk">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>
       <span class="gen-kw-rank">${i+1}</span>
       <span class="gen-kw-bd">
-        <span class="gen-kw-t">${esc(k.t)}${k.hot ? ' <span class="gen-kw-hot-pill">HOT</span>' : ''}</span>
-        <span class="gen-kw-meta">${esc(k.meta)}</span>
+        <span class="gen-kw-title">${esc(k.title)}${k.hot ? ' <span class="gen-kw-hot-pill">HOT</span>' : ''}</span>
+        <span class="gen-kw-meta">
+          <span class="gen-kw-meta-kw">🔍 ${esc(k.kw)}</span>
+          <span class="gen-kw-meta-sep">·</span>
+          <span>検索 ${k.sv.toLocaleString()} / 月</span>
+          <span class="gen-kw-meta-sep">·</span>
+          <span>${esc(k.comp)}</span>
+        </span>
+        <span class="gen-kw-expect">${esc(k.lp)}</span>
       </span>
-      <span class="gen-kw-go">${esc(k.go)} →</span>
-    </button>
+      <span class="gen-kw-side">
+        <button class="gen-kw-instant" onclick="event.stopPropagation();genStartOne(${i})" title="1 件 だけ 即 起動">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none"/></svg>
+        </button>
+      </span>
+    </div>
   `).join('');
+  updateGenSummary();
 }
+
+function updateGenSummary(){
+  const sum = document.getElementById('genSummary');
+  const cnt = GEN_CHECK.size;
+  if(cnt === 0){
+    sum.classList.remove('show');
+    return;
+  }
+  sum.classList.add('show');
+  // calc estimate
+  const site = SITES[activeSiteIdx];
+  const remain = site.cap - site.art;
+  const afterRemain = Math.max(0, remain - cnt);
+  let totalLp = 0;
+  GEN_CHECK.forEach(i => { totalLp += KW_SUGGESTIONS[i].expectLp; });
+  const mins = cnt * 2 + Math.ceil(cnt / 3) * 2; // rough mock
+  document.getElementById('genSumCount').textContent = cnt + ' 件 選択';
+  document.getElementById('genSumCap').textContent = afterRemain + ' / ' + site.cap + '  (残)';
+  document.getElementById('genSumTime').textContent = '約 ' + mins + ' 分';
+  document.getElementById('genSumLp').textContent = '+' + totalLp.toFixed(1) + ' sess / mo';
+  document.getElementById('genBatchLbl').textContent = cnt + ' 件 一括 生成';
+}
+
+function genToggle(i){
+  if(GEN_CHECK.has(i)) GEN_CHECK.delete(i);
+  else GEN_CHECK.add(i);
+  renderGenKw();
+}
+
 function openGenModal(){
+  GEN_CHECK.clear();
   renderGenKw();
   document.getElementById('genModal').classList.add('show');
   setTimeout(()=>document.getElementById('genKwInput').focus(), 200);
@@ -1316,12 +1431,26 @@ function openGenModal(){
 function closeGenModal(){
   document.getElementById('genModal').classList.remove('show');
 }
-function genStartKw(i){
-  const kw = KW_SUGGESTIONS[i];
+
+function genStartOne(i){
+  const k = KW_SUGGESTIONS[i];
   closeGenModal();
-  showToast('⚡ AI チーム 起動: 「' + kw.t + '」');
-  addFeed('publish', '起動: 「' + kw.t + '」 (= AI 提案 から)');
+  showToast('⚡ AI チーム 起動: 「' + k.title + '」');
+  addFeed('publish', '起動: 「' + k.title + '」 (= AI 提案 #' + (i+1) + ')');
 }
+
+function genStartBatch(){
+  if(GEN_CHECK.size === 0) return;
+  const items = Array.from(GEN_CHECK).map(i => KW_SUGGESTIONS[i]);
+  const n = items.length;
+  closeGenModal();
+  showToast('⚡ ' + n + ' 件 一括 起動 開始');
+  items.forEach((k, idx) => {
+    setTimeout(()=>addFeed('publish', '起動 [' + (idx+1) + '/' + n + ']: 「' + k.title + '」'), 300 * (idx+1));
+  });
+  GEN_CHECK.clear();
+}
+
 function genStartCustom(){
   const kw = document.getElementById('genKwInput').value.trim();
   if(!kw){ showToast('KW を 入力 して ください'); return; }

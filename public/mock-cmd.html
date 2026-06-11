@@ -517,6 +517,108 @@ button:active{transform:scale(.98)}
 .demo-badge .x:hover{color:#fff}
 @media (max-width:880px){ .demo-badge{bottom:140px;right:16px} }
 
+/* === Generic modal extension === */
+.modal-wide{max-width:680px}
+.modal-tall .modal-body{max-height:60vh;overflow-y:auto}
+
+/* === Category editor === */
+.cat-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.cat-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--wire);border-radius:8px;background:var(--paper);transition:all .15s}
+.cat-row:hover{border-color:var(--teal-line);background:var(--cream)}
+.cat-row.editing{border-color:var(--teal);background:var(--teal-soft)}
+.cat-drag{color:var(--text3);cursor:grab;font-size:14px;letter-spacing:-2px;user-select:none}
+.cat-name{flex:1;font-size:13px;font-weight:600;color:var(--text);padding:6px 0;outline:none}
+.cat-name[contenteditable=true]{background:#fff;border-radius:5px;padding:6px 9px;box-shadow:0 0 0 2px var(--teal)}
+.cat-count{font-family:var(--mono);font-size:10.5px;color:var(--text3);background:var(--cream2);padding:2px 8px;border-radius:5px}
+.cat-acts{display:flex;gap:4px}
+.cat-act-btn{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;color:var(--text3);transition:all .12s;background:transparent;font-size:13px}
+.cat-act-btn:hover{background:var(--cream2);color:var(--teal)}
+.cat-act-btn.del:hover{color:var(--rose);background:var(--rose-soft)}
+.cat-add{display:flex;gap:8px;padding:10px 12px;border:1px dashed var(--wire2);border-radius:8px;background:var(--cream)}
+.cat-add input{flex:1;background:#fff;border:1px solid var(--wire);border-radius:5px;padding:7px 10px;font-size:12.5px;outline:none}
+.cat-add input:focus{border-color:var(--teal)}
+
+/* === OG editor === */
+.og-pane{display:grid;grid-template-columns:1fr 240px;gap:18px;align-items:start}
+.og-preview{aspect-ratio:1200/630;background:linear-gradient(135deg,var(--teal),var(--teal2));border-radius:10px;padding:30px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;position:relative;overflow:hidden;box-shadow:0 4px 14px rgba(13,79,74,.15)}
+.og-preview.theme-cream{background:linear-gradient(135deg,#fafaf7,#ece8df);color:var(--teal)}
+.og-preview.theme-peach{background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#fff}
+.og-preview.theme-purple{background:linear-gradient(135deg,var(--purple),#a78bfa);color:#fff}
+.og-preview.theme-rose{background:linear-gradient(135deg,var(--rose),#ec4899);color:#fff}
+.og-preview-head{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;opacity:.7}
+.og-preview-title{font-size:24px;font-weight:900;line-height:1.25;letter-spacing:-.02em}
+.og-preview-sub{font-size:13px;opacity:.85;line-height:1.5}
+.og-form{display:flex;flex-direction:column;gap:12px}
+.og-form .set-fld{margin-bottom:0}
+.og-themes{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.og-theme{aspect-ratio:1;border-radius:7px;cursor:pointer;transition:all .15s;position:relative;border:2px solid transparent}
+.og-theme:hover{transform:scale(1.05)}
+.og-theme.active{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
+.og-theme.t-teal{background:linear-gradient(135deg,var(--teal),var(--teal2))}
+.og-theme.t-cream{background:linear-gradient(135deg,#fafaf7,#ece8df)}
+.og-theme.t-peach{background:linear-gradient(135deg,var(--peach),var(--peach-dark))}
+.og-theme.t-purple{background:linear-gradient(135deg,var(--purple),#a78bfa)}
+.og-theme.t-rose{background:linear-gradient(135deg,var(--rose),#ec4899)}
+
+/* === Card editor (Stripe Elements 風) === */
+.card-pane{display:flex;flex-direction:column;gap:14px}
+.card-visual{aspect-ratio:1.586/1;max-width:340px;border-radius:14px;background:linear-gradient(135deg,#0d4f4a 0%,#0a3d39 50%,#1a6a64 100%);padding:24px;color:#fff;position:relative;overflow:hidden;box-shadow:0 8px 24px rgba(13,79,74,.25);margin:0 auto;font-family:var(--mono)}
+.card-visual::before{content:'';position:absolute;top:-30%;right:-20%;width:60%;height:160%;background:radial-gradient(circle,rgba(255,255,255,.08),transparent);border-radius:50%}
+.card-visual-brand{font-size:11px;letter-spacing:.16em;font-weight:700;opacity:.7;margin-bottom:30px}
+.card-visual-num{font-size:17px;letter-spacing:.18em;font-weight:600;margin-bottom:18px}
+.card-visual-row{display:flex;justify-content:space-between;font-size:9px;opacity:.65;letter-spacing:.1em;margin-bottom:4px;text-transform:uppercase}
+.card-visual-row.lower{font-size:13px;opacity:1;letter-spacing:.04em}
+.card-row{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+.card-secure{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-top:6px}
+.card-secure::before{content:'🔒'}
+.card-brands{display:flex;gap:6px;margin-top:8px}
+.card-brand{padding:3px 7px;border:1px solid var(--wire);border-radius:4px;font-family:var(--mono);font-size:9.5px;color:var(--text3);letter-spacing:.06em;font-weight:700;background:#fff}
+
+/* === Wizard (= import / 退会) === */
+.wiz-steps{display:flex;gap:6px;padding:0 22px 16px;border-bottom:1px solid var(--wire);margin-bottom:0}
+.wiz-step{flex:1;height:4px;border-radius:2px;background:var(--cream2);transition:background .25s}
+.wiz-step.done{background:var(--teal)}
+.wiz-step.active{background:linear-gradient(90deg,var(--teal),var(--peach))}
+.wiz-step-labels{display:flex;font-family:var(--mono);font-size:10px;color:var(--text3);padding:0 22px 14px;letter-spacing:.06em}
+.wiz-step-labels > span{flex:1;text-align:center}
+.wiz-step-labels > span.active{color:var(--teal);font-weight:700}
+.wiz-content{padding:18px 22px 8px;min-height:280px}
+
+.drop-zone{border:2px dashed var(--wire2);border-radius:11px;padding:36px 24px;text-align:center;background:var(--cream);transition:all .15s;cursor:pointer}
+.drop-zone:hover{border-color:var(--teal);background:var(--teal-soft)}
+.drop-zone.over{border-color:var(--teal);background:var(--teal-soft);transform:scale(1.01)}
+.drop-zone-ic{font-size:36px;margin-bottom:8px}
+.drop-zone-h{font-size:14px;font-weight:700;margin-bottom:6px}
+.drop-zone-d{font-size:11.5px;color:var(--text3)}
+.fmt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px}
+.fmt-card{padding:14px 14px;border:1px solid var(--wire);border-radius:9px;background:var(--paper);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:11px}
+.fmt-card:hover{border-color:var(--teal-line);background:var(--cream)}
+.fmt-card.active{border-color:var(--teal);background:var(--teal-soft);box-shadow:0 0 0 3px rgba(13,79,74,.06)}
+.fmt-card-ic{width:36px;height:36px;border-radius:8px;background:var(--cream2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.fmt-card.active .fmt-card-ic{background:var(--teal);color:#fff}
+.fmt-card-n{font-size:13px;font-weight:700;margin-bottom:1px}
+.fmt-card-d{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.04em}
+
+.import-preview-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--wire);font-size:12px}
+.import-preview-row:last-child{border-bottom:0}
+.import-preview-row .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.import-preview-row .d{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.import-preview-row .ck{color:var(--green);font-weight:700;font-size:14px}
+
+.wiz-prog{padding:30px;text-align:center}
+.wiz-prog-ring{width:90px;height:90px;margin:0 auto 18px;position:relative;border-radius:50%;background:conic-gradient(var(--teal) var(--p,0%),var(--cream2) 0);display:flex;align-items:center;justify-content:center;transition:background .25s}
+.wiz-prog-ring::before{content:'';position:absolute;inset:8px;background:var(--paper);border-radius:50%}
+.wiz-prog-ring span{position:relative;font-family:var(--mono);font-size:18px;font-weight:800;color:var(--teal)}
+
+/* === Danger (退会 / サイト 削除) confirmation === */
+.danger-summary{padding:14px 16px;background:var(--rose-soft);border:1px solid #fecaca;border-radius:10px;margin-bottom:14px}
+.danger-summary-h{font-weight:800;color:var(--rose);font-size:13px;margin-bottom:6px}
+.danger-summary-li{font-size:12px;color:#7f1d1d;line-height:1.7;padding-left:18px;position:relative}
+.danger-summary-li::before{content:'•';position:absolute;left:5px;font-weight:700}
+.danger-confirm-input{width:100%;padding:11px 13px;border:2px solid #fecaca;border-radius:8px;font-family:var(--mono);font-size:13px;background:#fff;outline:none;transition:all .15s;letter-spacing:.02em}
+.danger-confirm-input:focus{border-color:var(--rose);box-shadow:0 0 0 3px var(--rose-soft)}
+.danger-confirm-input.ok{border-color:var(--green);background:var(--green-soft)}
+
 /* === Footer law links === */
 .law-footer{padding:18px 24px;border-top:1px solid var(--wire);background:var(--cream);font-family:var(--mono);font-size:10.5px;color:var(--text3);display:flex;gap:18px;flex-wrap:wrap;align-items:center}
 .law-footer a{color:var(--text2);text-decoration:none;transition:color .15s}
@@ -1311,7 +1413,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">カテゴリ (4)</div><div class="set-row-d">AI×メディア / ノウハウ / 比較 / 業界 動向</div></div>
-              <button class="btn-sm" onclick="showToast('編集 (mock)')">編集</button>
+              <button class="btn-sm" onclick="openCatModal()">編集</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">テーマ / 配色</div><div class="set-row-d">teal + cream</div></div>
@@ -1319,7 +1421,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">favicon / OG 画像</div><div class="set-row-d">設定 済 · auto-generated</div></div>
-              <button class="btn-sm" onclick="showToast('OG 編集 (mock)')">変更</button>
+              <button class="btn-sm" onclick="openOgModal()">変更</button>
             </div>
           </div>
 
@@ -1340,7 +1442,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row" style="border-top:0">
               <div class="set-row-info"><div class="set-row-l">支払い 方法</div><div class="set-row-d">VISA •••• 4242 · 有効 期限 12 / 28</div></div>
-              <button class="btn-sm" onclick="showToast('カード 編集 (mock)')">変更</button>
+              <button class="btn-sm" onclick="openCardModal()">変更</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">自動 更新</div><div class="set-row-d">毎月 11 日 に 自動 請求</div></div>
@@ -1481,7 +1583,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">📤 既存 ブログ から インポート</div><div class="set-row-d">WordPress / Note / はてな の XML / Markdown を 一括 取り込み</div></div>
-              <button class="btn-sm" onclick="showToast('インポート ウィザード (mock)')">インポート</button>
+              <button class="btn-sm" onclick="openImportModal()">インポート</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">🗂 アクティビティ ログ DL</div><div class="set-row-d">過去 90 日 の 公開 / リライト / シェア ログ を CSV で</div></div>
@@ -1524,7 +1626,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row" style="border-top:0">
               <div class="set-row-info"><div class="set-row-l">この サイト を 削除</div><div class="set-row-d">media-blog の 全 記事 / 設定 / 統計 を 完全 削除</div></div>
-              <button class="btn-danger" onclick="openDangerModal('site')">削除</button>
+              <button class="btn-danger" onclick="openDangerModalNew('site')">削除</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">プラン を 解約</div><div class="set-row-d">月末 で 解約 · データ は 30 日 間 保持</div></div>
@@ -1532,7 +1634,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">アカウント を 削除 (= 退会)</div><div class="set-row-d">全 サイト / 全 記事 / 全 data を 完全 削除 · 復元 不可</div></div>
-              <button class="btn-danger" onclick="openDangerModal('account')">退会</button>
+              <button class="btn-danger" onclick="openDangerModalNew('account')">退会</button>
             </div>
           </div>
         </div>
@@ -1659,6 +1761,203 @@ input[type="file"]{display:none}
       <span class="cmdk-esc">esc</span>
     </div>
     <div class="cmdk-body" id="cmdkBody"></div>
+  </div>
+</div>
+
+<!-- ━━ Category editor modal ━━ -->
+<div class="modal-bg" id="catModal" onclick="if(event.target===this)closeCatModal()">
+  <div class="modal modal-wide modal-tall">
+    <div class="modal-head"><span>📂</span> <span>カテゴリ 編集</span><button class="modal-x" onclick="closeCatModal()">×</button></div>
+    <div class="modal-body" style="padding:18px 22px">
+      <div class="set-p" style="margin-bottom:14px">カテゴリ を 追加 / リネーム / 削除。 並 び 替え は ↑↓ で 可能。 記事 が ある カテゴリ を 削除 する と 記事 は 「未分類」 に 移動 し ます。</div>
+      <div class="cat-list" id="catList"></div>
+      <div class="cat-add">
+        <input id="catNewInput" placeholder="新規 カテゴリ 名 (例: AI ツール 比較)" onkeydown="if(event.key==='Enter')catAdd()">
+        <button class="btn-sm primary" onclick="catAdd()">＋ 追加</button>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeCatModal()">キャンセル</button><button class="btn btn-go" onclick="catSave()">保存</button></div>
+  </div>
+</div>
+
+<!-- ━━ OG image editor ━━ -->
+<div class="modal-bg" id="ogModal" onclick="if(event.target===this)closeOgModal()">
+  <div class="modal modal-wide">
+    <div class="modal-head"><span>🖼</span> <span>OG 画像 編集</span><button class="modal-x" onclick="closeOgModal()">×</button></div>
+    <div class="modal-body" style="padding:18px 22px">
+      <div class="og-pane">
+        <div class="og-preview theme-teal" id="ogPreview">
+          <div class="og-preview-head">▌ <span id="ogPrevBrand">myaiagents.agency</span></div>
+          <div>
+            <div class="og-preview-title" id="ogPrevTitle">AI が メディア を 構築 し、 LP に 流入 を 起こす</div>
+            <div class="og-preview-sub" id="ogPrevSub" style="margin-top:10px">月 100 記事 を AI 24 名 が 自動 で 量産</div>
+          </div>
+        </div>
+        <div class="og-form">
+          <div class="set-fld">
+            <div class="set-fld-l">タイトル</div>
+            <input class="set-input" id="ogTitle" value="AI が メディア を 構築 し、 LP に 流入 を 起こす" oninput="updateOgPreview()">
+          </div>
+          <div class="set-fld">
+            <div class="set-fld-l">サブ タイトル</div>
+            <input class="set-input" id="ogSub" value="月 100 記事 を AI 24 名 が 自動 で 量産" oninput="updateOgPreview()">
+          </div>
+          <div class="set-fld">
+            <div class="set-fld-l">ブランド (= 右上)</div>
+            <input class="set-input" id="ogBrand" value="myaiagents.agency" oninput="updateOgPreview()">
+          </div>
+          <div class="set-fld">
+            <div class="set-fld-l">テーマ / 配色</div>
+            <div class="og-themes">
+              <div class="og-theme t-teal active" data-th="teal" onclick="setOgTheme('teal',this)"></div>
+              <div class="og-theme t-cream" data-th="cream" onclick="setOgTheme('cream',this)"></div>
+              <div class="og-theme t-peach" data-th="peach" onclick="setOgTheme('peach',this)"></div>
+              <div class="og-theme t-purple" data-th="purple" onclick="setOgTheme('purple',this)"></div>
+              <div class="og-theme t-rose" data-th="rose" onclick="setOgTheme('rose',this)"></div>
+            </div>
+          </div>
+          <button class="btn-sm" style="margin-top:6px" onclick="showToast('🪄 AI 自動 生成 (mock)')">🪄 AI に 任せて 自動 生成</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeOgModal()">キャンセル</button><button class="btn btn-go" onclick="showToast('✓ OG 画像 を 保存 (mock)');closeOgModal()">保存</button></div>
+  </div>
+</div>
+
+<!-- ━━ Card editor ━━ -->
+<div class="modal-bg" id="cardModal" onclick="if(event.target===this)closeCardModal()">
+  <div class="modal">
+    <div class="modal-head"><span>💳</span> <span>支払 カード を 編集</span><button class="modal-x" onclick="closeCardModal()">×</button></div>
+    <div class="modal-body" style="padding:18px 22px">
+      <div class="card-pane">
+        <div class="card-visual" id="cardVisual">
+          <div class="card-visual-brand">MY AI Agent</div>
+          <div class="card-visual-num" id="cardVisNum">•••• •••• •••• 4242</div>
+          <div>
+            <div class="card-visual-row"><span>card holder</span><span>expires</span></div>
+            <div class="card-visual-row lower"><span id="cardVisName">KOTA TAKEUCHI</span><span id="cardVisExp">12 / 28</span></div>
+          </div>
+        </div>
+        <div class="set-fld" style="margin-top:6px;margin-bottom:0">
+          <div class="set-fld-l">カード 番号</div>
+          <input class="set-input" id="cardNum" placeholder="1234 5678 9012 3456" maxlength="19" oninput="onCardNumInput()">
+        </div>
+        <div class="card-row">
+          <div class="set-fld" style="margin-bottom:0">
+            <div class="set-fld-l">有効 期限 (MM / YY)</div>
+            <input class="set-input" id="cardExp" placeholder="12 / 28" maxlength="7" oninput="onCardExpInput()">
+          </div>
+          <div class="set-fld" style="margin-bottom:0">
+            <div class="set-fld-l">CVC</div>
+            <input class="set-input" id="cardCvc" placeholder="123" maxlength="4" inputmode="numeric">
+          </div>
+        </div>
+        <div class="set-fld" style="margin-bottom:0">
+          <div class="set-fld-l">名義 (= ローマ字)</div>
+          <input class="set-input" id="cardName" placeholder="KOTA TAKEUCHI" oninput="onCardNameInput()">
+        </div>
+        <div class="card-secure">Stripe 経由 で 安全 に 保存 · 番号 は 当社 サーバ に 残り ません</div>
+        <div class="card-brands"><span class="card-brand">VISA</span><span class="card-brand">Mastercard</span><span class="card-brand">AMEX</span><span class="card-brand">JCB</span></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeCardModal()">キャンセル</button><button class="btn btn-go" onclick="showToast('✓ カード 更新 (mock)');closeCardModal()">保存</button></div>
+  </div>
+</div>
+
+<!-- ━━ Import wizard ━━ -->
+<div class="modal-bg" id="importModal" onclick="if(event.target===this)closeImportModal()">
+  <div class="modal modal-wide">
+    <div class="modal-head"><span>📥</span> <span>既存 ブログ から インポート</span><button class="modal-x" onclick="closeImportModal()">×</button></div>
+    <div class="modal-body" style="padding:0">
+      <div class="wiz-steps">
+        <div class="wiz-step active" id="wizStep1"></div>
+        <div class="wiz-step" id="wizStep2"></div>
+        <div class="wiz-step" id="wizStep3"></div>
+        <div class="wiz-step" id="wizStep4"></div>
+      </div>
+      <div class="wiz-step-labels">
+        <span class="active" id="wizLbl1">▌ 形式</span>
+        <span id="wizLbl2">アップロード</span>
+        <span id="wizLbl3">プレビュー</span>
+        <span id="wizLbl4">実行</span>
+      </div>
+
+      <!-- step 1 -->
+      <div class="wiz-content" id="wizPanel1">
+        <div class="set-h" style="font-size:14px">どこ から インポート しますか？</div>
+        <div class="set-p" style="margin-bottom:10px">既存 ブログ の エクスポート ファイル を ここ に 取り込みます。 形式 を 選ぶ と 次 へ。</div>
+        <div class="fmt-grid">
+          <div class="fmt-card active" data-fmt="wp" onclick="setImpFmt('wp',this)"><div class="fmt-card-ic">📘</div><div><div class="fmt-card-n">WordPress XML</div><div class="fmt-card-d">.xml · 一括 export</div></div></div>
+          <div class="fmt-card" data-fmt="note" onclick="setImpFmt('note',this)"><div class="fmt-card-ic">📝</div><div><div class="fmt-card-n">note</div><div class="fmt-card-d">記事 URL リスト or PDF</div></div></div>
+          <div class="fmt-card" data-fmt="hatena" onclick="setImpFmt('hatena',this)"><div class="fmt-card-ic">🍡</div><div><div class="fmt-card-n">はてな ブログ</div><div class="fmt-card-d">MovableType 形式</div></div></div>
+          <div class="fmt-card" data-fmt="md" onclick="setImpFmt('md',this)"><div class="fmt-card-ic">📄</div><div><div class="fmt-card-n">Markdown 一括</div><div class="fmt-card-d">.md / .zip</div></div></div>
+          <div class="fmt-card" data-fmt="csv" onclick="setImpFmt('csv',this)"><div class="fmt-card-ic">📊</div><div><div class="fmt-card-n">CSV</div><div class="fmt-card-d">title,body,published_at</div></div></div>
+          <div class="fmt-card" data-fmt="url" onclick="setImpFmt('url',this)"><div class="fmt-card-ic">🔗</div><div><div class="fmt-card-n">URL 一覧</div><div class="fmt-card-d">記事 URL を 1 行 ずつ</div></div></div>
+        </div>
+      </div>
+
+      <!-- step 2 -->
+      <div class="wiz-content" id="wizPanel2" style="display:none">
+        <div class="set-h" style="font-size:14px">ファイル を アップロード</div>
+        <div class="set-p" style="margin-bottom:14px">選択 形式: <b id="wizFmtLbl">WordPress XML</b>。 ドラッグ &amp; ドロップ も OK。</div>
+        <input type="file" id="wizFile" style="display:none" onchange="onWizFile(event)">
+        <div class="drop-zone" id="wizDrop" onclick="document.getElementById('wizFile').click()">
+          <div class="drop-zone-ic">📎</div>
+          <div class="drop-zone-h" id="wizDropH">ファイル を ドラッグ or click で 選択</div>
+          <div class="drop-zone-d">最大 50MB · 安全 に 暗号化 さ れ て 処理</div>
+        </div>
+      </div>
+
+      <!-- step 3 -->
+      <div class="wiz-content" id="wizPanel3" style="display:none">
+        <div class="set-h" style="font-size:14px">検出 された 記事 を 確認</div>
+        <div class="set-p" style="margin-bottom:14px">検出 数: <b id="wizCnt">42 記事</b>。 まず は 一部 を プレビュー。 取り込み 時 に 既存 カテゴリ に 自動 マッピング し ます。</div>
+        <div style="border:1px solid var(--wire);border-radius:8px;overflow:hidden">
+          <div class="import-preview-row"><span class="t">スマホ で 副業 を 始める 7 つ の 方法</span><span class="d">2024-08-12 · 6,200 字</span><span class="ck">✓</span></div>
+          <div class="import-preview-row"><span class="t">AI ライター を 使った 月 30 記事 量産 術</span><span class="d">2024-07-28 · 8,140 字</span><span class="ck">✓</span></div>
+          <div class="import-preview-row"><span class="t">SEO 順位 を 10 位 以内 に 入れる 5 つ の コツ</span><span class="d">2024-07-15 · 4,200 字</span><span class="ck">✓</span></div>
+          <div class="import-preview-row"><span class="t">WordPress → サブドメイン 移行 完全 ガイド</span><span class="d">2024-06-30 · 9,800 字</span><span class="ck">✓</span></div>
+          <div class="import-preview-row"><span class="t">ポイ活 アプリ 比較 2024 年 版</span><span class="d">2024-06-22 · 5,600 字</span><span class="ck">✓</span></div>
+        </div>
+        <div style="margin-top:14px;padding:12px 14px;background:var(--cream2);border-radius:7px;font-size:11.5px;color:var(--text2);line-height:1.55">
+          💡 残り 37 記事 も 同様 に 処理 さ れ ます。 メディア の 既 存 カテゴリ (= AI×メディア / ノウハウ / 比較 / 業界 動向) に 自動 マッピング、 マッチ し ない 物 は 「未分類」 に。
+        </div>
+      </div>
+
+      <!-- step 4 -->
+      <div class="wiz-content" id="wizPanel4" style="display:none">
+        <div class="wiz-prog">
+          <div class="wiz-prog-ring" id="wizRing" style="--p:0%"><span id="wizRingPct">0%</span></div>
+          <div class="set-h" style="font-size:15px;margin-bottom:5px" id="wizProgH">取り込み 中…</div>
+          <div class="set-p" id="wizProgD">42 記事 を 解析 し、 hero 画像 を 生成 中。 約 1-2 分。</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="wizBack" onclick="wizBack()" style="display:none">← 戻る</button>
+      <button class="btn btn-ghost" onclick="closeImportModal()">キャンセル</button>
+      <button class="btn btn-go" id="wizNext" onclick="wizNext()">次 へ →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ Danger confirm (= 退会 / サイト 削除) ━━ -->
+<div class="modal-bg" id="dangerModal" onclick="if(event.target===this)closeDangerModal()">
+  <div class="modal" style="border:1px solid #fecaca">
+    <div class="modal-head" style="background:var(--rose-soft);color:var(--rose)"><span>⚠️</span> <span id="dangerTag">退会 / 削除 の 最終 確認</span><button class="modal-x" onclick="closeDangerModal()">×</button></div>
+    <div class="modal-body" style="padding:18px 22px">
+      <div class="modal-h" style="color:var(--rose)" id="dangerH">本当 に 退会 します か？</div>
+      <div class="danger-summary">
+        <div class="danger-summary-h">⚠️ 失う もの</div>
+        <div id="dangerSummaryList"></div>
+      </div>
+      <div class="set-p" style="font-size:12.5px" id="dangerD">続行 する に は、 下 の 入力 欄 に <b id="dangerKeyword">退会 します</b> と <b>正確 に</b> 入力 し て ください。 30 日 以内 で あれば 復元 でき ます。</div>
+      <input type="text" class="danger-confirm-input" id="dangerInput" placeholder="ここ に 入力" oninput="checkDangerInput()">
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeDangerModal()">キャンセル</button>
+      <button class="btn" id="dangerGo" disabled style="background:var(--wire2);color:var(--text3);border-color:var(--wire2);cursor:not-allowed" onclick="dangerConfirm()">完全 削除</button>
+    </div>
   </div>
 </div>
 
@@ -2490,6 +2789,7 @@ document.addEventListener('keydown', (e)=>{
   // esc
   if(e.key === 'Escape'){
     closeModal(); closeGenModal(); closeCmdK(); closeHelp(); closeAllPops();
+    closeCatModal(); closeOgModal(); closeCardModal(); closeImportModal(); closeDangerModal();
     return;
   }
   // Cmd+K
@@ -2543,6 +2843,266 @@ window.toggleChat = function(){
     _origToggleChat();
   }
 };
+
+// ═════════════ Category editor ═════════════
+const CATS_INIT = [
+  { name:'AI×メディア', count:24 },
+  { name:'ノウハウ', count:14 },
+  { name:'比較', count:7 },
+  { name:'業界 動向', count:3 },
+];
+let CATS = JSON.parse(JSON.stringify(CATS_INIT));
+function openCatModal(){
+  CATS = JSON.parse(JSON.stringify(CATS_INIT));
+  renderCatList();
+  document.getElementById('catModal').classList.add('show');
+  setTimeout(()=>document.getElementById('catNewInput').focus(), 100);
+}
+function closeCatModal(){ document.getElementById('catModal').classList.remove('show'); }
+function renderCatList(){
+  const el = document.getElementById('catList');
+  el.innerHTML = CATS.map((c, i) => `
+    <div class="cat-row" data-i="${i}">
+      <span class="cat-drag">⋮⋮</span>
+      <span class="cat-name" contenteditable="false" id="catN${i}">${esc(c.name)}</span>
+      <span class="cat-count">${c.count} 記事</span>
+      <div class="cat-acts">
+        <button class="cat-act-btn" onclick="catEdit(${i})" title="リネーム">✏️</button>
+        <button class="cat-act-btn" onclick="catMove(${i},-1)" title="上 へ">↑</button>
+        <button class="cat-act-btn" onclick="catMove(${i},1)" title="下 へ">↓</button>
+        <button class="cat-act-btn del" onclick="catDel(${i})" title="削除">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+function catAdd(){
+  const inp = document.getElementById('catNewInput');
+  const v = inp.value.trim();
+  if(!v) return;
+  CATS.push({ name: v, count: 0 });
+  inp.value = '';
+  renderCatList();
+  showToast('+ ' + v + ' を 追加');
+}
+function catEdit(i){
+  const n = document.getElementById('catN' + i);
+  n.contentEditable = 'true';
+  n.parentElement.classList.add('editing');
+  n.focus();
+  const range = document.createRange(); range.selectNodeContents(n); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  n.onblur = () => {
+    n.contentEditable = 'false';
+    n.parentElement.classList.remove('editing');
+    CATS[i].name = n.textContent.trim();
+    showToast('リネーム: ' + CATS[i].name);
+  };
+}
+function catDel(i){
+  if(!confirm('「' + CATS[i].name + '」 を 削除？ (= ' + CATS[i].count + ' 記事 は 未分類 へ)')) return;
+  CATS.splice(i, 1);
+  renderCatList();
+}
+function catMove(i, d){
+  const j = i + d;
+  if(j < 0 || j >= CATS.length) return;
+  [CATS[i], CATS[j]] = [CATS[j], CATS[i]];
+  renderCatList();
+}
+function catSave(){
+  closeCatModal();
+  showToast('✓ カテゴリ ' + CATS.length + ' 件 を 保存');
+}
+
+// ═════════════ OG editor ═════════════
+function openOgModal(){
+  document.getElementById('ogModal').classList.add('show');
+  updateOgPreview();
+}
+function closeOgModal(){ document.getElementById('ogModal').classList.remove('show'); }
+function updateOgPreview(){
+  document.getElementById('ogPrevTitle').textContent = document.getElementById('ogTitle').value || '(タイトル を 入力)';
+  document.getElementById('ogPrevSub').textContent = document.getElementById('ogSub').value || '';
+  document.getElementById('ogPrevBrand').textContent = document.getElementById('ogBrand').value || '';
+}
+function setOgTheme(th, btn){
+  document.querySelectorAll('.og-theme').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const pv = document.getElementById('ogPreview');
+  pv.className = 'og-preview theme-' + th;
+}
+
+// ═════════════ Card editor ═════════════
+function openCardModal(){
+  document.getElementById('cardNum').value = '';
+  document.getElementById('cardExp').value = '';
+  document.getElementById('cardCvc').value = '';
+  document.getElementById('cardName').value = '';
+  document.getElementById('cardVisNum').textContent = '•••• •••• •••• ••••';
+  document.getElementById('cardVisName').textContent = 'YOUR NAME';
+  document.getElementById('cardVisExp').textContent = 'MM / YY';
+  document.getElementById('cardModal').classList.add('show');
+}
+function closeCardModal(){ document.getElementById('cardModal').classList.remove('show'); }
+function onCardNumInput(){
+  const inp = document.getElementById('cardNum');
+  let v = inp.value.replace(/\D/g, '').slice(0, 16);
+  v = v.replace(/(\d{4})/g, '$1 ').trim();
+  inp.value = v;
+  const padded = v.padEnd(19, '•').replace(/•/g, '•').slice(0, 19);
+  document.getElementById('cardVisNum').textContent = padded || '•••• •••• •••• ••••';
+}
+function onCardExpInput(){
+  const inp = document.getElementById('cardExp');
+  let v = inp.value.replace(/\D/g, '').slice(0, 4);
+  if(v.length >= 3) v = v.slice(0, 2) + ' / ' + v.slice(2);
+  inp.value = v;
+  document.getElementById('cardVisExp').textContent = v || 'MM / YY';
+}
+function onCardNameInput(){
+  const v = document.getElementById('cardName').value.toUpperCase();
+  document.getElementById('cardVisName').textContent = v || 'YOUR NAME';
+}
+
+// ═════════════ Import wizard ═════════════
+let WIZ_STEP = 1, WIZ_FMT = 'wp', WIZ_PROG_TIMER = null;
+const WIZ_FMT_LBL = { wp:'WordPress XML', note:'note', hatena:'はてな ブログ', md:'Markdown', csv:'CSV', url:'URL 一覧' };
+function openImportModal(){
+  WIZ_STEP = 1; WIZ_FMT = 'wp';
+  document.querySelectorAll('.fmt-card').forEach(c => c.classList.toggle('active', c.dataset.fmt === 'wp'));
+  document.getElementById('wizDropH').textContent = 'ファイル を ドラッグ or click で 選択';
+  document.getElementById('importModal').classList.add('show');
+  renderWiz();
+}
+function closeImportModal(){
+  document.getElementById('importModal').classList.remove('show');
+  if(WIZ_PROG_TIMER){ clearInterval(WIZ_PROG_TIMER); WIZ_PROG_TIMER = null; }
+}
+function setImpFmt(f, btn){
+  WIZ_FMT = f;
+  document.querySelectorAll('.fmt-card').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+}
+function onWizFile(e){
+  const f = e.target.files[0];
+  if(!f) return;
+  document.getElementById('wizDropH').textContent = '✓ ' + f.name + ' (' + Math.round(f.size/1024) + 'KB)';
+}
+function renderWiz(){
+  for(let i = 1; i <= 4; i++){
+    const step = document.getElementById('wizStep' + i);
+    const lbl = document.getElementById('wizLbl' + i);
+    step.classList.toggle('active', i === WIZ_STEP);
+    step.classList.toggle('done', i < WIZ_STEP);
+    lbl.classList.toggle('active', i === WIZ_STEP);
+    document.getElementById('wizPanel' + i).style.display = (i === WIZ_STEP) ? 'block' : 'none';
+  }
+  document.getElementById('wizBack').style.display = WIZ_STEP > 1 && WIZ_STEP < 4 ? 'block' : 'none';
+  const nextBtn = document.getElementById('wizNext');
+  if(WIZ_STEP === 1){ nextBtn.textContent = '次 へ →'; nextBtn.style.display = 'block'; }
+  else if(WIZ_STEP === 2){ nextBtn.textContent = '次 へ →'; nextBtn.style.display = 'block'; }
+  else if(WIZ_STEP === 3){ nextBtn.textContent = '✓ ' + 42 + ' 件 を 取り込む'; nextBtn.style.display = 'block'; }
+  else { nextBtn.style.display = 'none'; }
+  if(WIZ_STEP === 2){ document.getElementById('wizFmtLbl').textContent = WIZ_FMT_LBL[WIZ_FMT]; }
+}
+function wizNext(){
+  if(WIZ_STEP < 4){ WIZ_STEP++; renderWiz(); }
+  if(WIZ_STEP === 4) startWizProgress();
+}
+function wizBack(){
+  if(WIZ_STEP > 1){ WIZ_STEP--; renderWiz(); }
+}
+function startWizProgress(){
+  let p = 0;
+  const ring = document.getElementById('wizRing');
+  const pct = document.getElementById('wizRingPct');
+  const h = document.getElementById('wizProgH');
+  const d = document.getElementById('wizProgD');
+  WIZ_PROG_TIMER = setInterval(() => {
+    p += 3 + Math.random() * 4;
+    if(p >= 100){
+      p = 100; clearInterval(WIZ_PROG_TIMER); WIZ_PROG_TIMER = null;
+      ring.style.setProperty('--p', '100%'); pct.textContent = '✓';
+      h.textContent = '✓ 取り込み 完了';
+      d.textContent = '42 記事 を メディア に 追加 し まし た。 dashboard を 確認 して ください。';
+      setTimeout(() => { closeImportModal(); showToast('✓ 42 記事 を インポート 完了'); }, 1500);
+    } else {
+      ring.style.setProperty('--p', p + '%'); pct.textContent = Math.round(p) + '%';
+      if(p < 30) d.textContent = '42 記事 を 解析 中… (HTML / Markdown 変換)';
+      else if(p < 60) d.textContent = 'AI チーム が hero 画像 を 生成 中…';
+      else if(p < 90) d.textContent = 'カテゴリ マッピング 中…';
+      else d.textContent = '保存 + IndexNow ping を 送信 中…';
+    }
+  }, 250);
+}
+
+// ═════════════ Danger confirm ═════════════
+let DANGER_KIND = null;
+function openAccountDeleteModal(){ openDangerModalNew('account'); }
+function openDangerModalNew(kind){
+  DANGER_KIND = kind;
+  const map = {
+    site: {
+      tag: 'サイト 削除 の 最終 確認',
+      h: 'media-blog を 削除 します か？',
+      d: '続行 する には、 下 の 入力 欄 に <b>DELETE</b> と 入力 して ください。 30 日 grace 期間 内 は 復元 でき ます。',
+      kw: 'DELETE',
+      list: ['この サイト の 48 記事 と body_html 全文', 'メディア 設定 (= サブドメイン / カテゴリ / OG / テーマ)', '過去 30 日 の PV / LP 流入 統計', '計測 用 media_visits row (= 167 件)'],
+    },
+    account: {
+      tag: '退会 の 最終 確認',
+      h: '本当 に 退会 します か？',
+      d: '続行 する には、 下 の 入力 欄 に <b>退会 します</b> と <b>正確 に</b> 入力。 30 日 以内 で あれば 復元 可能 ですが、 30 日 経過 で 完全 削除 さ れ 復元 不可。',
+      kw: '退会 します',
+      list: ['全 サイト (= 2 件) と 全 記事 (= 51 件)', 'プラン (= BUSINESS / ¥4,950 月)', '請求 履歴 と 領収書 PDF', 'AI チーム 24 名 の 学習 履歴', '全 アカウント データ (= プロフィール / メール / 連携)'],
+    },
+  };
+  const v = map[kind];
+  document.getElementById('dangerTag').textContent = v.tag;
+  document.getElementById('dangerH').textContent = v.h;
+  document.getElementById('dangerD').innerHTML = v.d;
+  document.getElementById('dangerKeyword').textContent = v.kw;
+  document.getElementById('dangerSummaryList').innerHTML = v.list.map(x => `<div class="danger-summary-li">${esc(x)}</div>`).join('');
+  document.getElementById('dangerInput').value = '';
+  document.getElementById('dangerInput').classList.remove('ok');
+  const go = document.getElementById('dangerGo');
+  go.disabled = true;
+  go.style.background = 'var(--wire2)';
+  go.style.color = 'var(--text3)';
+  go.style.borderColor = 'var(--wire2)';
+  go.style.cursor = 'not-allowed';
+  document.getElementById('dangerModal').classList.add('show');
+  setTimeout(()=>document.getElementById('dangerInput').focus(), 200);
+}
+function closeDangerModal(){ document.getElementById('dangerModal').classList.remove('show'); }
+function checkDangerInput(){
+  const inp = document.getElementById('dangerInput');
+  const kw = document.getElementById('dangerKeyword').textContent;
+  const ok = inp.value === kw;
+  inp.classList.toggle('ok', ok);
+  const go = document.getElementById('dangerGo');
+  go.disabled = !ok;
+  if(ok){
+    go.style.background = 'var(--rose)';
+    go.style.color = '#fff';
+    go.style.borderColor = 'var(--rose)';
+    go.style.cursor = 'pointer';
+  } else {
+    go.style.background = 'var(--wire2)';
+    go.style.color = 'var(--text3)';
+    go.style.borderColor = 'var(--wire2)';
+    go.style.cursor = 'not-allowed';
+  }
+}
+function dangerConfirm(){
+  closeDangerModal();
+  if(DANGER_KIND === 'site'){
+    showToast('🗑 サイト 削除 受付 · 30 日 grace 期間 開始');
+    addFeed('warn', '危険 操作: サイト 削除 受付 (= 30 日 grace)');
+  } else {
+    showToast('🗑 退会 受付 · 30 日 後 に 完全 削除');
+    addFeed('warn', '危険 操作: 退会 受付 (= 30 日 grace)');
+  }
+}
 
 // === Demo state (= empty / error / loading / normal) ===
 let DEMO_STATE = 'normal';

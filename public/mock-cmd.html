@@ -655,6 +655,70 @@ button:active{transform:scale(.98)}
 .social-btn.linked{background:var(--green-soft);border-color:var(--green);color:var(--green)}
 .social-btn .ic{font-size:16px}
 
+/* === Welcome modal (= 初 ログイン 価値 体感) === */
+.welcome-stage{padding:8px 4px;text-align:center}
+.welcome-hero{font-size:34px;font-weight:900;letter-spacing:-1px;margin:6px 0 4px;color:var(--teal);line-height:1.1}
+.welcome-sub{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.55}
+.welcome-demo{background:var(--cream2);border-radius:11px;padding:18px 16px;margin:14px 0;border:1px dashed var(--wire)}
+.wd-row{display:flex;align-items:center;gap:12px;padding:8px 0;font-family:var(--mono);font-size:11.5px;text-align:left;opacity:.3;transition:opacity .35s}
+.wd-row.done{opacity:1}
+.wd-row.active{opacity:1;color:var(--teal);font-weight:700}
+.wd-row .wd-ic{width:24px;height:24px;border-radius:50%;background:var(--wire);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-weight:800}
+.wd-row.done .wd-ic{background:var(--green);color:#fff}
+.wd-row.active .wd-ic{background:var(--teal);color:#fff;animation:pulse 1.4s ease-in-out infinite}
+.welcome-result{background:var(--green-soft);border-radius:11px;padding:18px 16px;margin:14px 0;display:none;border:1px solid var(--green)}
+.welcome-result.show{display:block;animation:popIn .4s ease}
+.welcome-result-title{font-size:15px;font-weight:800;color:var(--green);margin-bottom:6px}
+.welcome-result-num{font-family:var(--mono);font-size:26px;font-weight:900;color:var(--teal);margin:4px 0;line-height:1.1}
+.welcome-cta{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.confetti{position:fixed;top:-10px;width:8px;height:14px;z-index:300;pointer-events:none;animation:confetti-fall 3s linear forwards}
+@keyframes confetti-fall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:.3}}
+
+/* === Plan usage card (= sidebar 下部) === */
+.plan-card{margin:14px 12px 8px;padding:11px 12px;background:var(--cream2);border-radius:9px;border:1px solid var(--wire);font-family:var(--mono);font-size:10.5px}
+.plan-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.plan-card-name{font-weight:800;color:var(--teal);font-size:11px;letter-spacing:.05em}
+.plan-card-frac{color:var(--text2)}
+.plan-card-bar{height:6px;background:#fff;border-radius:3px;overflow:hidden;border:1px solid var(--wire);margin-bottom:6px}
+.plan-card-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--green));transition:width .6s ease}
+.plan-card.warn .plan-card-fill{background:linear-gradient(90deg,#d97f3b,#c14d4d)}
+.plan-card-msg{color:var(--text2);font-size:9.5px;line-height:1.5}
+.plan-card.warn .plan-card-msg{color:#c14d4d;font-weight:700}
+.plan-card-upbtn{display:block;width:100%;margin-top:7px;padding:6px 8px;background:var(--teal);color:var(--paper);border:0;border-radius:6px;font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.05em;cursor:pointer;text-transform:uppercase}
+.plan-card-upbtn:hover{background:#0c4641}
+
+/* === Upsell modal === */
+.upsell-roi{background:var(--cream2);border-radius:9px;padding:11px 14px;margin:14px 0;font-size:12.5px;line-height:1.7;color:var(--ink)}
+.upsell-roi b{color:var(--teal);font-weight:800}
+.upsell-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.upsell-col{padding:14px;border-radius:11px;border:1px solid var(--wire);background:#fff}
+.upsell-col.pro{border:2px solid var(--teal);background:linear-gradient(180deg,#fff 0%,var(--cream2) 100%);position:relative}
+.upsell-col.pro::before{content:'推奨';position:absolute;top:-9px;left:14px;background:var(--teal);color:var(--paper);padding:2px 10px;border-radius:4px;font-size:9.5px;font-weight:800;letter-spacing:.05em;font-family:var(--mono)}
+.upsell-col-name{font-size:12px;font-weight:800;letter-spacing:.05em;color:var(--ink);margin-bottom:4px;font-family:var(--mono);text-transform:uppercase}
+.upsell-col-price{font-size:24px;font-weight:900;color:var(--teal);margin-bottom:10px;line-height:1.1}
+.upsell-col-price small{font-size:11px;font-weight:600;color:var(--text2)}
+.upsell-col ul{margin:0;padding:0}
+.upsell-col li{font-size:11.5px;padding:3px 0;color:var(--ink);list-style:none;padding-left:18px;position:relative;line-height:1.45}
+.upsell-col li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:800}
+
+/* === Churn (= 退会 防止) wizard === */
+.churn-step{display:none;padding:6px 4px}
+.churn-step.active{display:block;animation:fadeIn .25s ease}
+.churn-pause{background:var(--cream2);border-radius:11px;padding:18px 16px;margin:14px 0;border:1px dashed var(--teal)}
+.churn-pause-title{font-size:14px;font-weight:800;color:var(--teal);margin-bottom:6px}
+.churn-pause-desc{font-size:12px;color:var(--ink);line-height:1.6;margin-bottom:12px}
+.churn-reasons{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.churn-reason-btn{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--wire);background:#fff;border-radius:9px;cursor:pointer;text-align:left;font-family:var(--sans);font-size:13px;transition:all .2s ease;color:var(--ink)}
+.churn-reason-btn:hover{border-color:var(--teal);background:var(--cream2)}
+.churn-reason-btn.selected{border-color:var(--teal);background:var(--cream2);font-weight:700}
+.churn-reason-ic{font-size:18px;flex-shrink:0}
+.churn-offer{background:linear-gradient(135deg,var(--teal) 0%,#13635c 100%);color:var(--paper);border-radius:13px;padding:20px 18px;margin:14px 0;text-align:center}
+.churn-offer-tag{font-family:var(--mono);font-size:10px;letter-spacing:.1em;opacity:.85;text-transform:uppercase}
+.churn-offer-title{font-size:18px;font-weight:900;margin:6px 0 4px;line-height:1.25}
+.churn-offer-desc{font-size:12px;opacity:.9;line-height:1.5;margin-bottom:14px}
+.churn-offer-accept{background:var(--paper);color:var(--teal);border:0;padding:11px 18px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:var(--sans)}
+.churn-offer-accept:hover{background:var(--peach)}
+
 /* === Footer law links === */
 .law-footer{padding:18px 24px;border-top:1px solid var(--wire);background:var(--cream);font-family:var(--mono);font-size:10.5px;color:var(--text3);display:flex;gap:18px;flex-wrap:wrap;align-items:center}
 .law-footer a{color:var(--text2);text-decoration:none;transition:color .15s}
@@ -998,6 +1062,17 @@ input[type="file"]{display:none}
       <button class="nav-btn" data-view="analytics" onclick="navTo('analytics',this)"><span class="nav-icon">📊</span> 分析</button>
       <button class="nav-btn" data-view="team" onclick="navTo('team',this)"><span class="nav-icon">🤖</span> AI チーム</button>
       <button class="nav-btn" data-view="settings" onclick="navTo('settings',this)"><span class="nav-icon">⚙</span> 設定</button>
+    </div>
+
+    <!-- Plan usage (= cap progress) -->
+    <div class="plan-card" id="planCard">
+      <div class="plan-card-head">
+        <span class="plan-card-name" id="planCardName">⚡ BUSINESS</span>
+        <span class="plan-card-frac" id="planCardFrac">48 / 100</span>
+      </div>
+      <div class="plan-card-bar"><div class="plan-card-fill" id="planCardFill" style="width:48%"></div></div>
+      <div class="plan-card-msg" id="planCardMsg">今月 残 52 本 · 24 日 後 reset</div>
+      <button class="plan-card-upbtn" id="planCardUpBtn" style="display:none" onclick="openUpsellModal()">▲ プラン を 上げる</button>
     </div>
   </div>
 
@@ -1664,6 +1739,22 @@ input[type="file"]{display:none}
               <div class="set-row-info"><div class="set-row-l">⚠️ エラー 状態</div><div class="set-row-d">API 失敗 時 の inline error + retry button</div></div>
               <button class="btn-sm" onclick="setDemoState('error')">適用</button>
             </div>
+            <div class="set-row" style="border-top:1px dashed var(--wire);margin-top:12px;padding-top:14px">
+              <div class="set-row-info"><div class="set-row-l">🆓 FREE plan に 切替 (= upsell 動 線 確認)</div><div class="set-row-d">残 3 / 20 本 (= 85%) で sidebar に <b>「あと 3 本 で cap」</b> warn + 「プラン を 上げる」 button が 出現</div></div>
+              <button class="btn-sm" onclick="try{localStorage.setItem('mock-plan-mode','free')}catch(_){};updatePlanCard();showToast('🆓 FREE plan に 切替')">適用</button>
+            </div>
+            <div class="set-row">
+              <div class="set-row-info"><div class="set-row-l">✦ PRO plan に 切替</div><div class="set-row-d">32 / 50 本 (= 64%) で 通常 表示</div></div>
+              <button class="btn-sm" onclick="try{localStorage.setItem('mock-plan-mode','pro')}catch(_){};updatePlanCard();showToast('✦ PRO plan に 切替')">適用</button>
+            </div>
+            <div class="set-row">
+              <div class="set-row-info"><div class="set-row-l">⚡ BUSINESS plan に 切替 (= デフォルト)</div><div class="set-row-d">48 / 100 本 (= 48%) で 通常 表示</div></div>
+              <button class="btn-sm" onclick="try{localStorage.setItem('mock-plan-mode','business')}catch(_){};updatePlanCard();showToast('⚡ BUSINESS plan に 切替')">適用</button>
+            </div>
+            <div class="set-row" style="border-top:1px dashed var(--wire);margin-top:12px;padding-top:14px">
+              <div class="set-row-info"><div class="set-row-l">🔄 オンボーディング 体験 を リセット</div><div class="set-row-d">welcome modal + tour + cookie ack を リセット し、 reload で 初 ログイン 体験 を 再 現</div></div>
+              <button class="btn-sm" onclick="try{['mock-welcome-done','mock-tour-seen','mock-cookie-ack'].forEach(k=>localStorage.removeItem(k))}catch(_){};showToast('🔄 reset 完了 · reload し て 確認');setTimeout(()=>location.reload(),900)">適用</button>
+            </div>
             <div style="margin-top:20px;padding:14px 16px;background:var(--cream2);border-radius:8px;font-size:11.5px;color:var(--text2);line-height:1.6">
               💡 mode は <b>localStorage</b> に 保存 され、 ページ リロード 後 も 維持 さ れ ます。 解除 する に は 「通常」 を 適用。
             </div>
@@ -1684,7 +1775,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">アカウント を 削除 (= 退会)</div><div class="set-row-d">全 サイト / 全 記事 / 全 data を 完全 削除 · 復元 不可</div></div>
-              <button class="btn-danger" onclick="openDangerModalNew('account')">退会</button>
+              <button class="btn-danger" onclick="openChurnModal()">退会</button>
             </div>
           </div>
         </div>
@@ -1802,6 +1893,7 @@ input[type="file"]{display:none}
     <div class="help-sect">
       <div class="help-sect-h">▌ 初期 設定</div>
       <div class="help-q" onclick="closeHelp();setTimeout(tourStart,300)">🎯 オンボーディング tour を もう 一度 見る</div>
+      <div class="help-q" onclick="closeHelp();try{localStorage.removeItem('mock-welcome-done')}catch(_){};setTimeout(openWelcome,300)">✨ ウェルカム デモ (= 自動 公開) を 再生</div>
     </div>
   </div>
 </div>
@@ -2176,6 +2268,160 @@ input[type="file"]{display:none}
       <button class="btn btn-ghost" id="tfaBack" onclick="tfaBack()" style="display:none">← 戻る</button>
       <button class="btn btn-ghost" onclick="closeTwoFa()">キャンセル</button>
       <button class="btn btn-go" id="tfaNext" onclick="tfaNext()">次 へ →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ Welcome modal (= 初 ログイン 即 価値 体感) ━━ -->
+<div class="modal-bg" id="welcomeModal" onclick="if(event.target===this){}">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head" style="background:var(--cream2)"><span>✨</span> <span>MY AI Agent へ ようこそ</span></div>
+    <div class="modal-body" style="padding:24px 22px">
+      <div class="welcome-stage" id="welcomeStage1">
+        <div class="welcome-hero">「書く」 から 解放 されよう。</div>
+        <div class="welcome-sub">AI チーム が <b>キーワード 調査 → 8,000 字 記事 → 公開 → SNS 拡散</b> まで を <b>90 秒</b> で 自動 化。 今 から、 まず <b>1 件 を 実際 に 公開 し て 体感</b> して もらい ます。</div>
+        <div style="background:var(--cream2);border-radius:10px;padding:14px;margin:14px 0;font-size:12px;color:var(--ink);line-height:1.65">
+          📌 <b>サンプル サイト</b>「あなた の 業 種」 で 自動 公開:<br>
+          ・ KW = 「副業 ブログ 始め 方 初心者」<br>
+          ・ 推定 月間 検索 = 1,900<br>
+          ・ 想定 LP 流入 = +3 sess / 月
+        </div>
+        <div class="welcome-cta">
+          <button class="btn btn-ghost" onclick="closeWelcome(true)">後 で やる</button>
+          <button class="btn btn-go" onclick="welcomeAutoPublish()">▶ AI に 任 せ て 1 件 公開</button>
+        </div>
+      </div>
+      <div class="welcome-stage" id="welcomeStage2" style="display:none">
+        <div class="welcome-hero" style="font-size:22px">AI チーム 24 名 が 動 い て い ます</div>
+        <div class="welcome-demo">
+          <div class="wd-row" id="wdRow1"><span class="wd-ic" id="wdIc1">1</span><span id="wdMsg1">🔍 KW Strategist が 月間 検索 量 を 算出 中...</span></div>
+          <div class="wd-row" id="wdRow2"><span class="wd-ic" id="wdIc2">2</span><span id="wdMsg2">📝 SEO Writer が 8,000 字 の 本文 を 執筆 中...</span></div>
+          <div class="wd-row" id="wdRow3"><span class="wd-ic" id="wdIc3">3</span><span id="wdMsg3">🖼 Designer が アイ キャッチ 画像 を 生成 中...</span></div>
+          <div class="wd-row" id="wdRow4"><span class="wd-ic" id="wdIc4">4</span><span id="wdMsg4">⚡ Publisher が CMS へ 公開 中...</span></div>
+          <div class="wd-row" id="wdRow5"><span class="wd-ic" id="wdIc5">5</span><span id="wdMsg5">📡 SNS Distributor が 拡散 中...</span></div>
+        </div>
+        <div style="font-size:11.5px;color:var(--text2);text-align:center;font-family:var(--mono)">推定 残り 時間: <span id="welcomeEta">28</span> 秒</div>
+      </div>
+      <div class="welcome-stage" id="welcomeStage3" style="display:none">
+        <div class="welcome-hero" style="color:var(--green)">🎉 公開 完了!</div>
+        <div class="welcome-sub">AI チーム が たった 今 1 件 の 記事 を 完成 し、 サイト に 公開 し まし た。 これ が <b>毎日 自動 で 起きる</b> 体験 です。</div>
+        <div class="welcome-result show">
+          <div class="welcome-result-title">📰 公開 された 記事</div>
+          <div style="font-size:13px;color:var(--ink);margin:4px 0;font-weight:700">「副業 ブログ で 月 5 万 円 稼ぐ ロード マップ 2026」</div>
+          <div style="font-size:11px;color:var(--text2);font-family:var(--mono);margin-bottom:8px">8,234 字 · 公開 から 12 秒 後</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
+            <div style="text-align:center"><div class="welcome-result-num">1</div><div style="font-size:10px;color:var(--text2);font-family:var(--mono)">RECORDS</div></div>
+            <div style="text-align:center"><div class="welcome-result-num">¥3K</div><div style="font-size:10px;color:var(--text2);font-family:var(--mono)">外注 換算</div></div>
+            <div style="text-align:center"><div class="welcome-result-num">90秒</div><div style="font-size:10px;color:var(--text2);font-family:var(--mono)">所要 時間</div></div>
+          </div>
+        </div>
+        <div style="background:var(--peach-soft);border:1px solid var(--peach);border-radius:9px;padding:12px 14px;margin:10px 0;font-size:12px;color:var(--peach-dark);line-height:1.55">
+          💡 <b>次 は あなた の キーワード</b> で 書か せ ましょう。 月 100 本 まで AI に 任 せる だけ で OK。
+        </div>
+        <div class="welcome-cta">
+          <button class="btn btn-ghost" onclick="closeWelcome(true)">後 で やる</button>
+          <button class="btn btn-go" onclick="closeWelcome(false);openGenModal()">▶ 自分 の KW で 書か せる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ Upsell modal (= plan アップ動 線) ━━ -->
+<div class="modal-bg" id="upsellModal" onclick="if(event.target===this)closeUpsellModal()">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-head" style="background:var(--cream2)"><span>📈</span> <span>プラン を アップ グレード</span><button class="modal-x" onclick="closeUpsellModal()">×</button></div>
+    <div class="modal-body" style="padding:22px 22px">
+      <div class="modal-h" style="font-size:17px">あと <span id="upsellLeft" style="color:var(--rose)">3</span> 本 で 今月 の cap に 到達 し ます</div>
+      <div class="upsell-roi">
+        🌱 今月 は すで に <b>¥<span id="upsellSaved">144,000</span> 相当</b> の 外注 コスト を 節約。<br>
+        ➕ PRO へ アップ で <b>+ 30 本 / 月</b> · 1 本 ¥49 → <b>¥1,950 / 月</b> の 追加 投資 で <b>+ ¥90,000 / 月 効果</b>。
+      </div>
+      <div class="upsell-row">
+        <div class="upsell-col">
+          <div class="upsell-col-name">FREE</div>
+          <div class="upsell-col-price">¥0<small> / 月</small></div>
+          <ul>
+            <li>月 20 本 まで</li>
+            <li>1 サイト</li>
+            <li>基本 SEO</li>
+          </ul>
+        </div>
+        <div class="upsell-col pro">
+          <div class="upsell-col-name">PRO</div>
+          <div class="upsell-col-price">¥1,950<small> / 月</small></div>
+          <ul>
+            <li><b>月 30 本 + 既存 20 本</b></li>
+            <li>3 サイト まで</li>
+            <li>AEO 強制 / リライト 自動</li>
+            <li>SNS 自動 シェア</li>
+          </ul>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:var(--text2);font-family:var(--mono);margin-top:6px">いつでも 解約 OK · 日 割り 返金 対応</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeUpsellModal()">後 で</button>
+      <button class="btn btn-go" onclick="closeUpsellModal();showToast('✅ PRO へ アップ グレード (mock) · ¥1,950 / 月')">▶ PRO に アップ する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ Churn (= 退会 防止) wizard ━━ -->
+<div class="modal-bg" id="churnModal" onclick="if(event.target===this)closeChurnModal()">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-head" style="background:var(--rose-soft);color:var(--rose)"><span>😢</span> <span id="churnTitle">退会 する 前 に</span><button class="modal-x" onclick="closeChurnModal()">×</button></div>
+    <div class="modal-body" style="padding:22px 22px">
+
+      <!-- step 1: pause 提案 -->
+      <div class="churn-step active" id="churnStep1">
+        <div class="modal-h" style="font-size:16px">本当 に お別れ し ます か？</div>
+        <div class="modal-p">これ まで <b>48 記事 を 公開</b>、 累計 <b>¥144,000 相当 の 外注 費 を 節約</b>。 これ ら の data は 退会 で <b>全て 削除</b> され ます (= 30 日 後 完全 削除)。</div>
+        <div class="churn-pause">
+          <div class="churn-pause-title">💤 まずは「一時 停止」して みません か？</div>
+          <div class="churn-pause-desc">1 ヶ月 〜 6 ヶ月 の 課金 停止 が 可能。 サイト と 記事 は <b>そのまま 保持</b>、 いつ でも 再 開 できる ので 「ちょっと 使う 頻度 が 落ちた」 程度 なら こちら が おすすめ。</div>
+          <button class="btn btn-go" style="width:100%" onclick="closeChurnModal();showToast('💤 1 ヶ月 一時 停止 を 受付 (mock)')">▶ 1 ヶ月 一時 停止 する</button>
+        </div>
+        <div style="text-align:center"><a onclick="churnNext(2)" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);text-decoration:underline;cursor:pointer">それ でも 退会 し たい</a></div>
+      </div>
+
+      <!-- step 2: 理由 アンケート -->
+      <div class="churn-step" id="churnStep2">
+        <div class="modal-h" style="font-size:15px">退会 の 理由 を 教えて ください</div>
+        <div class="modal-p" style="font-size:12px">改善 の ため。 1 つ 選ん で ください。</div>
+        <div class="churn-reasons">
+          <div class="churn-reason-btn" data-reason="price" onclick="pickChurnReason(this,'price')"><span class="churn-reason-ic">💰</span><span>料金 が 高い · もう 少し 安く して ほしい</span></div>
+          <div class="churn-reason-btn" data-reason="quality" onclick="pickChurnReason(this,'quality')"><span class="churn-reason-ic">📝</span><span>記事 の 品質 が 期待 通り で は な かった</span></div>
+          <div class="churn-reason-btn" data-reason="usage" onclick="pickChurnReason(this,'usage')"><span class="churn-reason-ic">📉</span><span>使う 頻度 が 落ちた · 必要 な く なった</span></div>
+          <div class="churn-reason-btn" data-reason="missing" onclick="pickChurnReason(this,'missing')"><span class="churn-reason-ic">🔧</span><span>欲しい 機能 が 無 い · 物足り ない</span></div>
+          <div class="churn-reason-btn" data-reason="other" onclick="pickChurnReason(this,'other')"><span class="churn-reason-ic">💬</span><span>そ の 他</span></div>
+        </div>
+      </div>
+
+      <!-- step 3: 引き留め オファー -->
+      <div class="churn-step" id="churnStep3">
+        <div class="churn-offer">
+          <div class="churn-offer-tag" id="churnOfferTag">特別 オファー</div>
+          <div class="churn-offer-title" id="churnOfferTitle">2 ヶ月 半額 で 続け ませ んか？</div>
+          <div class="churn-offer-desc" id="churnOfferDesc">¥4,950 → <b>¥2,475</b> / 月 を 2 ヶ月 提供。 合計 <b>¥4,950 の 割引</b>。 期間 終了 後 は 通常 料金 に 戻り ます (= 解約 自由)。</div>
+          <button class="churn-offer-accept" onclick="closeChurnModal();showToast('🎉 オファー 適用 · 2 ヶ月 半額 で 継続')">▶ オファー を 受ける</button>
+        </div>
+        <div style="text-align:center"><a onclick="churnNext(4)" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);text-decoration:underline;cursor:pointer">退会 を 進める</a></div>
+      </div>
+
+      <!-- step 4: 最終 確認 -->
+      <div class="churn-step" id="churnStep4">
+        <div class="modal-h" style="color:var(--rose);font-size:15px">⚠️ 最終 確認</div>
+        <div class="modal-p">続行 する に は、 下 の 欄 に <b>退会 します</b> と 正確 に 入力 し て ください。 退会 後 <b>30 日 以内</b> は 復元 可能、 30 日 経過 で 全 data 完全 削除。</div>
+        <input class="set-input" id="churnConfirm" placeholder="退会 します" oninput="onChurnConfirm()">
+        <div id="churnConfirmStatus" style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-top:6px">— 「退会 します」 と 入力</div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="churnBack" onclick="churnBack()" style="display:none">← 戻る</button>
+      <button class="btn btn-ghost" onclick="closeChurnModal()">キャンセル</button>
+      <button class="btn" id="churnGo" style="background:var(--rose);color:#fff;display:none;opacity:.5;cursor:not-allowed" disabled onclick="confirmChurn()">退会 を 実行</button>
     </div>
   </div>
 </div>
@@ -2994,8 +3240,14 @@ function ackCookie(kind){
   document.getElementById('cookieBn').classList.remove('show');
   try { localStorage.setItem('mock-cookie-ack', kind); } catch(_){}
   showToast('Cookie 設定 保存: ' + (kind === 'all' ? '全 て OK' : '必須 のみ'));
-  // 初 visit な ら tour 自動 起動
-  try { if(!localStorage.getItem('mock-tour-seen')){ setTimeout(tourStart, 600); } } catch(_){}
+  // 初 visit ⇒ welcome (= 即 価値 体感) → 終了 後 tour
+  try {
+    if(!localStorage.getItem('mock-welcome-done')){
+      setTimeout(openWelcome, 600);
+    } else if(!localStorage.getItem('mock-tour-seen')){
+      setTimeout(tourStart, 600);
+    }
+  } catch(_){}
 }
 function maybeShowCookie(){
   try {
@@ -3012,6 +3264,7 @@ document.addEventListener('keydown', (e)=>{
     closeModal(); closeGenModal(); closeCmdK(); closeHelp(); closeAllPops();
     closeCatModal(); closeOgModal(); closeCardModal(); closeImportModal(); closeDangerModal();
     closePwReset(); closeEmailVerify(); closeTwoFa();
+    closeUpsellModal(); closeChurnModal();
     return;
   }
   // Cmd+K
@@ -3034,6 +3287,7 @@ document.addEventListener('keydown', (e)=>{
 
 maybeShowCookie();
 maybeStartTour();
+updatePlanCard();
 
 // === Mobile: sidebar drawer ===
 function toggleSidebar(){
@@ -3498,6 +3752,180 @@ const _origEsc = document.querySelector('script');
 document.addEventListener('keydown', (e) => {
   if(e.key === 'Escape' && document.getElementById('tourBg').classList.contains('show')) tourEnd(true);
 });
+
+// ═════════════ Welcome (= 即 価値 体感) ═════════════
+function openWelcome(){
+  ['welcomeStage1','welcomeStage2','welcomeStage3'].forEach((id,i)=>{
+    document.getElementById(id).style.display = (i===0) ? 'block' : 'none';
+  });
+  for(let i=1;i<=5;i++){
+    const r=document.getElementById('wdRow'+i);
+    if(r){ r.classList.remove('done','active'); document.getElementById('wdIc'+i).textContent = i; }
+  }
+  document.getElementById('welcomeModal').classList.add('show');
+}
+function closeWelcome(skipTour){
+  document.getElementById('welcomeModal').classList.remove('show');
+  try { localStorage.setItem('mock-welcome-done', '1'); } catch(_){}
+  if(!skipTour){
+    try { if(!localStorage.getItem('mock-tour-seen')){ setTimeout(tourStart, 400); } } catch(_){}
+  }
+}
+function welcomeAutoPublish(){
+  // stage 1 → 2 切替
+  document.getElementById('welcomeStage1').style.display = 'none';
+  document.getElementById('welcomeStage2').style.display = 'block';
+  const steps = [
+    { delay: 0,    msg: '🔍 KW Strategist が 月間 検索 量 を 算出 中...' },
+    { delay: 5000, msg: '📝 SEO Writer が 8,000 字 の 本文 を 執筆 中...' },
+    { delay: 14000, msg: '🖼 Designer が アイ キャッチ 画像 を 生成 中...' },
+    { delay: 19000, msg: '⚡ Publisher が CMS へ 公開 中...' },
+    { delay: 24000, msg: '📡 SNS Distributor が 拡散 中...' },
+  ];
+  let eta = 28;
+  const etaT = setInterval(()=>{
+    eta--;
+    if(eta>=0) document.getElementById('welcomeEta').textContent = eta;
+  }, 1000);
+  steps.forEach((s, i) => {
+    setTimeout(()=>{
+      const idx = i + 1;
+      // 前 step done に
+      if(idx>1){
+        const prev = document.getElementById('wdRow' + (idx-1));
+        prev.classList.remove('active');
+        prev.classList.add('done');
+        document.getElementById('wdIc' + (idx-1)).textContent = '✓';
+      }
+      const cur = document.getElementById('wdRow' + idx);
+      cur.classList.add('active');
+    }, s.delay);
+  });
+  // 完了
+  setTimeout(()=>{
+    clearInterval(etaT);
+    // 最後 を done に
+    const last = document.getElementById('wdRow5');
+    last.classList.remove('active');
+    last.classList.add('done');
+    document.getElementById('wdIc5').textContent = '✓';
+  }, 27000);
+  setTimeout(()=>{
+    document.getElementById('welcomeStage2').style.display = 'none';
+    document.getElementById('welcomeStage3').style.display = 'block';
+    fireConfetti();
+    addFeed('publish', '✨ サンプル 記事 を 自動 公開: 「副業 ブログ で 月 5 万 円 稼ぐ ロード マップ 2026」');
+  }, 28000);
+}
+function fireConfetti(){
+  const colors = ['#0e5a55','#dca27e','#fff1c2','#7c9e6e','#c45c5c'];
+  for(let i=0;i<60;i++){
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = (Math.random()*100) + '%';
+    c.style.background = colors[i % colors.length];
+    c.style.animationDelay = (Math.random()*1.5) + 's';
+    c.style.animationDuration = (2 + Math.random()*1.5) + 's';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(), 4000);
+  }
+}
+
+// ═════════════ Plan usage + Upsell ═════════════
+function updatePlanCard(){
+  // demo: BUSINESS = 100 cap, 48 使用, 残 52 (= 48%) ⇒ 通常
+  // free 体験 用 に localStorage 'mock-plan-mode' = 'free' ⇒ 17/20 (= 85% warn)
+  let cap, used, name;
+  try { var mode = localStorage.getItem('mock-plan-mode') || 'business'; } catch(_){ var mode = 'business'; }
+  if(mode === 'free'){ name = '🆓 FREE'; cap = 20; used = 17; }
+  else if(mode === 'pro'){ name = '✦ PRO'; cap = 50; used = 32; }
+  else { name = '⚡ BUSINESS'; cap = 100; used = 48; }
+  const pct = Math.round(used / cap * 100);
+  const card = document.getElementById('planCard');
+  document.getElementById('planCardName').textContent = name;
+  document.getElementById('planCardFrac').textContent = used + ' / ' + cap;
+  document.getElementById('planCardFill').style.width = pct + '%';
+  const left = cap - used;
+  const msg = left <= cap*0.2
+    ? '⚠️ あと ' + left + ' 本 で cap 到達'
+    : '今月 残 ' + left + ' 本 · 月 末 reset';
+  document.getElementById('planCardMsg').textContent = msg;
+  card.classList.toggle('warn', pct >= 80);
+  document.getElementById('planCardUpBtn').style.display = (pct >= 80 && mode !== 'business') ? 'block' : 'none';
+}
+function openUpsellModal(){
+  // 動的 ROI 算出
+  try { var mode = localStorage.getItem('mock-plan-mode') || 'business'; } catch(_){ var mode = 'business'; }
+  const cap = mode === 'free' ? 20 : 50;
+  const used = mode === 'free' ? 17 : 32;
+  document.getElementById('upsellLeft').textContent = (cap - used);
+  document.getElementById('upsellSaved').textContent = (used * 3000).toLocaleString();
+  document.getElementById('upsellModal').classList.add('show');
+}
+function closeUpsellModal(){ document.getElementById('upsellModal').classList.remove('show'); }
+
+// ═════════════ Churn (= 退会 防止) wizard ═════════════
+let CHURN_STEP = 1;
+let CHURN_REASON = null;
+const CHURN_OFFERS = {
+  price:   { tag:'価格 オファー', title:'2 ヶ月 半額 で 続け ませ んか？', desc:'¥4,950 → <b>¥2,475</b> / 月 を 2 ヶ月 提供。 合計 <b>¥4,950 割引</b>。 期間 後 は 通常 料金 に 戻り ます (= 解約 自由)。' },
+  quality: { tag:'品質 サポート', title:'1on1 で 記事 品質 を チューニ ング し ます',  desc:'CS マネージャ が <b>無料 で 30 分 セッション</b>。 業 種 に 最適 な prompt 設定 と 競合 分析 を 行 い ます。 改善 し ない 場合 は <b>1 ヶ月 全額 返金</b>。' },
+  usage:   { tag:'ライト プラン',   title:'月 ¥980 の ライト プラン を ご 提案',  desc:'月 5 本 まで の <b>¥980 / 月 ライト</b> プラン に 切り替え 可能。 サイト と 既存 記事 は そのまま 保持 さ れ ます。' },
+  missing: { tag:'機能 リクエスト', title:'欲しい 機能 を 教えて ください', desc:'プロダクト チーム が <b>2 週間 以内 に 検討</b>。 重要 リクエスト は <b>1 ヶ月 無料 + 優先 開発</b>。 まず は ヘルプ から ご 連絡 ください。' },
+  other:   { tag:'柔軟 オファー', title:'1 ヶ月 無料 で もう 一度 試 し ませ んか？', desc:'<b>1 ヶ月 完全 無料 + CS チーム の 個別 サポート</b>。 それ でも 合わ なけれ ば 即時 退会 可能 (= 課金 さ れ ませ ん)。' },
+};
+function openChurnModal(){
+  CHURN_STEP = 1;
+  CHURN_REASON = null;
+  renderChurn();
+  document.getElementById('churnConfirm').value = '';
+  document.getElementById('churnConfirmStatus').textContent = '— 「退会 します」 と 入力';
+  document.querySelectorAll('.churn-reason-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('churnModal').classList.add('show');
+}
+function closeChurnModal(){ document.getElementById('churnModal').classList.remove('show'); }
+function renderChurn(){
+  for(let i=1;i<=4;i++){
+    document.getElementById('churnStep'+i).classList.toggle('active', i === CHURN_STEP);
+  }
+  const titles = { 1:'退会 する 前 に', 2:'退会 の 理由', 3:'特別 オファー', 4:'最終 確認' };
+  document.getElementById('churnTitle').textContent = titles[CHURN_STEP];
+  document.getElementById('churnBack').style.display = CHURN_STEP > 1 ? 'inline-flex' : 'none';
+  document.getElementById('churnGo').style.display = CHURN_STEP === 4 ? 'inline-flex' : 'none';
+}
+function churnNext(step){
+  CHURN_STEP = step;
+  renderChurn();
+}
+function churnBack(){
+  if(CHURN_STEP > 1){ CHURN_STEP--; renderChurn(); }
+}
+function pickChurnReason(el, key){
+  document.querySelectorAll('.churn-reason-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  CHURN_REASON = key;
+  const o = CHURN_OFFERS[key];
+  document.getElementById('churnOfferTag').textContent = o.tag;
+  document.getElementById('churnOfferTitle').textContent = o.title;
+  document.getElementById('churnOfferDesc').innerHTML = o.desc;
+  setTimeout(()=>churnNext(3), 400);
+}
+function onChurnConfirm(){
+  const v = document.getElementById('churnConfirm').value.trim();
+  const ok = v === '退会 します';
+  const go = document.getElementById('churnGo');
+  go.disabled = !ok;
+  go.style.opacity = ok ? '1' : '.5';
+  go.style.cursor = ok ? 'pointer' : 'not-allowed';
+  document.getElementById('churnConfirmStatus').textContent = ok ? '✓ 入力 OK' : '— 「退会 します」 と 入力';
+  document.getElementById('churnConfirmStatus').style.color = ok ? 'var(--green)' : 'var(--text2)';
+}
+function confirmChurn(){
+  if(document.getElementById('churnGo').disabled) return;
+  closeChurnModal();
+  showToast('🗑 退会 受付 · 30 日 後 に 完全 削除 · 理由: ' + (CHURN_REASON || 'unknown'));
+  addFeed('warn', '危険 操作: 退会 受付 (= 30 日 grace · 理由 ' + CHURN_REASON + ')');
+}
 
 // === Demo state (= empty / error / loading / normal) ===
 let DEMO_STATE = 'normal';

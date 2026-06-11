@@ -92,6 +92,50 @@ button:active{transform:scale(.98)}
 .site-dd-add{padding:9px 10px;border-radius:7px;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--teal);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em}
 .site-dd-add:hover{background:var(--teal-soft)}
 
+/* === Primary CTA (= 記事 生成) === */
+.primary-cta{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border-radius:10px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;text-align:left;transition:all .15s;box-shadow:0 2px 8px rgba(13,79,74,.18);margin-bottom:4px;cursor:pointer;position:relative;overflow:hidden}
+.primary-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(13,79,74,.28)}
+.primary-cta::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);animation:shine 4s infinite}
+@keyframes shine{0%,100%{left:-100%}50%{left:100%}}
+.primary-cta-ic{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.primary-cta-bd{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.primary-cta-l{font-size:12.5px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.primary-cta-s{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:rgba(255,255,255,.7);text-transform:uppercase}
+
+/* === Gen modal === */
+.gen-modal{width:100%;max-width:620px}
+.gen-modal .modal-body{padding:0}
+.gen-sect{padding:20px 22px;border-bottom:1px solid var(--wire)}
+.gen-sect:last-child{border-bottom:0}
+.gen-sect-h{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:14px;font-weight:700}
+.gen-sect-h .gen-sect-dot{width:6px;height:6px;border-radius:50%;background:var(--teal)}
+.gen-kw-list{display:flex;flex-direction:column;gap:8px}
+.gen-kw{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--wire);border-radius:9px;background:var(--paper);cursor:pointer;transition:all .15s;text-align:left}
+.gen-kw:hover{border-color:var(--teal);background:var(--teal-soft);transform:translateX(2px)}
+.gen-kw.hot{border-color:#fecaca;background:linear-gradient(135deg,var(--rose-soft),var(--paper))}
+.gen-kw.hot:hover{border-color:var(--rose);background:linear-gradient(135deg,var(--rose-soft),#fff5f5)}
+.gen-kw-rank{width:24px;height:24px;border-radius:50%;background:var(--cream2);color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.gen-kw.hot .gen-kw-rank{background:var(--rose);color:#fff}
+.gen-kw-bd{flex:1;min-width:0}
+.gen-kw-t{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.gen-kw-hot-pill{background:var(--rose);color:#fff;font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.08em;padding:1px 6px;border-radius:3px;text-transform:uppercase}
+.gen-kw-meta{font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.04em}
+.gen-kw-go{font-family:var(--mono);font-size:10.5px;color:var(--teal);font-weight:700;flex-shrink:0;opacity:.5;transition:opacity .15s}
+.gen-kw:hover .gen-kw-go{opacity:1}
+.gen-or{text-align:center;padding:8px 0 12px;font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--text3);text-transform:uppercase;position:relative}
+.gen-or::before,.gen-or::after{content:'';position:absolute;top:50%;width:38%;height:1px;background:var(--wire)}
+.gen-or::before{left:0}
+.gen-or::after{right:0}
+.gen-input-wrap{display:flex;gap:8px}
+.gen-input{flex:1;padding:11px 13px;border:1px solid var(--wire);border-radius:8px;font-size:13.5px;font-family:inherit;outline:none;transition:border-color .15s;background:#fff}
+.gen-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,79,74,.08)}
+.gen-go{padding:11px 18px;border-radius:8px;background:var(--teal);color:#fff;font-weight:700;font-family:var(--mono);font-size:12px;letter-spacing:.04em;transition:all .15s;display:flex;align-items:center;gap:6px}
+.gen-go:hover{background:var(--teal2);box-shadow:0 2px 8px rgba(13,79,74,.25)}
+.gen-opts{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap}
+.gen-opt{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text2);cursor:pointer;user-select:none}
+.gen-opt input{accent-color:var(--teal);width:14px;height:14px}
+.gen-opt-tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--text3);background:var(--cream2);padding:1px 5px;border-radius:3px}
+
 .nav-section{margin-top:6px}
 .nav-section-h{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;color:var(--text3);text-transform:uppercase;padding:8px 12px 4px}
 .nav-btn{display:flex;align-items:center;gap:11px;width:100%;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--text2);transition:all .12s;text-align:left}
@@ -419,6 +463,15 @@ input[type="file"]{display:none}
         </div>
       </div>
     </div>
+
+    <!-- Primary CTA (= 記事 生成) -->
+    <button class="primary-cta" onclick="openGenModal()">
+      <span class="primary-cta-ic">⚡</span>
+      <span class="primary-cta-bd">
+        <span class="primary-cta-l">記事 を AI に 書か せる</span>
+        <span class="primary-cta-s">この サイト に 公開</span>
+      </span>
+    </button>
 
     <!-- Nav (= within active site) -->
     <div class="nav-section">
@@ -820,6 +873,34 @@ input[type="file"]{display:none}
   </div>
 </div>
 
+<!-- ━━━ GEN MODAL (= 記事 生成) ━━━ -->
+<div class="modal-bg" id="genModal" onclick="if(event.target===this)closeGenModal()">
+  <div class="modal gen-modal">
+    <div class="modal-head"><span>⚡</span> <span>記事 を AI に 書か せる</span><button class="modal-x" onclick="closeGenModal()">×</button></div>
+    <div class="modal-body">
+
+      <div class="gen-sect">
+        <div class="gen-sect-h"><span class="gen-sect-dot"></span> AI が 提案 する 今 旬 の KW · click で 即 起動</div>
+        <div class="gen-kw-list" id="genKwList"></div>
+      </div>
+
+      <div class="gen-sect">
+        <div class="gen-sect-h"><span class="gen-sect-dot" style="background:var(--text3)"></span> または、 自分 で 指定</div>
+        <div class="gen-or">OR</div>
+        <div class="gen-input-wrap">
+          <input class="gen-input" id="genKwInput" placeholder="KW を 入力 (例: スマホ で 記事 生成)" onkeydown="if(event.key==='Enter')genStartCustom()">
+          <button class="gen-go" onclick="genStartCustom()">⚡ 起動</button>
+        </div>
+        <div class="gen-opts">
+          <label class="gen-opt"><input type="checkbox" id="genOptAeo"> AEO モード <span class="gen-opt-tag">AI 検索 最適化</span></label>
+          <label class="gen-opt"><input type="checkbox" id="genOptEnd" checked> end_card 強化 <span class="gen-opt-tag">LP 流入 +30%</span></label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <script>
 // ━━━ Site data ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const SITES = [
@@ -1203,6 +1284,58 @@ function insertCodeBlock(){
 }
 function openLibrary(){
   showModal('LIBRARY', '成果物 ライブラリ', 'AI チーム が 作った 過去 成果物 (= 記事 / hero 画像 / SNS 投稿 文案 / SEO レポート 等) の 一覧。 過去 30 日 で 48 記事 + 48 画像 + 96 SNS 投稿。', '開く');
+}
+
+// === Gen modal (= 記事 生成) ===
+const KW_SUGGESTIONS = [
+  { hot:true, t:'AI 記事 ツール 比較 2026', meta:'検索 数 8,100 / 月 · 競合 #1 を 12h で 抜ける 見込み', go:'+ 2-3 LP / mo' },
+  { hot:false, t:'スマホ で SEO を 完全 自動 化 する 方法', meta:'検索 数 5,400 / 月 · 関連 KW 8 個 一括 もOK', go:'+ 1-2 LP / mo' },
+  { hot:false, t:'AI ライター × メディア 自動 運営 入門', meta:'検索 数 3,200 / 月 · 内部 リンク 5 件 推奨', go:'+ 1 LP / mo' },
+  { hot:false, t:'ブログ 月 100 記事 量産 ハック', meta:'検索 数 2,800 / 月 · 競合 弱い', go:'+ 1 LP / mo' },
+  { hot:false, t:'WordPress vs サブドメイン 配信 比較', meta:'検索 数 1,900 / 月 · 上位 が 古い (= 抜ける)', go:'+ 0-1 LP / mo' },
+];
+function renderGenKw(){
+  const el = document.getElementById('genKwList');
+  if(!el) return;
+  el.innerHTML = KW_SUGGESTIONS.map((k, i) => `
+    <button class="gen-kw ${k.hot ? 'hot' : ''}" onclick="genStartKw(${i})">
+      <span class="gen-kw-rank">${i+1}</span>
+      <span class="gen-kw-bd">
+        <span class="gen-kw-t">${esc(k.t)}${k.hot ? ' <span class="gen-kw-hot-pill">HOT</span>' : ''}</span>
+        <span class="gen-kw-meta">${esc(k.meta)}</span>
+      </span>
+      <span class="gen-kw-go">${esc(k.go)} →</span>
+    </button>
+  `).join('');
+}
+function openGenModal(){
+  renderGenKw();
+  document.getElementById('genModal').classList.add('show');
+  setTimeout(()=>document.getElementById('genKwInput').focus(), 200);
+}
+function closeGenModal(){
+  document.getElementById('genModal').classList.remove('show');
+}
+function genStartKw(i){
+  const kw = KW_SUGGESTIONS[i];
+  closeGenModal();
+  showToast('⚡ AI チーム 起動: 「' + kw.t + '」');
+  addFeed('publish', '起動: 「' + kw.t + '」 (= AI 提案 から)');
+}
+function genStartCustom(){
+  const kw = document.getElementById('genKwInput').value.trim();
+  if(!kw){ showToast('KW を 入力 して ください'); return; }
+  const aeo = document.getElementById('genOptAeo').checked;
+  const ec = document.getElementById('genOptEnd').checked;
+  const opts = [];
+  if(aeo) opts.push('AEO');
+  if(ec) opts.push('end_card 強化');
+  document.getElementById('genKwInput').value = '';
+  document.getElementById('genOptAeo').checked = false;
+  document.getElementById('genOptEnd').checked = true;
+  closeGenModal();
+  showToast('⚡ AI チーム 起動: 「' + kw + '」' + (opts.length ? ' (' + opts.join(', ') + ')' : ''));
+  addFeed('publish', '起動: 「' + kw + '」 (= カスタム 指定)');
 }
 function sendChat(){
   const input = document.getElementById('chatInput');

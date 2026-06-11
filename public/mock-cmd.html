@@ -619,6 +619,42 @@ button:active{transform:scale(.98)}
 .danger-confirm-input:focus{border-color:var(--rose);box-shadow:0 0 0 3px var(--rose-soft)}
 .danger-confirm-input.ok{border-color:var(--green);background:var(--green-soft)}
 
+/* === Onboarding tour === */
+.tour-bg{position:fixed;inset:0;z-index:200;display:none;animation:fadeIn .25s ease}
+.tour-bg.show{display:block}
+.tour-hole{position:absolute;border-radius:10px;box-shadow:0 0 0 9999px rgba(13,79,74,.65),0 0 30px rgba(13,79,74,.3);transition:all .4s cubic-bezier(.4,0,.2,1);pointer-events:none;border:2px solid var(--teal)}
+.tour-card{position:absolute;background:var(--paper);padding:18px 20px;border-radius:11px;max-width:320px;box-shadow:0 20px 60px rgba(0,0,0,.25);transition:all .4s ease;z-index:210}
+.tour-card-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--teal);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.tour-card-h .step{background:var(--teal-soft);padding:2px 8px;border-radius:5px;font-weight:700}
+.tour-card-t{font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px;letter-spacing:-.01em}
+.tour-card-d{font-size:12.5px;color:var(--text2);line-height:1.65;margin-bottom:14px}
+.tour-card-acts{display:flex;align-items:center;gap:8px}
+.tour-card-acts .skip{font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--mono);text-decoration:underline}
+.tour-card-acts .skip:hover{color:var(--text)}
+.tour-card-acts .spacer{flex:1}
+.tour-prog{display:flex;gap:4px;margin-top:14px}
+.tour-prog .dot{width:6px;height:6px;border-radius:50%;background:var(--wire2)}
+.tour-prog .dot.active{background:var(--teal);width:18px;border-radius:3px}
+
+/* === 2FA / Auth modals === */
+.qr-pane{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.qr-box{width:160px;height:160px;border-radius:10px;background:#fff;border:2px solid var(--wire);padding:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.qr-svg{width:100%;height:100%}
+.qr-info{flex:1;min-width:220px}
+.qr-key{font-family:var(--mono);font-size:11px;background:var(--cream2);padding:8px 11px;border-radius:6px;color:var(--text2);word-break:break-all;letter-spacing:.04em;margin-top:8px}
+.backup-codes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:14px;background:var(--cream2);border-radius:8px;font-family:var(--mono);font-size:12px;margin-top:12px}
+.backup-codes span{padding:5px 10px;background:#fff;border-radius:5px;text-align:center;font-weight:700;color:var(--text);letter-spacing:.04em}
+.code-input-row{display:flex;gap:6px;margin-top:10px}
+.code-input-row input{flex:1;width:36px;height:46px;text-align:center;font-family:var(--mono);font-size:18px;font-weight:700;border:1.5px solid var(--wire);border-radius:7px;background:#fff;outline:none;transition:border-color .15s}
+.code-input-row input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,79,74,.06)}
+
+/* === Social login buttons === */
+.social-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.social-btn{flex:1;min-width:120px;padding:11px 12px;border-radius:8px;border:1px solid var(--wire);background:#fff;display:flex;align-items:center;justify-content:center;gap:9px;font-size:12.5px;font-weight:700;color:var(--text);transition:all .15s;cursor:pointer}
+.social-btn:hover{border-color:var(--teal);background:var(--teal-soft)}
+.social-btn.linked{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.social-btn .ic{font-size:16px}
+
 /* === Footer law links === */
 .law-footer{padding:18px 24px;border-top:1px solid var(--wire);background:var(--cream);font-family:var(--mono);font-size:10.5px;color:var(--text3);display:flex;gap:18px;flex-wrap:wrap;align-items:center}
 .law-footer a{color:var(--text2);text-decoration:none;transition:color .15s}
@@ -1472,7 +1508,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-fld">
               <div class="set-fld-l">メール アドレス <span class="req">*</span></div>
-              <input class="set-input" value="kota.takeuchi@protocol.ooo" onchange="showToast('email 変更 → 確認 mail 送信 (mock)')">
+              <input class="set-input" id="acctEmail" value="kota.takeuchi@protocol.ooo" onchange="openEmailVerify(this.value)">
               <div class="set-hint">変更 する と 確認 メール が 送信 され、 認証 後 に 反映 さ れ ます。</div>
             </div>
 
@@ -1496,7 +1532,11 @@ input[type="file"]{display:none}
                 <input type="password" class="set-input" placeholder="同 じ もの を 再入力">
               </div>
             </div>
-            <button class="btn-sm primary" style="margin-top:6px" onclick="showToast('✓ パスワード 変更 完了 (mock)')">パスワード を 変更</button>
+            <div style="display:flex;align-items:center;gap:14px;margin-top:6px">
+              <button class="btn-sm primary" onclick="showToast('✓ パスワード 変更 完了 (mock)')">パスワード を 変更</button>
+              <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">·</span>
+              <a href="javascript:void(0)" onclick="openPwReset()" style="font-family:var(--mono);font-size:11.5px;color:var(--teal);text-decoration:underline">パスワード を 忘れた 場合 は こちら</a>
+            </div>
 
             <div style="margin:28px 0 16px;padding-top:18px;border-top:1px solid var(--wire)">
               <div class="set-h" style="font-size:13.5px">2 段階 認証</div>
@@ -1504,7 +1544,17 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row" style="border-top:0">
               <div class="set-row-info"><div class="set-row-l">2FA (= TOTP)</div><div class="set-row-d">Google Authenticator / Authy / 1Password で 利用 可能</div></div>
-              <button class="btn-sm primary" onclick="showToast('QR 表示 (mock)')">設定 する</button>
+              <button class="btn-sm primary" onclick="openTwoFa()">設定 する</button>
+            </div>
+
+            <div style="margin:28px 0 16px;padding-top:18px;border-top:1px solid var(--wire)">
+              <div class="set-h" style="font-size:13.5px">外部 ログイン 連携</div>
+              <div class="set-p" style="margin-bottom:10px">ソーシャル ログイン を 連携 する と、 メール アドレス + パスワード 不要 で ログイン でき ます。</div>
+            </div>
+            <div class="social-row">
+              <button class="social-btn linked" onclick="showToast('Google 連携 解除 (mock)')"><span class="ic">🌐</span> Google ✓ 連携 中</button>
+              <button class="social-btn" onclick="showToast('GitHub 連携 (mock)')"><span class="ic">🐙</span> GitHub</button>
+              <button class="social-btn" onclick="showToast('Apple ID 連携 (mock)')"><span class="ic">🍎</span> Apple ID</button>
             </div>
 
             <div style="margin:24px 0 12px;padding-top:18px;border-top:1px solid var(--wire)">
@@ -1749,6 +1799,10 @@ input[type="file"]{display:none}
       <div class="help-q" onclick="showToast('Slack コミュニティ (mock)')">💬 ユーザ コミュニティ</div>
       <div class="help-q" onclick="showToast('バグ 報告 (mock)')">🐛 バグ を 報告</div>
     </div>
+    <div class="help-sect">
+      <div class="help-sect-h">▌ 初期 設定</div>
+      <div class="help-q" onclick="closeHelp();setTimeout(tourStart,300)">🎯 オンボーディング tour を もう 一度 見る</div>
+    </div>
   </div>
 </div>
 
@@ -1957,6 +2011,171 @@ input[type="file"]{display:none}
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeDangerModal()">キャンセル</button>
       <button class="btn" id="dangerGo" disabled style="background:var(--wire2);color:var(--text3);border-color:var(--wire2);cursor:not-allowed" onclick="dangerConfirm()">完全 削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ Onboarding tour ━━ -->
+<div class="tour-bg" id="tourBg">
+  <div class="tour-hole" id="tourHole"></div>
+  <div class="tour-card" id="tourCard">
+    <div class="tour-card-h">
+      <span>▌ ONBOARDING · <span id="tourStep">1</span> / 5</span>
+      <span class="step" id="tourStepBadge">1 / 5</span>
+    </div>
+    <div class="tour-card-t" id="tourT">title</div>
+    <div class="tour-card-d" id="tourD">description</div>
+    <div class="tour-prog" id="tourProg"></div>
+    <div class="tour-card-acts">
+      <span class="skip" onclick="tourEnd(true)">skip</span>
+      <span class="spacer"></span>
+      <button class="btn-sm" id="tourBack" onclick="tourBack()">← 戻る</button>
+      <button class="btn-sm primary" id="tourNext" onclick="tourNext()">次 へ →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ Password reset modal ━━ -->
+<div class="modal-bg" id="pwResetModal" onclick="if(event.target===this)closePwReset()">
+  <div class="modal">
+    <div class="modal-head"><span>🔐</span> <span>パスワード を 忘れた 場合</span><button class="modal-x" onclick="closePwReset()">×</button></div>
+    <div class="modal-body" style="padding:20px 22px">
+      <div class="modal-p">登録 済 メール アドレス に <b>リセット 用 リンク</b> を 送り ます。 メール 内 の リンク を click し て 24 時間 以内 に 新 パスワード を 設定 し て ください。</div>
+      <div class="set-fld" style="margin-bottom:0">
+        <div class="set-fld-l">登録 メール アドレス</div>
+        <input class="set-input" id="pwResetEmail" placeholder="you@example.com" value="kota.takeuchi@protocol.ooo">
+      </div>
+      <div style="margin-top:14px;padding:11px 14px;background:var(--cream2);border-radius:7px;font-size:11.5px;color:var(--text2);line-height:1.55">
+        💡 メール が 届か ない 場合 は <b>迷惑 メール</b> も 確認 し て ください。 5 分 経過 し ても 届か ない 場合 は ヘルプ から 問い合わせ。
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closePwReset()">キャンセル</button>
+      <button class="btn btn-go" onclick="sendPwReset()">リセット 用 メール を 送信</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ Email verify modal ━━ -->
+<div class="modal-bg" id="emailVerifyModal" onclick="if(event.target===this)closeEmailVerify()">
+  <div class="modal">
+    <div class="modal-head"><span>✉️</span> <span>メール アドレス 変更 の 確認</span><button class="modal-x" onclick="closeEmailVerify()">×</button></div>
+    <div class="modal-body" style="padding:20px 22px">
+      <div class="modal-h" style="font-size:15px;display:flex;align-items:center;gap:10px"><span style="font-size:24px">📬</span> 確認 メール を 送信 し まし た</div>
+      <div class="modal-p">
+        新しい メール アドレス <b id="emailVerifyTarget">new@example.com</b> 宛 に 確認 用 リンク を 送り まし た。 <b>10 分 以内</b> に メール 内 の リンク を click し て 認証 を 完了 し て ください。
+      </div>
+      <div style="margin:14px 0;padding:12px 14px;background:var(--peach-soft);border:1px solid var(--peach);border-radius:7px;font-size:11.5px;color:var(--peach-dark);line-height:1.55">
+        ⚠️ 認証 完了 まで は <b>旧 メール アドレス</b> が 有効。 新 メール アドレス で の ログイン は 認証 後 に 可能。
+      </div>
+      <div style="text-align:center;margin-top:14px">
+        <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">メール が 届か ない?</span>
+        <button class="btn-sm" style="margin-left:8px" onclick="showToast('✓ 確認 メール を 再送 信 し まし た')">再送 信</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-go" onclick="closeEmailVerify()">了解</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ 2FA setup modal ━━ -->
+<div class="modal-bg" id="twoFaModal" onclick="if(event.target===this)closeTwoFa()">
+  <div class="modal modal-wide">
+    <div class="modal-head"><span>🔐</span> <span>2 段階 認証 を 設定</span><button class="modal-x" onclick="closeTwoFa()">×</button></div>
+    <div class="modal-body" style="padding:0">
+      <div class="wiz-steps">
+        <div class="wiz-step active" id="tfaStep1"></div>
+        <div class="wiz-step" id="tfaStep2"></div>
+        <div class="wiz-step" id="tfaStep3"></div>
+      </div>
+      <div class="wiz-step-labels">
+        <span class="active" id="tfaLbl1">▌ QR スキャン</span>
+        <span id="tfaLbl2">確認 コード</span>
+        <span id="tfaLbl3">バックアップ</span>
+      </div>
+
+      <!-- step 1 -->
+      <div class="wiz-content" id="tfaPanel1">
+        <div class="set-h" style="font-size:14px">QR コード を 認証 アプリ で スキャン</div>
+        <div class="set-p" style="margin-bottom:18px">Google Authenticator / Authy / 1Password / Bitwarden 等 の 認証 アプリ で 下 の QR を スキャン し て ください。</div>
+        <div class="qr-pane">
+          <div class="qr-box">
+            <!-- mock QR (= teal squares) -->
+            <svg class="qr-svg" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+              <rect width="21" height="21" fill="#fff"/>
+              <g fill="#0d4f4a">
+                <rect x="0" y="0" width="7" height="7"/><rect x="1" y="1" width="5" height="5" fill="#fff"/><rect x="2" y="2" width="3" height="3"/>
+                <rect x="14" y="0" width="7" height="7"/><rect x="15" y="1" width="5" height="5" fill="#fff"/><rect x="16" y="2" width="3" height="3"/>
+                <rect x="0" y="14" width="7" height="7"/><rect x="1" y="15" width="5" height="5" fill="#fff"/><rect x="2" y="16" width="3" height="3"/>
+                <rect x="8" y="0" width="1" height="1"/><rect x="10" y="0" width="1" height="2"/><rect x="12" y="0" width="1" height="1"/>
+                <rect x="9" y="2" width="2" height="1"/><rect x="8" y="3" width="1" height="2"/><rect x="11" y="3" width="2" height="1"/>
+                <rect x="10" y="4" width="1" height="2"/><rect x="12" y="4" width="1" height="1"/>
+                <rect x="0" y="8" width="1" height="1"/><rect x="2" y="8" width="2" height="1"/><rect x="5" y="8" width="2" height="1"/>
+                <rect x="8" y="8" width="2" height="2"/><rect x="11" y="8" width="1" height="2"/><rect x="13" y="8" width="1" height="1"/>
+                <rect x="15" y="8" width="2" height="1"/><rect x="18" y="8" width="1" height="2"/><rect x="20" y="8" width="1" height="1"/>
+                <rect x="1" y="9" width="1" height="2"/><rect x="4" y="9" width="1" height="2"/>
+                <rect x="9" y="10" width="1" height="2"/><rect x="12" y="10" width="2" height="1"/>
+                <rect x="15" y="10" width="1" height="2"/><rect x="17" y="10" width="2" height="1"/><rect x="19" y="10" width="1" height="2"/>
+                <rect x="2" y="11" width="2" height="1"/><rect x="5" y="11" width="2" height="1"/>
+                <rect x="8" y="12" width="1" height="2"/><rect x="11" y="12" width="1" height="1"/><rect x="13" y="12" width="1" height="2"/>
+                <rect x="16" y="12" width="2" height="1"/><rect x="20" y="12" width="1" height="2"/>
+                <rect x="0" y="13" width="2" height="1"/><rect x="3" y="13" width="1" height="1"/><rect x="5" y="13" width="1" height="1"/>
+                <rect x="10" y="14" width="1" height="2"/><rect x="12" y="14" width="2" height="1"/><rect x="15" y="14" width="1" height="2"/>
+                <rect x="17" y="14" width="1" height="1"/><rect x="19" y="14" width="2" height="1"/>
+                <rect x="9" y="16" width="2" height="1"/><rect x="13" y="16" width="1" height="2"/><rect x="16" y="16" width="2" height="2"/>
+                <rect x="19" y="16" width="1" height="2"/>
+                <rect x="8" y="18" width="1" height="2"/><rect x="11" y="18" width="2" height="1"/><rect x="14" y="18" width="1" height="2"/>
+                <rect x="18" y="18" width="1" height="2"/><rect x="20" y="18" width="1" height="2"/>
+              </g>
+            </svg>
+          </div>
+          <div class="qr-info">
+            <div class="set-h" style="font-size:13px">スキャン でき ない 場合</div>
+            <div class="set-p" style="font-size:12px">下 の シークレット を 手動 で 入力 し て ください。</div>
+            <div class="qr-key" id="qrKey">JBSWY3DPEHPK3PXPCQ6FNSL7HQAPK2N4</div>
+            <button class="btn-sm" style="margin-top:10px;width:100%" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('qrKey').textContent);showToast('✓ シークレット を コピー')">📋 コピー</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- step 2 -->
+      <div class="wiz-content" id="tfaPanel2" style="display:none">
+        <div class="set-h" style="font-size:14px">アプリ の 6 桁 コード を 入力</div>
+        <div class="set-p" style="margin-bottom:18px">認証 アプリ に 表示 さ れ る 6 桁 の コード を 入力 し、 設定 を 完了 さ せ て ください。 コード は 30 秒 ご と に 変わり ます。</div>
+        <div class="code-input-row">
+          <input type="text" maxlength="1" inputmode="numeric" oninput="onTfaCode(this,0)" id="tfaC0">
+          <input type="text" maxlength="1" inputmode="numeric" oninput="onTfaCode(this,1)" id="tfaC1">
+          <input type="text" maxlength="1" inputmode="numeric" oninput="onTfaCode(this,2)" id="tfaC2">
+          <input type="text" maxlength="1" inputmode="numeric" oninput="onTfaCode(this,3)" id="tfaC3">
+          <input type="text" maxlength="1" inputmode="numeric" oninput="onTfaCode(this,4)" id="tfaC4">
+          <input type="text" maxlength="1" inputmode="numeric" oninput="onTfaCode(this,5)" id="tfaC5">
+        </div>
+        <div style="margin-top:18px;font-size:11.5px;color:var(--text3);font-family:var(--mono);text-align:center" id="tfaCodeStatus">— コード 入力 待ち</div>
+      </div>
+
+      <!-- step 3 -->
+      <div class="wiz-content" id="tfaPanel3" style="display:none">
+        <div class="set-h" style="font-size:14px">✓ バックアップ コード を 保存</div>
+        <div class="set-p" style="margin-bottom:14px">認証 アプリ を 紛失 し た 場合 に 使え る 10 個 の バックアップ コード です。 <b>必ず 安全 な 場所 に 保存</b> し て ください。 各 コード は <b>1 回 のみ</b> 使用 でき ます。</div>
+        <div class="backup-codes">
+          <span>a3b9-7m2k</span><span>f8x4-2nq1</span>
+          <span>p7w6-r3yk</span><span>n2c5-9hb8</span>
+          <span>t6e1-4ws3</span><span>k9d2-7vp4</span>
+          <span>r4u8-1jn6</span><span>m5q3-8bc9</span>
+          <span>h7s2-3xz5</span><span>v1a4-6lt7</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-sm" style="flex:1" onclick="showToast('✓ コピー')">📋 全 て コピー</button>
+          <button class="btn-sm" style="flex:1" onclick="showToast('✓ DL')">📥 .txt で DL</button>
+          <button class="btn-sm" style="flex:1" onclick="showToast('✓ 印刷')">🖨 印刷</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="tfaBack" onclick="tfaBack()" style="display:none">← 戻る</button>
+      <button class="btn btn-ghost" onclick="closeTwoFa()">キャンセル</button>
+      <button class="btn btn-go" id="tfaNext" onclick="tfaNext()">次 へ →</button>
     </div>
   </div>
 </div>
@@ -2775,6 +2994,8 @@ function ackCookie(kind){
   document.getElementById('cookieBn').classList.remove('show');
   try { localStorage.setItem('mock-cookie-ack', kind); } catch(_){}
   showToast('Cookie 設定 保存: ' + (kind === 'all' ? '全 て OK' : '必須 のみ'));
+  // 初 visit な ら tour 自動 起動
+  try { if(!localStorage.getItem('mock-tour-seen')){ setTimeout(tourStart, 600); } } catch(_){}
 }
 function maybeShowCookie(){
   try {
@@ -2790,6 +3011,7 @@ document.addEventListener('keydown', (e)=>{
   if(e.key === 'Escape'){
     closeModal(); closeGenModal(); closeCmdK(); closeHelp(); closeAllPops();
     closeCatModal(); closeOgModal(); closeCardModal(); closeImportModal(); closeDangerModal();
+    closePwReset(); closeEmailVerify(); closeTwoFa();
     return;
   }
   // Cmd+K
@@ -2811,6 +3033,7 @@ document.addEventListener('keydown', (e)=>{
 });
 
 maybeShowCookie();
+maybeStartTour();
 
 // === Mobile: sidebar drawer ===
 function toggleSidebar(){
@@ -3103,6 +3326,178 @@ function dangerConfirm(){
     addFeed('warn', '危険 操作: 退会 受付 (= 30 日 grace)');
   }
 }
+
+// ═════════════ Password reset ═════════════
+function openPwReset(){ document.getElementById('pwResetModal').classList.add('show'); }
+function closePwReset(){ document.getElementById('pwResetModal').classList.remove('show'); }
+function sendPwReset(){
+  const em = document.getElementById('pwResetEmail').value.trim();
+  closePwReset();
+  showToast('📧 リセット 用 メール を ' + em + ' へ 送信');
+}
+
+// ═════════════ Email verify ═════════════
+function openEmailVerify(newEmail){
+  document.getElementById('emailVerifyTarget').textContent = newEmail || 'new@example.com';
+  document.getElementById('emailVerifyModal').classList.add('show');
+}
+function closeEmailVerify(){ document.getElementById('emailVerifyModal').classList.remove('show'); }
+
+// ═════════════ 2FA setup wizard ═════════════
+let TFA_STEP = 1;
+function openTwoFa(){
+  TFA_STEP = 1;
+  renderTfa();
+  // clear inputs
+  for(let i = 0; i < 6; i++){ const el = document.getElementById('tfaC' + i); if(el) el.value = ''; }
+  document.getElementById('tfaCodeStatus').textContent = '— コード 入力 待ち';
+  document.getElementById('twoFaModal').classList.add('show');
+}
+function closeTwoFa(){ document.getElementById('twoFaModal').classList.remove('show'); }
+function renderTfa(){
+  for(let i = 1; i <= 3; i++){
+    const step = document.getElementById('tfaStep' + i);
+    const lbl = document.getElementById('tfaLbl' + i);
+    step.classList.toggle('active', i === TFA_STEP);
+    step.classList.toggle('done', i < TFA_STEP);
+    lbl.classList.toggle('active', i === TFA_STEP);
+    document.getElementById('tfaPanel' + i).style.display = (i === TFA_STEP) ? 'block' : 'none';
+  }
+  document.getElementById('tfaBack').style.display = TFA_STEP > 1 ? 'inline-flex' : 'none';
+  const nxt = document.getElementById('tfaNext');
+  if(TFA_STEP === 1) nxt.textContent = '次 へ → コード を 入力';
+  else if(TFA_STEP === 2) nxt.textContent = '✓ 確認 する';
+  else nxt.textContent = '✓ 完了';
+}
+function tfaBack(){ if(TFA_STEP > 1){ TFA_STEP--; renderTfa(); } }
+function tfaNext(){
+  if(TFA_STEP === 1){ TFA_STEP = 2; renderTfa(); setTimeout(()=>document.getElementById('tfaC0').focus(), 200); return; }
+  if(TFA_STEP === 2){
+    let code = '';
+    for(let i = 0; i < 6; i++){ code += (document.getElementById('tfaC' + i).value || ''); }
+    if(code.length !== 6){
+      document.getElementById('tfaCodeStatus').textContent = '✗ 6 桁 すべて を 入力';
+      document.getElementById('tfaCodeStatus').style.color = 'var(--rose)';
+      return;
+    }
+    document.getElementById('tfaCodeStatus').textContent = '✓ コード OK · バックアップ コード を 保存 し て ください';
+    document.getElementById('tfaCodeStatus').style.color = 'var(--green)';
+    TFA_STEP = 3; renderTfa(); return;
+  }
+  if(TFA_STEP === 3){
+    closeTwoFa();
+    showToast('✓ 2FA 設定 完了');
+  }
+}
+function onTfaCode(el, i){
+  el.value = el.value.replace(/\D/g, '').slice(0, 1);
+  if(el.value && i < 5){
+    const next = document.getElementById('tfaC' + (i + 1));
+    if(next) next.focus();
+  }
+}
+
+// ═════════════ Onboarding tour ═════════════
+const TOUR_STEPS = [
+  { sel:'.site-switch', t:'まず は サイト を 選ぼう', d:'左 上 の サイト 名 を click する と 切り替え 可能。 「+ 新しい サイト」 で 複数 サイト を 同時 運営 でき ます。', placement:'right' },
+  { sel:'.primary-cta', t:'記事 を AI に 書か せる', d:'最 重要 アクション。 1 click で AI チーム 24 名 が 起動 し、 8,000 字 級 の 記事 を 90 秒 で 公開 し ます。 月 100 本 まで。', placement:'right' },
+  { sel:'#view-home .stats', t:'数字 は 自動 で 計測', d:'GA4 / GSC 連携 は 不要。 月間 PV / Users / LP 流入 数 は MY AI Agent が 自前 計測 して 自動 表示 し ます。', placement:'bottom' },
+  { sel:'.top-time', t:'検索 と 通知', d:'🔍 で どこ にでも 飛べる コマンド パレット (= Cmd+K)。 🔔 で 新着 通知。 👤 で アカウント 設定 / プラン / 退会。', placement:'bottom' },
+  { sel:'.help-fab', t:'困ったら こ こ', d:'右下 の ❓ で FAQ + キー ボード ショートカット + 問い合わせ。 この tour を もう 一度 見る こと も でき ます。', placement:'top' },
+];
+let TOUR_IDX = 0;
+
+function tourStart(){
+  TOUR_IDX = 0;
+  closeSidebar();
+  document.getElementById('tourBg').classList.add('show');
+  renderTour();
+  try { localStorage.setItem('mock-tour-seen', '1'); } catch(_){}
+}
+function tourEnd(skipped){
+  document.getElementById('tourBg').classList.remove('show');
+  if(skipped) showToast('tour skip · ヘルプ から 再 起動 でき ます');
+}
+function tourNext(){
+  if(TOUR_IDX < TOUR_STEPS.length - 1){
+    TOUR_IDX++;
+    renderTour();
+  } else {
+    tourEnd(false);
+    showToast('🎉 tour 完了 · さっそく 記事 を 書 い て み ましょう');
+  }
+}
+function tourBack(){
+  if(TOUR_IDX > 0){ TOUR_IDX--; renderTour(); }
+}
+function renderTour(){
+  const step = TOUR_STEPS[TOUR_IDX];
+  const target = document.querySelector(step.sel);
+  if(!target){
+    // target なし = skip
+    if(TOUR_IDX < TOUR_STEPS.length - 1){ TOUR_IDX++; renderTour(); return; }
+    tourEnd(false); return;
+  }
+  const r = target.getBoundingClientRect();
+  const pad = 8;
+  const hole = document.getElementById('tourHole');
+  hole.style.left = (r.left - pad) + 'px';
+  hole.style.top = (r.top - pad) + 'px';
+  hole.style.width = (r.width + pad * 2) + 'px';
+  hole.style.height = (r.height + pad * 2) + 'px';
+
+  // card 配置
+  const card = document.getElementById('tourCard');
+  const cardW = 320, cardH = 220, gap = 16;
+  let cl = 0, ct = 0;
+  if(step.placement === 'right'){
+    cl = r.right + gap; ct = r.top;
+    if(cl + cardW > window.innerWidth - 16){ cl = r.left; ct = r.bottom + gap; }
+  } else if(step.placement === 'bottom'){
+    cl = Math.max(16, r.left + r.width/2 - cardW/2); ct = r.bottom + gap;
+  } else if(step.placement === 'top'){
+    cl = Math.max(16, r.right - cardW); ct = r.top - cardH - gap;
+    if(ct < 16) ct = r.bottom + gap;
+  } else {
+    cl = r.left; ct = r.bottom + gap;
+  }
+  if(cl + cardW > window.innerWidth - 16) cl = window.innerWidth - cardW - 16;
+  if(ct + cardH > window.innerHeight - 16) ct = Math.max(16, window.innerHeight - cardH - 16);
+  card.style.left = cl + 'px';
+  card.style.top = ct + 'px';
+
+  document.getElementById('tourT').textContent = step.t;
+  document.getElementById('tourD').textContent = step.d;
+  document.getElementById('tourStep').textContent = TOUR_IDX + 1;
+  document.getElementById('tourStepBadge').textContent = (TOUR_IDX + 1) + ' / ' + TOUR_STEPS.length;
+
+  // progress dots
+  const prog = document.getElementById('tourProg');
+  prog.innerHTML = TOUR_STEPS.map((_, i) => `<div class="dot${i === TOUR_IDX ? ' active' : ''}"></div>`).join('');
+
+  // buttons
+  document.getElementById('tourBack').style.display = TOUR_IDX > 0 ? 'inline-flex' : 'none';
+  document.getElementById('tourNext').textContent = TOUR_IDX === TOUR_STEPS.length - 1 ? '✓ 完了' : '次 へ →';
+}
+
+window.addEventListener('resize', () => {
+  if(document.getElementById('tourBg').classList.contains('show')) renderTour();
+});
+
+// auto-start: 初 visit + cookie ack 済 + tour 未 見
+function maybeStartTour(){
+  try {
+    if(!localStorage.getItem('mock-tour-seen') && localStorage.getItem('mock-cookie-ack')){
+      setTimeout(tourStart, 1800);
+    }
+  } catch(_){}
+}
+
+// Esc も tour 閉じる
+const _origEsc = document.querySelector('script');
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape' && document.getElementById('tourBg').classList.contains('show')) tourEnd(true);
+});
 
 // === Demo state (= empty / error / loading / normal) ===
 let DEMO_STATE = 'normal';

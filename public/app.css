@@ -9621,3 +9621,55 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   }
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════
+   🚀 Phase 2: Sidebar 再 設計 (= site switcher + 5 nav + plan-card)
+   mock-cmd-lime.html から 抽 出 し て app brand に 統 一
+   既 .sb / .sb-bot / .balance-card 等 は 保 持
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* site switcher (= dropdown) */
+.site-switch{margin:10px 12px 8px;position:relative}
+.site-btn{display:flex;align-items:center;gap:9px;width:100%;padding:9px 11px;background:var(--cream);border:1px solid var(--wire2);border-radius:10px;cursor:pointer;font-family:inherit;transition:all .15s ease}
+.site-btn:hover{border-color:var(--peach-dark);background:var(--peach-soft)}
+.site-logo{width:30px;height:30px;border-radius:8px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.site-info{flex:1;min-width:0;text-align:left}
+.site-name{font-size:12.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.site-url{font-family:var(--mono);font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+.site-caret{color:var(--text3);font-size:9px;flex-shrink:0;transition:transform .2s}
+.site-switch.open .site-caret{transform:rotate(180deg)}
+.site-dd{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--cream);border:1px solid var(--wire2);border-radius:10px;box-shadow:0 8px 24px rgba(13,79,74,.12);z-index:50;padding:6px 4px;max-height:60vh;overflow-y:auto}
+.site-dd-sep{height:1px;background:var(--wire);margin:6px 8px}
+
+/* Primary CTA (= 記事 を AI に 書か せる) */
+.primary-cta{display:flex;align-items:center;gap:11px;margin:6px 12px 12px;padding:11px 13px;background:linear-gradient(135deg,var(--peach) 0%,var(--peach-dark) 100%);border:0;border-radius:11px;cursor:pointer;font-family:inherit;color:#0a0a0e;width:auto;transition:all .15s ease;box-shadow:0 2px 8px rgba(192,255,92,.25)}
+.primary-cta:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(192,255,92,.35)}
+.primary-cta:active{transform:translateY(0)}
+.primary-cta-ic{width:30px;height:30px;border-radius:8px;background:rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.primary-cta-bd{flex:1;display:flex;flex-direction:column;gap:1px;text-align:left;min-width:0}
+.primary-cta-l{font-size:12.5px;font-weight:800;color:#0a0a0e;letter-spacing:.01em}
+.primary-cta-s{font-size:9.5px;color:rgba(10,10,14,.65);font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase}
+
+/* Nav 5 個 */
+.nav-section{margin:4px 8px 8px;padding:0 4px}
+.nav-section-h{font-family:var(--mono);font-size:9.5px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;padding:6px 8px 4px;font-weight:700}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;background:transparent;border:0;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--text2);text-align:left;transition:all .12s ease;margin-bottom:1px}
+.nav-btn:hover{background:var(--cream2);color:var(--text)}
+.nav-btn.active{background:var(--peach-soft);color:var(--text);font-weight:700}
+.nav-btn.active .nav-icon{color:var(--peach-dark)}
+.nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--wire2);color:var(--text2);font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:9px;font-family:var(--mono);min-width:22px;text-align:center}
+.nav-btn.active .nav-badge{background:var(--peach-dark);color:#0a0a0e}
+
+/* Plan card (= sidebar 下部) */
+.plan-card{margin:8px 12px 4px;padding:10px 11px;background:var(--cream2);border-radius:9px;border:1px solid var(--wire2);font-family:var(--mono);font-size:10.5px}
+.plan-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.plan-card-name{font-weight:800;color:var(--teal);font-size:11px;letter-spacing:.05em}
+.plan-card-frac{color:var(--text3)}
+.plan-card-bar{height:5px;background:var(--cream);border-radius:3px;overflow:hidden;border:1px solid var(--wire);margin-bottom:6px}
+.plan-card-fill{height:100%;background:linear-gradient(90deg,var(--peach-dark),var(--peach));transition:width .6s ease}
+.plan-card.warn .plan-card-fill{background:linear-gradient(90deg,#d97f3b,#c14d4d)}
+.plan-card-msg{color:var(--text3);font-size:9.5px;line-height:1.5}
+.plan-card.warn .plan-card-msg{color:#c14d4d;font-weight:700}
+.plan-card-upbtn{display:block;width:100%;margin-top:7px;padding:6px 8px;background:var(--teal);color:#fff;border:0;border-radius:6px;font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.05em;cursor:pointer;text-transform:uppercase}
+.plan-card-upbtn:hover{background:#0a3d39}

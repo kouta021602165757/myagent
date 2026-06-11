@@ -57,6 +57,7 @@ setTimeout(function(){
 <div class="layout">
   <!-- ── SIDEBAR ─────────────────────────────────────────── -->
   <aside class="sb">
+    <!-- ━━ Phase 2 改 修: site switcher (= 既 agList を dropdown に 内 包) ━━ -->
     <div class="sb-brand">
       <a class="sb-logo" href="/" style="text-decoration:none;color:var(--text)">
   <div style="display:flex;align-items:center;gap:7px">
@@ -69,19 +70,65 @@ setTimeout(function(){
   </div>
 </a>
     </div>
-    <!-- Home button は廃止 (= ロゴクリックで /lp.html、サイトクリックで site dashboard) -->
-    <!-- 「新しいサイトを追加」 を最上位に固定 (= primary CTA) -->
-    <button class="ag-add-site sb-add-site-top" onclick="openAddSiteModal()" style="margin:10px 12px 6px">
-      <span class="ag-add-ic">+</span>
-      <span class="ag-add-tx">新しいサイトを追加</span>
+
+    <!-- site switcher (= dropdown) -->
+    <div class="site-switch">
+      <button class="site-btn" id="siteBtn" onclick="toggleSiteDD()">
+        <div class="site-logo" id="siteLogo">—</div>
+        <div class="site-info">
+          <div class="site-name" id="siteName">サイト 未 選 択</div>
+          <div class="site-url" id="siteUrl">サイト を 選 ぶ</div>
+        </div>
+        <span class="site-caret">▼</span>
+      </button>
+      <div class="site-dd" id="siteDD" style="display:none">
+        <!-- 既 ag-list は dropdown 内 に 維 持 (= app.js が 参 照) -->
+        <div class="ag-list" id="agList" style="max-height:none;overflow:visible"></div>
+        <div class="site-dd-sep"></div>
+        <button class="ag-add-site sb-add-site-top" onclick="closeSiteDD();openAddSiteModal()" style="margin:8px 4px 4px;width:auto">
+          <span class="ag-add-ic">+</span>
+          <span class="ag-add-tx">新 し い サイト を 追加</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Primary CTA (= 記事 を AI に 書 か せる) -->
+    <button class="primary-cta" id="primaryCta" onclick="openArticleGenModal()">
+      <span class="primary-cta-ic">⚡</span>
+      <span class="primary-cta-bd">
+        <span class="primary-cta-l">記事 を AI に 書 か せる</span>
+        <span class="primary-cta-s" id="primaryCtaSub">この サイト に 公 開</span>
+      </span>
     </button>
-    <button class="sb-search-btn" onclick="openSearch()" title="Search (⌘K)">
+
+    <!-- Nav 5 個 -->
+    <div class="nav-section">
+      <div class="nav-section-h">この サイト で</div>
+      <button class="nav-btn active" data-view="home" onclick="navTo('home',this)"><span class="nav-icon">🏠</span> ダッシュ ボード</button>
+      <button class="nav-btn" data-view="media" onclick="navTo('media',this)"><span class="nav-icon">📰</span> メディア <span class="nav-badge" id="navMediaBadge">0</span></button>
+      <button class="nav-btn" data-view="analytics" onclick="navTo('analytics',this)"><span class="nav-icon">📊</span> 分析</button>
+      <button class="nav-btn" data-view="team" onclick="navTo('team',this)"><span class="nav-icon">🤖</span> AI チーム</button>
+      <button class="nav-btn" data-view="settings" onclick="navTo('settings',this)"><span class="nav-icon">⚙</span> 設定</button>
+    </div>
+
+    <!-- Plan card (= 使 用 量 + アップ動 線) -->
+    <div class="plan-card" id="planCard">
+      <div class="plan-card-head">
+        <span class="plan-card-name" id="planCardName">🆓 FREE</span>
+        <span class="plan-card-frac" id="planCardFrac">— / —</span>
+      </div>
+      <div class="plan-card-bar"><div class="plan-card-fill" id="planCardFill" style="width:0%"></div></div>
+      <div class="plan-card-msg" id="planCardMsg">プラン 情 報 を 取得 中...</div>
+      <button class="plan-card-upbtn" id="planCardUpBtn" style="display:none" onclick="openUpsellModal()">▲ プラン を 上げる</button>
+    </div>
+
+    <!-- 既 検索 button (= ⌘K) -->
+    <button class="sb-search-btn" onclick="openSearch()" title="Search (⌘K)" style="margin:8px 12px 4px">
       <span style="font-size:12px">🔍</span>
       <span style="flex:1;text-align:left;color:var(--text3)" data-i18n="navSearch">検索</span>
       <kbd style="font-size:9px;background:rgba(9,9,11,.06);border:.5px solid var(--wire2);padding:1px 4px;border-radius:4px;color:var(--text3);font-family:'JetBrains Mono','SF Mono',monospace">⌘K</kbd>
     </button>
     <div class="sb-lbl" id="i18n-teamLabel" style="display:none">チーム</div>
-    <div class="ag-list" id="agList"></div>
     <div class="sb-bot">
       <div class="balance-card">
         <div class="balance-row" style="display:none">

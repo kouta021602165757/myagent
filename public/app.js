@@ -27946,3 +27946,148 @@ function showToast(msg,type='ok'){
   toastT=setTimeout(()=>t.classList.remove('on'),3200);
 }
 
+
+// ═════════════════════════════════════════════════════════════════
+// 🚀 Phase 2: Sidebar 再 設計 stub 関 数 (= 後 phase で 実 装 拡 張)
+// ─────────────────────────────────────────────────────────────────
+// 既 機 能 を 壊 さ ない よう に、 これ ら は **新 規** で 追加。
+// 既 同 名 関 数 が ない こと は grep 確 認 済 (Phase 2 着 手 時)。
+// ═════════════════════════════════════════════════════════════════
+
+// site switcher dropdown
+function toggleSiteDD(){
+  const dd = document.getElementById('siteDD');
+  const sw = document.querySelector('.site-switch');
+  if(!dd || !sw) return;
+  const open = dd.style.display !== 'none' && dd.style.display !== '';
+  dd.style.display = open ? 'none' : 'block';
+  sw.classList.toggle('open', !open);
+}
+function closeSiteDD(){
+  const dd = document.getElementById('siteDD');
+  const sw = document.querySelector('.site-switch');
+  if(dd) dd.style.display = 'none';
+  if(sw) sw.classList.remove('open');
+}
+// click 外 で 閉じる
+document.addEventListener('click', (e) => {
+  const sw = document.querySelector('.site-switch');
+  if(sw && !sw.contains(e.target)){
+    const dd = document.getElementById('siteDD');
+    if(dd && dd.style.display === 'block') closeSiteDD();
+  }
+}, true);
+
+// site 表示 更新 (= agent 選択 時 / 起 動 時 に 呼 び 出す)
+// app.js の 既 agent CRUD が agList を render し た 後 で、 active agent の 情 報 を site-btn に 反映
+function updateSiteButton(agent){
+  if(!agent) return;
+  const nameEl = document.getElementById('siteName');
+  const urlEl = document.getElementById('siteUrl');
+  const logoEl = document.getElementById('siteLogo');
+  const ctaSubEl = document.getElementById('primaryCtaSub');
+  if(nameEl) nameEl.textContent = agent.name || agent.title || 'サイト';
+  if(urlEl) urlEl.textContent = (agent.media && agent.media.slug) ? (agent.media.slug + '.myaiagents.agency') : '記事 数 不明';
+  if(logoEl) logoEl.textContent = (agent.name || '?').charAt(0).toUpperCase();
+  if(ctaSubEl) ctaSubEl.textContent = 'この サイト に 公 開';
+}
+
+// nav 切替 (= 5 nav)
+function navTo(view, btn){
+  // active class 切替
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+
+  // 各 view への routing (= Phase 3 で 実 装、 今 は stub)
+  switch(view){
+    case 'home':
+      // 既 home dashboard を 表示
+      if(typeof goHome === 'function') goHome();
+      else showToast('🏠 ダッシュ ボード (= Phase 3 で 実 装)', 'ok');
+      break;
+    case 'media':
+      // 既 メディア 機能 へ
+      if(typeof openMediaWizard === 'function') openMediaWizard();
+      else showToast('📰 メディア (= 既 メディア 機能 と 接 続 予定)', 'ok');
+      break;
+    case 'analytics':
+      showToast('📊 分析 (= Phase 3 で 実 装)', 'ok');
+      break;
+    case 'team':
+      showToast('🤖 AI チーム (= Phase 3 で 実 装)', 'ok');
+      break;
+    case 'settings':
+      if(typeof openSettings === 'function') openSettings();
+      break;
+  }
+}
+
+// Primary CTA = 記事 生成 modal (= 既 機 能 へ redirect)
+function openArticleGenModal(){
+  // Phase 4 で mock の gen modal を 実 装。 今 は 既 機 能 を 起 動
+  if(typeof _generateArticleDraft === 'function'){
+    // 既 関 数 が ある 場合 = activate active agent
+    const activeAg = (typeof _activeAgent !== 'undefined') ? _activeAgent : null;
+    if(activeAg && activeAg.id){
+      _generateArticleDraft(activeAg.id);
+      return;
+    }
+  }
+  showToast('⚡ 記事 生成 modal (= Phase 4 で 実 装)', 'ok');
+}
+
+// Plan upsell modal stub (= Phase 6 で 実 装)
+function openUpsellModal(){
+  // 既 課金 modal へ redirect
+  if(typeof openCharge === 'function'){
+    openCharge();
+    setTimeout(() => {
+      if(typeof bsTab === 'function') bsTab('monthly');
+    }, 200);
+    return;
+  }
+  showToast('▲ プラン アップ (= Phase 6 で 詳 細 実 装)', 'ok');
+}
+function closeUpsellModal(){
+  if(typeof closeCharge === 'function') closeCharge();
+}
+
+// Plan card 更 新 (= /api/me から)
+async function updatePlanCard(){
+  try {
+    const me = (typeof api === 'function')
+      ? await api('GET', '/api/me')
+      : null;
+    if(!me) return;
+    const plan = me.plan || 'free';
+    const planMap = {
+      free:     { name: '🆓 FREE',     cap: 20  },
+      pro:      { name: '✦ PRO',       cap: 50  },
+      business: { name: '⚡ BUSINESS', cap: 100 },
+    };
+    const info = planMap[plan] || planMap.free;
+
+    // 月間 公 開 数 は 既 サーバ で 集計 し ない 可能 性 = stub
+    // Phase 3 で 実 装 集計 endpoint と 接 続
+    const used = 0;
+    const pct = Math.round(used / info.cap * 100);
+
+    const card = document.getElementById('planCard');
+    if(!card) return;
+    const nameEl = document.getElementById('planCardName');
+    const fracEl = document.getElementById('planCardFrac');
+    const fillEl = document.getElementById('planCardFill');
+    const msgEl  = document.getElementById('planCardMsg');
+    const upBtn  = document.getElementById('planCardUpBtn');
+    if(nameEl) nameEl.textContent = info.name;
+    if(fracEl) fracEl.textContent = used + ' / ' + info.cap;
+    if(fillEl) fillEl.style.width = pct + '%';
+    if(msgEl)  msgEl.textContent = '今 月 残 ' + (info.cap - used) + ' 本 · 月 末 reset';
+    card.classList.toggle('warn', pct >= 80);
+    if(upBtn) upBtn.style.display = (pct >= 80 && plan !== 'business') ? 'block' : 'none';
+  } catch(e){
+    console.warn('updatePlanCard fail', e);
+  }
+}
+// app.js init 完了 後 に 自動 呼 び 出 し (= 既 init 体 系 を 壊 さ ない)
+setTimeout(updatePlanCard, 2000);

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>利用規約 — コスト適正化サービス</title>
+<style>
+  :root{
+    --ink:#1d1d1f;--sub:#6e6e73;--line:#d2d2d7;--hair:#e8e8ed;
+    --bg:#fff;--bg2:#f5f5f7;--accent:#0071e3;--accent-d:#0058b0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro JP","SF Pro Text","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.85;letter-spacing:.01em;-webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  nav.bar{position:sticky;top:0;z-index:100;height:52px;
+    background:rgba(255,255,255,.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:1px solid rgba(0,0,0,.06)}
+  .bar .wrap{height:100%;display:flex;align-items:center;justify-content:space-between}
+  .brand{font-size:18px;font-weight:600;letter-spacing:-.01em}
+  .brand b{font-weight:700}
+  .bar a.back{font-size:13px;color:var(--accent)}
+
+  .wrap{width:100%;max-width:760px;margin:0 auto;padding:0 clamp(20px,5vw,24px)}
+
+  header.hd{text-align:center;padding:80px 0 44px;border-bottom:1px solid var(--hair);margin-bottom:48px}
+  header.hd .eyebrow{font-size:14px;font-weight:600;color:var(--accent);margin-bottom:12px;letter-spacing:.04em}
+  header.hd h1{font-size:clamp(30px,5vw,42px);font-weight:700;letter-spacing:-.03em;line-height:1.2}
+  header.hd .meta{margin-top:18px;font-size:13px;color:var(--sub)}
+
+  main{padding-bottom:90px}
+  .lead{font-size:15.5px;color:var(--sub);margin-bottom:40px;line-height:1.9}
+
+  section.art{margin-bottom:38px}
+  section.art h2{font-size:19px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px;
+    padding-left:14px;border-left:3px solid var(--accent);line-height:1.4}
+  section.art p{font-size:15px;margin-bottom:12px}
+  section.art p:last-child{margin-bottom:0}
+
+  ol.cl{list-style:none;counter-reset:cl;margin:6px 0 0}
+  ol.cl>li{counter-increment:cl;position:relative;padding-left:30px;margin-bottom:11px;font-size:15px}
+  ol.cl>li::before{content:"("counter(cl)")";position:absolute;left:0;top:0;color:var(--sub);font-size:13.5px;font-weight:600}
+  ul.dot{list-style:none;margin:8px 0 0}
+  ul.dot>li{position:relative;padding-left:20px;margin-bottom:9px;font-size:15px}
+  ul.dot>li::before{content:"";position:absolute;left:4px;top:11px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+
+  .ph{color:#c2410c;font-weight:600}
+
+  /* 情報共同利用テーブル */
+  .joint{background:var(--bg2);border:1px solid var(--hair);border-radius:16px;padding:8px 22px;margin-top:14px}
+  .joint .row{display:grid;grid-template-columns:200px 1fr;gap:16px;padding:15px 0;border-top:1px solid var(--hair);font-size:14.5px}
+  .joint .row:first-child{border-top:none}
+  .joint .row .k{font-weight:700;color:var(--ink)}
+  .joint .row .v{color:#3a3a3c}
+  @media(max-width:600px){.joint .row{grid-template-columns:1fr;gap:4px}.joint .row .k{font-size:13.5px;color:var(--accent)}}
+
+  /* 運営2社カード */
+  .ops{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  .opc{border:1px solid var(--hair);border-radius:16px;padding:22px 22px;background:#fff}
+  .opc .role{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);background:#eaf3fe;
+    padding:4px 11px;border-radius:980px;margin-bottom:12px}
+  .opc h3{font-size:17px;font-weight:700;letter-spacing:-.01em;margin-bottom:8px}
+  .opc p{font-size:13.5px;color:var(--sub);line-height:1.8;margin:0}
+  @media(max-width:600px){.ops{grid-template-columns:1fr}}
+
+  footer{background:var(--bg2);color:var(--sub);font-size:12px;padding:30px 0;border-top:1px solid var(--line)}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  footer a{color:var(--sub)}
+</style>
+</head>
+<body>
+
+<nav class="bar">
+  <div class="wrap">
+    <div class="brand"><b>COST</b>OPT</div>
+    <a class="back" href="/cost-optimization-lp.html">‹ サービストップへ</a>
+  </div>
+</nav>
+
+<header class="hd">
+  <div class="wrap">
+    <p class="eyebrow">TERMS OF SERVICE</p>
+    <h1>利用規約</h1>
+    <p class="meta">制定日：2026年6月11日</p>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="lead">
+      本利用規約（以下「本規約」といいます）は、株式会社PROTOCOL（以下「PROTOCOL」といいます）および株式会社アイ・ステーション（以下「アイ・ステーション」といい、PROTOCOLと総称して「運営会社」といいます）が共同で提供するコスト適正化サービス（以下「本サービス」といいます）の利用条件を定めるものです。本サービスへのお申込み・お問い合わせをされた方（以下「利用者」といいます）は、本規約に同意のうえご利用いただくものとします。
+    </p>
+
+    <!-- 運営体制 -->
+    <section class="art">
+      <h2>第1条（運営体制）</h2>
+      <p>本サービスは、PROTOCOLおよびアイ・ステーションの2社が、それぞれ次の役割を分担して提供します。両社は、本サービスの提供に必要な範囲で相互に連携し、利用者の情報を共同して管理します。</p>
+      <div class="ops">
+        <div class="opc">
+          <span class="role">窓口・受付</span>
+          <h3>株式会社PROTOCOL</h3>
+          <p>本サービスのご案内、お問い合わせ・お申込みの受付、一次対応、利用者と実務担当との取次ぎを行います。</p>
+        </div>
+        <div class="opc">
+          <span class="role">実務・運営</span>
+          <h3>株式会社アイ・ステーション</h3>
+          <p>コスト診断、改善提案、各種契約手続き・切替の支援、導入後のフォローなど、本サービスの実務を行います。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 適用 -->
+    <section class="art">
+      <h2>第2条（適用）</h2>
+      <ol class="cl">
+        <li>本規約は、本サービスの提供および利用に関する運営会社と利用者との間の一切の関係に適用されます。</li>
+        <li>運営会社が本サービスに関して別途定める個別規定・注意事項等は、本規約の一部を構成します。本規約の定めと個別規定の定めが矛盾する場合は、個別規定が優先して適用されます。</li>
+      </ol>
+    </section>
+
+    <!-- 定義 -->
+    <section class="art">
+      <h2>第3条（定義）</h2>
+      <p>本規約において使用する用語の定義は、次のとおりとします。</p>
+      <ul class="dot">
+        <li>「本サービス」とは、運営会社が提供する、企業の販管費・固定費の見直しおよび最適化に関する診断・提案・切替支援等の一連のサービスをいいます。</li>
+        <li>「利用者」とは、本サービスへのお問い合わせ・お申込みを行い、または本サービスを利用する法人・個人事業主その他の事業者をいいます。</li>
+        <li>「取扱商材」とは、本サービスにおいて運営会社が取り扱う各種サービス・商品・契約をいい、その内容は予告なく変更される場合があります。</li>
+      </ul>
+    </section>
+
+    <!-- サービス内容 -->
+    <section class="art">
+      <h2>第4条（本サービスの内容）</h2>
+      <ol class="cl">
+        <li>本サービスは、利用者の現状の契約内容・利用状況をもとに、コストの見直し余地を診断し、最適なプラン・条件のご提案および契約の切替支援等を行うものです。</li>
+        <li>本サービスは、コストの削減効果その他特定の成果を保証するものではありません。実際の効果は、利用者の契約状況・利用状況・市場環境等により異なります。</li>
+        <li>運営会社は、本サービスの一環として、利用者に対し取扱商材を提案する場合があります。取扱商材の契約は、利用者と各商材の提供事業者との間で別途締結されるものとし、その契約条件は当該提供事業者の定めるところによります。</li>
+      </ol>
+    </section>
+
+    <!-- 申込み -->
+    <section class="art">
+      <h2>第5条（お申込み・お問い合わせ）</h2>
+      <ol class="cl">
+        <li>本サービスのお申込み・お問い合わせは、PROTOCOLが窓口として受け付けます。</li>
+        <li>利用者は、お申込み・お問い合わせにあたり、真実かつ正確な情報を提供するものとします。</li>
+        <li>運営会社は、利用者から取得した情報をもとに、アイ・ステーションが実務対応を行うため、両社間で当該情報を共有します。情報の取扱いについては第8条に定めるところによります。</li>
+      </ol>
+    </section>
+
+    <!-- 料金 -->
+    <section class="art">
+      <h2>第6条（料金）</h2>
+      <ol class="cl">
+        <li>本サービスにおける初回のコスト診断は、原則として無料で提供します。</li>
+        <li>個別の支援・取扱商材の導入等にあたり費用が発生する場合、運営会社は事前にその内容・金額を利用者に提示し、利用者の同意を得るものとします。</li>
+      </ol>
+    </section>
+
+    <!-- 禁止事項 -->
+    <section class="art">
+      <h2>第7条（禁止事項）</h2>
+      <p>利用者は、本サービスの利用にあたり、次の行為を行ってはなりません。</p>
+      <ul class="dot">
+        <li>法令または公序良俗に違反する行為</li>
+        <li>運営会社、他の利用者または第三者の権利・利益を侵害する行為</li>
+        <li>虚偽の情報を提供する行為</li>
+        <li>本サービスの運営を妨げ、または信用を毀損する行為</li>
+        <li>その他、運営会社が不適切と合理的に判断する行為</li>
+      </ul>
+    </section>
+
+    <!-- 情報の共同管理 -->
+    <section class="art">
+      <h2>第8条（利用者情報の取扱い・共同利用）</h2>
+      <ol class="cl">
+        <li>運営会社は、本サービスの提供にあたり取得した利用者の情報（個人情報を含みます）を、関係法令および運営会社が別途定めるプライバシーポリシーに従い、適切に取り扱います。</li>
+        <li>PROTOCOLおよびアイ・ステーションは、本サービスを共同で提供するため、利用者の個人情報を以下のとおり共同して利用します。両社は、当該情報を本サービスの提供に必要な範囲で共有し、相互に協力して安全管理措置を講じます。</li>
+      </ol>
+      <div class="joint">
+        <div class="row"><span class="k">共同して利用する者の範囲</span><span class="v">株式会社PROTOCOL／株式会社アイ・ステーション</span></div>
+        <div class="row"><span class="k">共同して利用する情報の項目</span><span class="v">氏名、会社名・屋号、部署・役職、電話番号、メールアドレス、住所、現在の契約・利用状況に関する情報、お問い合わせ・ご相談の内容、その他本サービスの提供に必要な情報</span></div>
+        <div class="row"><span class="k">利用目的</span><span class="v">本サービス（コスト診断・改善提案・契約手続きおよび切替の支援・導入後のフォロー等）の提供、これに関するご連絡・ご案内、品質向上のための分析</span></div>
+        <div class="row"><span class="k">管理について責任を有する者</span><span class="v">株式会社PROTOCOL（お問い合わせ窓口）。なお、実務上の取扱いに関する責任は株式会社アイ・ステーションが負い、両社が共同して情報の適切な管理に責任を負います。<span class="ph">［管理責任者部署・連絡先：要記載］</span></span></div>
+        <div class="row"><span class="k">取得方法</span><span class="v">お問い合わせフォーム、電話、メール、面談その他の方法により利用者から取得します。</span></div>
+      </div>
+      <ol class="cl" style="margin-top:16px">
+        <li>運営会社は、法令に基づく場合を除き、利用者の同意なく、共同利用者以外の第三者に個人情報を提供しません。ただし、取扱商材の契約手続きに必要な範囲で、利用者の同意を得たうえで当該商材の提供事業者へ情報を提供する場合があります。</li>
+        <li>個人情報の開示・訂正・利用停止等のご請求、その他個人情報の取扱いに関するお問い合わせは、PROTOCOLの窓口にて一括して受け付けます。</li>
+      </ol>
+    </section>
+
+    <!-- 免責 -->
+    <section class="art">
+      <h2>第9条（免責事項）</h2>
+      <ol class="cl">
+        <li>運営会社は、本サービスにより特定のコスト削減効果その他の成果が得られることを保証するものではありません。</li>
+        <li>取扱商材の品質・性能・適合性等については、各商材の提供事業者が責任を負うものとし、運営会社は当該事業者と利用者との間の契約に関して責任を負いません。ただし、運営会社の故意または重過失による場合はこの限りではありません。</li>
+        <li>運営会社は、本サービスの提供に関し利用者に生じた損害について、運営会社の責めに帰すべき事由による場合を除き、責任を負いません。</li>
+      </ol>
+    </section>
+
+    <!-- 変更・停止 -->
+    <section class="art">
+      <h2>第10条（本サービスの変更・中断・終了）</h2>
+      <p>運営会社は、利用者への事前の通知により、本サービスの内容を変更し、または本サービスの全部もしくは一部を中断・終了することができます。これにより利用者に生じた損害について、運営会社は前条の範囲で責任を負います。</p>
+    </section>
+
+    <!-- 規約変更 -->
+    <section class="art">
+      <h2>第11条（本規約の変更）</h2>
+      <p>運営会社は、必要と判断した場合、利用者への通知または本サービスのウェブサイト上への掲示により、本規約を変更することができます。変更後の本規約は、掲示の時点から効力を生じるものとします。</p>
+    </section>
+
+    <!-- 譲渡禁止 -->
+    <section class="art">
+      <h2>第12条（権利義務の譲渡禁止）</h2>
+      <p>利用者は、運営会社の書面による事前の承諾なく、本規約上の地位または本規約に基づく権利義務の全部もしくは一部を、第三者に譲渡し、または担保に供することはできません。</p>
+    </section>
+
+    <!-- 準拠法・管轄 -->
+    <section class="art">
+      <h2>第13条（準拠法・合意管轄）</h2>
+      <ol class="cl">
+        <li>本規約の解釈および適用は、日本法に準拠します。</li>
+        <li>本サービスに関して運営会社と利用者との間で生じた紛争については、<span class="ph">［　　　］地方裁判所</span>を第一審の専属的合意管轄裁判所とします。</li>
+      </ol>
+    </section>
+
+    <!-- 事業者情報 -->
+    <section class="art">
+      <h2>第14条（事業者の表示）</h2>
+      <div class="joint">
+        <div class="row"><span class="k">窓口・受付</span><span class="v">株式会社PROTOCOL<br>所在地：<span class="ph">［要記載］</span>／代表者：<span class="ph">［要記載］</span></span></div>
+        <div class="row"><span class="k">実務・運営</span><span class="v">株式会社アイ・ステーション<br>所在地：<span class="ph">［要記載］</span>／代表者：<span class="ph">［要記載］</span></span></div>
+        <div class="row"><span class="k">お問い合わせ窓口</span><span class="v">株式会社PROTOCOL　<span class="ph">［メールアドレス／電話番号：要記載］</span></span></div>
+      </div>
+    </section>
+
+    <p style="font-size:13px;color:var(--sub);margin-top:40px">以上</p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>COSTOPT — コスト適正化サービス</span>
+    <span><a href="/cost-optimization-lp.html">サービストップ</a>　© 2026 株式会社PROTOCOL / 株式会社アイ・ステーション</span>
+  </div>
+</footer>
+
+</body>
+</html>

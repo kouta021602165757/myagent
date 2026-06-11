@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MY AI Agent — Command Center [MOCK]</title>
+<style>
+:root{
+  --bg:#0a0e14;
+  --bg2:#0f141d;
+  --bg3:#141a26;
+  --border:rgba(255,255,255,.08);
+  --border-hi:rgba(0,255,136,.3);
+  --green:#00ff88;
+  --green-dim:#00ff8855;
+  --green-glow:#00ff8822;
+  --purple:#b794f6;
+  --purple-dim:#b794f655;
+  --amber:#fbbf24;
+  --red:#ff5c7c;
+  --text:#e6edf3;
+  --text2:#8b949e;
+  --text3:#5a6370;
+  --mono:'IBM Plex Mono','JetBrains Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  --sans:'Inter',-apple-system,'Hiragino Sans','Yu Gothic',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+button:active{transform:scale(.98)}
+
+/* === Grid bg === */
+.grid-bg{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,255,136,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,255,136,.025) 1px,transparent 1px);
+  background-size:48px 48px;
+  background-position:-1px -1px;
+  mask-image:radial-gradient(circle at 30% 40%,#000 0%,#000 60%,transparent 100%);
+  -webkit-mask-image:radial-gradient(circle at 30% 40%,#000 0%,#000 60%,transparent 100%);
+}
+.grid-bg::after{content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 80% 20%,rgba(183,148,246,.06) 0%,transparent 40%),
+             radial-gradient(circle at 20% 80%,rgba(0,255,136,.04) 0%,transparent 50%)}
+
+/* === Layout === */
+.app{position:relative;z-index:1;display:grid;grid-template-columns:64px 1fr 380px;grid-template-rows:56px 1fr;height:100vh;gap:0}
+.topbar{grid-column:1/-1;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);background:rgba(10,14,20,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:5}
+.sidebar{border-right:1px solid var(--border);background:rgba(10,14,20,.6);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;z-index:4}
+.main{overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:18px;scrollbar-width:thin;scrollbar-color:#1a1f2e transparent}
+.main::-webkit-scrollbar{width:8px}
+.main::-webkit-scrollbar-track{background:transparent}
+.main::-webkit-scrollbar-thumb{background:#1a1f2e;border-radius:4px}
+.chat{border-left:1px solid var(--border);background:rgba(10,14,20,.7);display:flex;flex-direction:column;z-index:3;transition:width .25s ease;position:relative}
+.chat.collapsed{width:48px}
+.chat.collapsed .chat-body,.chat.collapsed .chat-foot{display:none}
+
+/* === Topbar === */
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.04em}
+.brand-mark{width:24px;height:24px;border-radius:5px;background:linear-gradient(135deg,var(--green),var(--purple));display:flex;align-items:center;justify-content:center;font-size:13px;color:#0a0e14;font-weight:900}
+.brand-name{color:var(--green)}
+.brand-sub{color:var(--text3);font-size:10px;letter-spacing:.2em;padding:2px 6px;border:1px solid var(--border);border-radius:3px;margin-left:4px}
+.top-time{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:14px}
+.top-time .blink{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.top-btn{padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:11px;color:var(--text2);transition:all .15s}
+.top-btn:hover{border-color:var(--green-dim);color:var(--green)}
+
+/* === Sidebar === */
+.nav-btn{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:18px;color:var(--text3);transition:all .15s;position:relative}
+.nav-btn:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.nav-btn.active{background:rgba(0,255,136,.08);color:var(--green)}
+.nav-btn.active::before{content:'';position:absolute;left:-12px;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--green);border-radius:0 2px 2px 0;box-shadow:0 0 8px var(--green)}
+.nav-tip{position:absolute;left:54px;background:#1a1f2e;border:1px solid var(--border);padding:5px 10px;border-radius:5px;font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;font-family:var(--mono)}
+.nav-btn:hover .nav-tip{opacity:1}
+
+/* === Main blocks === */
+.block{border:1px solid var(--border);border-radius:10px;background:rgba(15,20,29,.6);overflow:hidden}
+.block-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text2)}
+.block-head .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.block-head .right{margin-left:auto;color:var(--text3);font-size:10px}
+
+/* === Live stats === */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;padding:0}
+.stat{padding:18px 18px 16px;border-right:1px solid var(--border);position:relative;overflow:hidden}
+.stat:last-child{border-right:0}
+.stat-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.stat-val{font-family:var(--mono);font-size:32px;font-weight:700;line-height:1;color:var(--green);text-shadow:0 0 12px rgba(0,255,136,.3);letter-spacing:-.02em}
+.stat-delta{margin-top:6px;font-family:var(--mono);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.stat-delta.up{color:var(--green)}
+.stat-delta.dn{color:var(--red)}
+.stat-spark{margin-top:10px;height:24px;display:flex;align-items:flex-end;gap:2px}
+.stat-spark .b{flex:1;background:linear-gradient(180deg,var(--green) 0%,transparent 100%);border-radius:1px 1px 0 0;min-height:3px;opacity:.7;transition:height .8s ease}
+.stat.purple .stat-val{color:var(--purple);text-shadow:0 0 12px rgba(183,148,246,.3)}
+.stat.purple .stat-spark .b{background:linear-gradient(180deg,var(--purple) 0%,transparent 100%)}
+.stat::after{content:'';position:absolute;top:0;left:-50%;width:200%;height:1px;background:linear-gradient(90deg,transparent,var(--green-dim),transparent);animation:scan 4s linear infinite}
+@keyframes scan{0%{transform:translateX(-50%)}100%{transform:translateX(50%)}}
+
+/* === Working now === */
+.work-grid{padding:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.work-card{border:1px solid var(--border);border-radius:8px;padding:14px;background:rgba(0,255,136,.025);position:relative;overflow:hidden}
+.work-card.purple{background:rgba(183,148,246,.04)}
+.work-card.amber{background:rgba(251,191,36,.04)}
+.work-state{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.work-card.purple .work-state{color:var(--purple)}
+.work-card.amber .work-state{color:var(--amber)}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.6s infinite}
+.work-card.purple .pulse{background:var(--purple);box-shadow:0 0 8px var(--purple)}
+.work-card.amber .pulse{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.4}}
+.work-title{font-size:13px;font-weight:600;line-height:1.4;margin-bottom:8px}
+.work-meta{font-family:var(--mono);font-size:10.5px;color:var(--text2);display:flex;align-items:center;gap:10px}
+.work-bar{margin-top:10px;height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
+.work-bar-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--green-dim));border-radius:2px;width:0%;transition:width .8s ease}
+.work-card.purple .work-bar-fill{background:linear-gradient(90deg,var(--purple),var(--purple-dim))}
+.work-card.amber .work-bar-fill{background:linear-gradient(90deg,var(--amber),#fbbf2455)}
+
+/* === Suggestions === */
+.sug-grid{padding:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.sug{border:1px solid var(--border);border-radius:8px;padding:16px;background:rgba(255,255,255,.02);cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.sug:hover{border-color:var(--green-dim);background:rgba(0,255,136,.04);transform:translateY(-2px)}
+.sug:hover .sug-cta{color:var(--green)}
+.sug-prio{font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;color:var(--purple);text-transform:uppercase;margin-bottom:8px}
+.sug.hot .sug-prio{color:var(--red)}
+.sug-title{font-size:14px;font-weight:600;line-height:1.4;margin-bottom:8px;color:var(--text)}
+.sug-why{font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:14px}
+.sug-cta{font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px;transition:color .15s}
+.sug-cta::after{content:'→';transition:transform .2s}
+.sug:hover .sug-cta::after{transform:translateX(4px)}
+
+/* === Activity feed === */
+.feed{padding:0;max-height:280px;overflow-y:auto;font-family:var(--mono);font-size:11.5px;line-height:1.85}
+.feed::-webkit-scrollbar{width:6px}
+.feed::-webkit-scrollbar-thumb{background:#1a1f2e;border-radius:3px}
+.feed-row{padding:5px 16px;display:grid;grid-template-columns:60px 60px 1fr auto;gap:12px;border-bottom:1px solid rgba(255,255,255,.03);align-items:center}
+.feed-row:hover{background:rgba(255,255,255,.02)}
+.feed-time{color:var(--text3);font-size:10.5px}
+.feed-tag{color:var(--green);font-size:10px;letter-spacing:.06em}
+.feed-tag.purple{color:var(--purple)}
+.feed-tag.amber{color:var(--amber)}
+.feed-tag.red{color:var(--red)}
+.feed-msg{color:var(--text)}
+.feed-msg .v{color:var(--green);font-weight:600}
+.feed-link{color:var(--text3);font-size:10.5px;text-decoration:none}
+.feed-link:hover{color:var(--green)}
+.feed-row.new{animation:slideIn .4s ease;background:rgba(0,255,136,.05)}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+
+/* === Chat panel === */
+.chat-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text2)}
+.chat-toggle{margin-left:auto;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:5px;color:var(--text3);transition:all .15s}
+.chat-toggle:hover{background:rgba(255,255,255,.05);color:var(--green)}
+.chat.collapsed .chat-toggle{position:absolute;top:12px;left:12px;margin:0}
+.chat.collapsed .chat-head{justify-content:center;padding:12px 0}
+.chat.collapsed .chat-head .lbl{display:none}
+.chat-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px;font-size:13px;line-height:1.6}
+.chat-body::-webkit-scrollbar{width:6px}
+.chat-body::-webkit-scrollbar-thumb{background:#1a1f2e;border-radius:3px}
+.msg{display:flex;gap:10px}
+.msg-av{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:linear-gradient(135deg,var(--green),var(--purple));color:#0a0e14}
+.msg.user .msg-av{background:#2a3142;color:var(--text2)}
+.msg-bd{flex:1;min-width:0}
+.msg-bd .nm{font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.05em;margin-bottom:3px}
+.msg-bd .tx{color:var(--text);font-size:13px}
+.msg-bd .tx .k{color:var(--green);font-family:var(--mono);font-size:11.5px;background:rgba(0,255,136,.08);padding:1px 5px;border-radius:3px}
+.msg-card{margin-top:8px;border:1px solid var(--border);border-radius:7px;padding:10px 12px;background:rgba(0,255,136,.04);font-size:12px}
+.msg-card .ti{font-weight:600;margin-bottom:3px}
+.msg-card .mt{font-family:var(--mono);font-size:10.5px;color:var(--text2)}
+.chat-foot{padding:12px 14px;border-top:1px solid var(--border);background:rgba(10,14,20,.6)}
+.chat-input-wrap{border:1px solid var(--border);border-radius:8px;background:#0f141d;padding:10px 12px;display:flex;align-items:flex-end;gap:8px;transition:border-color .15s}
+.chat-input-wrap:focus-within{border-color:var(--green-dim)}
+.chat-input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:inherit;font-size:13px;resize:none;line-height:1.5;max-height:120px}
+.chat-input::placeholder{color:var(--text3)}
+.chat-send{width:30px;height:30px;border-radius:6px;background:var(--green);color:#0a0e14;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex-shrink:0;transition:all .15s}
+.chat-send:hover{box-shadow:0 0 12px var(--green-dim)}
+.chat-suggest{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.chat-suggest button{font-family:var(--mono);font-size:10.5px;padding:5px 10px;border:1px solid var(--border);border-radius:5px;color:var(--text2);transition:all .15s}
+.chat-suggest button:hover{border-color:var(--green-dim);color:var(--green);background:rgba(0,255,136,.04)}
+
+/* === Toast === */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 20px;background:#1a1f2e;border:1px solid var(--green-dim);border-radius:8px;font-family:var(--mono);font-size:12px;color:var(--green);box-shadow:0 8px 32px rgba(0,255,136,.15);z-index:1000;opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+
+/* === Modal === */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.show{display:flex}
+.modal{width:100%;max-width:560px;background:#0f141d;border:1px solid var(--border-hi);border-radius:12px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(0,255,136,.08);animation:zoomIn .25s ease}
+@keyframes zoomIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--green);text-transform:uppercase}
+.modal-x{margin-left:auto;color:var(--text3);font-size:18px}
+.modal-x:hover{color:var(--text)}
+.modal-body{padding:22px}
+.modal-h{font-size:18px;font-weight:700;margin-bottom:14px;color:var(--text)}
+.modal-p{font-size:13.5px;color:var(--text2);line-height:1.7;margin-bottom:18px}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;background:rgba(0,0,0,.2)}
+.btn{padding:10px 18px;border-radius:7px;font-size:12.5px;font-weight:600;font-family:var(--mono);letter-spacing:.04em;transition:all .15s;border:1px solid var(--border)}
+.btn-ghost{color:var(--text2)}
+.btn-ghost:hover{border-color:var(--text3);color:var(--text)}
+.btn-go{background:var(--green);color:#0a0e14;border-color:var(--green);font-weight:800}
+.btn-go:hover{box-shadow:0 0 16px var(--green-dim)}
+
+/* === Mobile === */
+@media (max-width: 880px){
+  .app{grid-template-columns:48px 1fr;grid-template-rows:52px 1fr auto}
+  .chat{grid-column:1/-1;grid-row:3/4;border-left:0;border-top:1px solid var(--border);width:100%;height:auto;max-height:50vh}
+  .chat.collapsed{height:48px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat{border-bottom:1px solid var(--border)}
+  .stat:nth-child(2n){border-right:0}
+  .work-grid,.sug-grid{grid-template-columns:1fr}
+  .main{padding:14px}
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="app">
+
+  <!-- ━━━ TOPBAR ━━━ -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">M</div>
+      <span class="brand-name">MY AI AGENT</span>
+      <span class="brand-sub">COMMAND CENTER · v0.1</span>
+    </div>
+    <div class="top-time">
+      <span><span class="blink"></span> 24 AI TEAM ONLINE</span>
+      <span id="topClock">--:--:--</span>
+      <button class="top-btn" onclick="toggleChat()">⌘ CHAT</button>
+      <button class="top-btn" onclick="alert('Settings (mock)')">⚙</button>
+    </div>
+  </div>
+
+  <!-- ━━━ SIDEBAR ━━━ -->
+  <div class="sidebar">
+    <button class="nav-btn active" onclick="navTo('home')">⌂<span class="nav-tip">HOME</span></button>
+    <button class="nav-btn" onclick="navTo('media')">📰<span class="nav-tip">MEDIA</span></button>
+    <button class="nav-btn" onclick="navTo('analytics')">📊<span class="nav-tip">ANALYTICS</span></button>
+    <button class="nav-btn" onclick="navTo('team')">🤖<span class="nav-tip">AI TEAM</span></button>
+    <button class="nav-btn" onclick="navTo('store')">🛒<span class="nav-tip">STORE</span></button>
+    <div style="flex:1"></div>
+    <button class="nav-btn" onclick="navTo('settings')">⚙<span class="nav-tip">SETTINGS</span></button>
+  </div>
+
+  <!-- ━━━ MAIN ━━━ -->
+  <div class="main">
+
+    <!-- LIVE STATS -->
+    <div class="block">
+      <div class="block-head">
+        <span class="dot"></span> LIVE METRICS
+        <span class="right" id="liveClock">SYNC --:--</span>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-lbl">▶ MONTHLY PV</div>
+          <div class="stat-val" id="statPv">0</div>
+          <div class="stat-delta up">↑ +12.4% vs last week</div>
+          <div class="stat-spark" id="sparkPv"></div>
+        </div>
+        <div class="stat purple">
+          <div class="stat-lbl">▶ UNIQUE USERS</div>
+          <div class="stat-val" id="statUsers">0</div>
+          <div class="stat-delta up">↑ +8.1%</div>
+          <div class="stat-spark" id="sparkUsers"></div>
+        </div>
+        <div class="stat">
+          <div class="stat-lbl">▶ LP INFLOW</div>
+          <div class="stat-val" id="statLp">0</div>
+          <div class="stat-delta up">↑ +24.7%</div>
+          <div class="stat-spark" id="sparkLp"></div>
+        </div>
+        <div class="stat purple">
+          <div class="stat-lbl">▶ ARTICLES / MO</div>
+          <div class="stat-val" id="statArt">0</div>
+          <div class="stat-delta">48 / 100 cap</div>
+          <div class="stat-spark" id="sparkArt"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORKING NOW -->
+    <div class="block">
+      <div class="block-head">
+        <span class="dot"></span> AI TEAM · NOW WORKING
+        <span class="right">3 TASKS ACTIVE</span>
+      </div>
+      <div class="work-grid">
+        <div class="work-card" onclick="openTask('write')">
+          <div class="work-state"><span class="pulse"></span> WRITING · 42s</div>
+          <div class="work-title">スマホ で ポイ活 始めたい 人 向け 完全 ガイド</div>
+          <div class="work-meta">📝 Writer-3 · 8,200 chars</div>
+          <div class="work-bar"><div class="work-bar-fill" id="bar1" style="width:48%"></div></div>
+        </div>
+        <div class="work-card purple" onclick="openTask('research')">
+          <div class="work-state"><span class="pulse"></span> RESEARCHING · 17s</div>
+          <div class="work-title">competitor: rewards-app.jp の 直近 30 KW を 分析</div>
+          <div class="work-meta">🔍 Researcher-1 · scanning…</div>
+          <div class="work-bar"><div class="work-bar-fill" id="bar2" style="width:72%"></div></div>
+        </div>
+        <div class="work-card amber" onclick="openTask('rewrite')">
+          <div class="work-state"><span class="pulse"></span> REWRITING · 5s</div>
+          <div class="work-title">「AI 記事 自動 化」 を SEO 観点 で 改修</div>
+          <div class="work-meta">♻️ Editor-2 · day 30 rank check</div>
+          <div class="work-bar"><div class="work-bar-fill" id="bar3" style="width:25%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI SUGGESTIONS -->
+    <div class="block">
+      <div class="block-head">
+        <span class="dot"></span> RECOMMENDED ACTIONS · 今 やる べき 3 つ
+        <span class="right">AI 提案 · 04:31 更新</span>
+      </div>
+      <div class="sug-grid">
+        <div class="sug hot" onclick="openSug('hot')">
+          <div class="sug-prio">▌ HOT · 24H 以内</div>
+          <div class="sug-title">競合 が 「AI 記事 ツール 比較」 で 1 位 → 12h 以内 に 抜く 案</div>
+          <div class="sug-why">同 KW で あなた #4。 競合 5,400 字、 構造 比較 表 弱い。 8,500 字 + AI 制作 比較 ダッシュ で 抜け る 見込み。</div>
+          <div class="sug-cta">⚡ AI チーム を 起動</div>
+        </div>
+        <div class="sug" onclick="openSug('medium')">
+          <div class="sug-prio">▌ HIGH · 今週</div>
+          <div class="sug-title">「LP 流入」 が 11 sessions → 100 まで 伸ばす 3 手</div>
+          <div class="sug-why">記事 末尾 CTA の clickthrough は OK、 でも 記事 中 inline CTA が 0 件。 inline 3 箇所 追加 で +60-80 sess 見込み。</div>
+          <div class="sug-cta">📊 詳細 を 見る</div>
+        </div>
+        <div class="sug" onclick="openSug('low')">
+          <div class="sug-prio">▌ MEDIUM · 余裕 あれ ば</div>
+          <div class="sug-title">古い 記事 「ポイ活 アプリ 比較」 が 順位 #18 まで 落下</div>
+          <div class="sug-why">過去 7 日 で position #11 → #18。 内容 古い 可能性。 AI で リライト し て 30 日 様子 見 推奨。</div>
+          <div class="sug-cta">♻️ リライト を 起動</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY FEED -->
+    <div class="block">
+      <div class="block-head">
+        <span class="dot"></span> ACTIVITY FEED · system_log
+        <span class="right" id="feedCount">— events</span>
+      </div>
+      <div class="feed" id="feed"></div>
+    </div>
+
+  </div>
+
+  <!-- ━━━ CHAT PANEL ━━━ -->
+  <div class="chat" id="chat">
+    <div class="chat-head">
+      <span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)"></span>
+      <span class="lbl">AI ASSISTANT</span>
+      <button class="chat-toggle" onclick="toggleChat()" title="折りたたみ">⟩</button>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <div class="msg">
+        <div class="msg-av">M</div>
+        <div class="msg-bd">
+          <div class="nm">MY · 04:31</div>
+          <div class="tx">おはよう。 寝てる 間 に <b>3 記事 公開</b>、 <b>87 人 読んだ</b>。 1 件 SNS 反応 良好 だった。</div>
+          <div class="msg-card">
+            <div class="ti">🔥 「スマホ で 記事 生成」</div>
+            <div class="mt">PV 276 · LP 流入 9 sess · X likes 14</div>
+          </div>
+        </div>
+      </div>
+      <div class="msg">
+        <div class="msg-av">M</div>
+        <div class="msg-bd">
+          <div class="nm">MY · 04:32</div>
+          <div class="tx">いま <span class="k">/work</span> で 何 が 動 い てる か 見える。 <span class="k">/sug</span> で 提案 一覧。</div>
+        </div>
+      </div>
+    </div>
+    <div class="chat-foot">
+      <div class="chat-input-wrap">
+        <textarea class="chat-input" id="chatInput" rows="1" placeholder="AI に 何 か 頼 む… (例: 「今週 の 数字 まとめ て」)" onkeydown="onChatKey(event)"></textarea>
+        <button class="chat-send" onclick="sendChat()">↑</button>
+      </div>
+      <div class="chat-suggest">
+        <button onclick="quickChat('今週 の 数字 まとめて')">今週 の 数字</button>
+        <button onclick="quickChat('競合 分析 やって')">競合 分析</button>
+        <button onclick="quickChat('新 記事 提案 5 件')">新 記事 提案</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ━━━ TOAST ━━━ -->
+<div class="toast" id="toast"></div>
+
+<!-- ━━━ MODAL ━━━ -->
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <span>⚡</span> <span id="modalTag">ACTION</span>
+      <button class="modal-x" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-h" id="modalH">Action</div>
+      <div class="modal-p" id="modalP">Description</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-go" id="modalGo" onclick="modalConfirm()">⚡ 起動 する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// State
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const S = {
+  pv: 1768, users: 473, lp: 11, art: 48,
+  pvTarget: 1768, usersTarget: 473, lpTarget: 11, artTarget: 48,
+  feedRows: 0,
+  modalAction: null,
+  chatCollapsed: false,
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Clock + ambient
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function pad(n){ return String(n).padStart(2,'0'); }
+function tick(){
+  const d = new Date();
+  const t = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+  document.getElementById('topClock').textContent = t;
+  document.getElementById('liveClock').textContent = 'SYNC ' + t;
+}
+setInterval(tick, 1000); tick();
+
+// Numbers crawl up
+function animateNum(id, current, target){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const step = Math.max(1, Math.round((target - current) / 30));
+  if(current >= target){ el.textContent = target.toLocaleString(); return; }
+  const next = Math.min(target, current + step);
+  el.textContent = next.toLocaleString();
+  setTimeout(()=>animateNum(id, next, target), 35);
+}
+animateNum('statPv', 0, S.pv);
+animateNum('statUsers', 0, S.users);
+animateNum('statLp', 0, S.lp);
+animateNum('statArt', 0, S.art);
+
+// Sparkline bars
+function buildSpark(id, count){
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  for(let i = 0; i < count; i++){
+    const b = document.createElement('div');
+    b.className = 'b';
+    b.style.height = (20 + Math.random()*80) + '%';
+    el.appendChild(b);
+  }
+}
+['sparkPv','sparkUsers','sparkLp','sparkArt'].forEach(id => buildSpark(id, 14));
+
+// Stats auto-increment for ambient motion
+setInterval(()=>{
+  if(Math.random() < 0.3){
+    S.pvTarget += Math.floor(Math.random()*3) + 1;
+    animateNum('statPv', S.pv, S.pvTarget); S.pv = S.pvTarget;
+  }
+  if(Math.random() < 0.15){
+    S.usersTarget += 1;
+    animateNum('statUsers', S.users, S.usersTarget); S.users = S.usersTarget;
+  }
+  if(Math.random() < 0.08){
+    S.lpTarget += 1;
+    animateNum('statLp', S.lp, S.lpTarget); S.lp = S.lpTarget;
+  }
+}, 4000);
+
+// Sparkline ambient pulse
+setInterval(()=>{
+  ['sparkPv','sparkUsers','sparkLp','sparkArt'].forEach(id => {
+    const el = document.getElementById(id);
+    const bars = el.querySelectorAll('.b');
+    bars.forEach(b => {
+      const h = 20 + Math.random()*80;
+      b.style.height = h + '%';
+    });
+  });
+}, 3000);
+
+// Working bars
+let barProgress = { bar1: 48, bar2: 72, bar3: 25 };
+setInterval(()=>{
+  Object.keys(barProgress).forEach(k => {
+    barProgress[k] += Math.random() * 3;
+    if(barProgress[k] >= 100){
+      barProgress[k] = 0;
+      // Add completion feed
+      addFeed('publish', '記事 公開: 「AI で 月 100 本 自動化」', 'media-blog.myaiagents.agency');
+    }
+    document.getElementById(k).style.width = barProgress[k] + '%';
+  });
+}, 2000);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Activity feed
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const FEED_TEMPLATES = [
+  ['publish', 'green', '記事 公開', ['「スマホ で 副業 始める 完全 ガイド」', '「AI ライター 比較 2026 年版」', '「ポイ活 始め 方 初心者 編」']],
+  ['rewrite', 'amber', 'AI リライト 完了', ['「メディア 自動 化 入門」 (#11 → 順位 改善 待ち)', '「AI で 100 記事 / 月」 (字数 +1,200)']],
+  ['share',   'purple','SNS 自動 シェア', ['X · @media_blog · 「スマホ で 記事 自動 化…」', 'Threads · 文脈 短 縮 で 投稿']],
+  ['inflow',  'green', 'LP 流入', ['utm_medium=inline_mid · campaign=ai-60', 'utm_medium=footer · session +1', 'organic search → /lp']],
+  ['research','purple','KW 調査', ['「AI 記事 自動 化」 → 5 候補 抽出', '競合 rewards-app.jp の 直近 30 KW を 取得']],
+  ['idx',     'green', 'IndexNow 送信', ['1 URL → Bing + Yandex', '5 URL → 全 エンジン']],
+  ['warn',    'red',   '順位 下落 検知', ['「メディア 構築 ツール」 #4 → #9', '「AI 記事」 #2 → #4 → リライト 推奨']],
+  ['ga4',     'purple','GA4 同期', ['過去 7 日 = 167 PV / 31 users', 'リアルタイム 17 人 が 読 中']],
+];
+const SEED_FEED = [
+  { t:'04:31:42', tag:'PUBLISH', cls:'',       msg:'記事 公開: <span class="v">「スマホで 記事生成 を 完全 マスター」</span>', link:'open' },
+  { t:'04:31:38', tag:'INFLOW',  cls:'',       msg:'LP 送客: utm=<span class="v">media/inline_mid</span> · ai-60 campaign', link:'open' },
+  { t:'04:31:21', tag:'SHARE',   cls:'purple', msg:'X 自動 投稿: 「<span class="v">スマホ 1 台 で SEO 記事 が…</span>」 (likes 12)', link:'open' },
+  { t:'04:31:08', tag:'IDXNOW',  cls:'',       msg:'IndexNow 送信: <span class="v">3 URLs</span> → Bing + Yandex + Naver', link:'' },
+  { t:'04:30:54', tag:'GA4',     cls:'purple', msg:'同期 完了: 過去 24h = <span class="v">94 PV</span> · <span class="v">31 users</span>', link:'' },
+  { t:'04:30:42', tag:'KW',      cls:'purple', msg:'競合 抽出: rewards-app.jp の <span class="v">30 KW</span> を 取得', link:'open' },
+  { t:'04:30:31', tag:'RWRITE',  cls:'amber',  msg:'AI リライト: <span class="v">「ポイ活 アプリ 比較」</span> 字数 +1,420', link:'open' },
+  { t:'04:30:19', tag:'WARN',    cls:'red',    msg:'順位 下落: 「メディア 構築 ツール」 #4 → #9', link:'' },
+  { t:'04:30:02', tag:'PUBLISH', cls:'',       msg:'記事 公開: <span class="v">「AI ライター 完全 比較 2026」</span>', link:'open' },
+  { t:'04:29:48', tag:'INFLOW',  cls:'',       msg:'LP 送客: utm=<span class="v">media/footer</span> · session +1', link:'open' },
+];
+
+function fmtTime(){
+  const d = new Date();
+  return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+}
+function feedRowHTML(t, tag, cls, msg, link){
+  return `
+    <span class="feed-time">${t}</span>
+    <span class="feed-tag ${cls}">▌${tag}</span>
+    <span class="feed-msg">${msg}</span>
+    <a class="feed-link" href="javascript:void(0)" onclick="event.stopPropagation();showToast('開く: ' + '${tag}')">${link?'open ↗':''}</a>
+  `;
+}
+function renderFeed(){
+  const el = document.getElementById('feed');
+  el.innerHTML = SEED_FEED.map(r =>
+    `<div class="feed-row">${feedRowHTML(r.t, r.tag, r.cls, r.msg, r.link)}</div>`
+  ).join('');
+  S.feedRows = SEED_FEED.length;
+  document.getElementById('feedCount').textContent = S.feedRows + ' events';
+}
+function addFeed(kind, msg, linkText){
+  const tpl = FEED_TEMPLATES.find(t => t[0] === kind) || FEED_TEMPLATES[0];
+  const tag = tpl[2].toUpperCase().replace(/\s/g,'_').slice(0, 8);
+  const cls = tpl[1] === 'green' ? '' : tpl[1];
+  const row = document.createElement('div');
+  row.className = 'feed-row new';
+  const msgHTML = msg.replace(/「([^」]+)」/, '<span class="v">「$1」</span>');
+  row.innerHTML = feedRowHTML(fmtTime(), tag, cls, msgHTML, linkText || '');
+  const feed = document.getElementById('feed');
+  feed.insertBefore(row, feed.firstChild);
+  if(feed.children.length > 30) feed.lastChild.remove();
+  S.feedRows++;
+  document.getElementById('feedCount').textContent = S.feedRows + ' events';
+}
+renderFeed();
+
+// Auto-generate feed events
+setInterval(()=>{
+  const tpl = FEED_TEMPLATES[Math.floor(Math.random() * FEED_TEMPLATES.length)];
+  const sample = tpl[3][Math.floor(Math.random() * tpl[3].length)];
+  const tagFmt = tpl[2].toUpperCase().replace(/\s/g,'_').slice(0, 8);
+  const cls = tpl[1] === 'green' ? '' : tpl[1];
+  const row = document.createElement('div');
+  row.className = 'feed-row new';
+  row.innerHTML = feedRowHTML(fmtTime(), tagFmt, cls, `${tpl[2]}: <span class="v">${sample}</span>`, tpl[0]==='warn'?'':'open');
+  const feed = document.getElementById('feed');
+  feed.insertBefore(row, feed.firstChild);
+  if(feed.children.length > 30) feed.lastChild.remove();
+  S.feedRows++;
+  document.getElementById('feedCount').textContent = S.feedRows + ' events';
+}, 5000 + Math.random() * 5000);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Nav
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function navTo(where){
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  showToast('→ ' + where.toUpperCase() + ' (mock)');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Tasks / Suggestions / Modal
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function openTask(kind){
+  const m = {
+    write: ['Writing task','AI Writer-3 が 「スマホ で ポイ活 始め たい 人 向け 完全 ガイド」 を 執筆 中。 8,200 字 目標。 完了 まで 約 25 秒。'],
+    research: ['Research task','Researcher-1 が rewards-app.jp の 直近 30 KW を 分析。 競合 ギャップ を 5 件 抽出 中。'],
+    rewrite: ['Rewrite task','Editor-2 が 「AI 記事 自動 化」 を SEO 観点 で 改修。 1,200 字 追加 + 内部 リンク 3 つ 追加 予定。'],
+  };
+  const v = m[kind] || ['Task','Unknown task'];
+  showModal('TASK · WORKING', v[0], v[1], 'チャット で 介入 する');
+}
+
+function openSug(kind){
+  const m = {
+    hot: ['緊急: 競合 抜き 案 を 起動 する',
+          'AI チーム 5 名 (Researcher / Writer / Editor / SEO / Image) を 同時 起動 し、 12 時間 以内 に 公開 完了。 月間 cap 残 52 件 から 1 件 消費。 推定 コスト ¥18。'],
+    medium: ['LP 流入 を 11 → 100 sessions に 伸ばす',
+             '記事 中 inline CTA を 直近 10 記事 に 自動 注入。 既存 記事 を 触ら ず、 SSR render 時 に 後 注入 で 安全。 推定 +60-80 sess / 月。'],
+    low: ['「ポイ活 アプリ 比較」 を AI リライト',
+          'GSC の clickthrough data + 上位 競合 構造 を 元 に、 AI が 1,200-1,800 字 追加 + 比較 表 を 改修。 30 日 後 順位 を 再 check。'],
+  };
+  const v = m[kind] || m.medium;
+  showModal('SUGGESTION', v[0], v[1], '⚡ 起動 する');
+}
+
+function showModal(tag, h, p, goLabel){
+  document.getElementById('modalTag').textContent = tag;
+  document.getElementById('modalH').textContent = h;
+  document.getElementById('modalP').textContent = p;
+  document.getElementById('modalGo').textContent = goLabel;
+  document.getElementById('modal').classList.add('show');
+  S.modalAction = h;
+}
+function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+function modalConfirm(){
+  closeModal();
+  showToast('⚡ ' + (S.modalAction || 'action') + ' を 起動 (mock)');
+  // Simulate work
+  setTimeout(()=>addFeed('publish', '起動: ' + S.modalAction, 'open'), 400);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Chat
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function toggleChat(){
+  const c = document.getElementById('chat');
+  S.chatCollapsed = !S.chatCollapsed;
+  c.classList.toggle('collapsed', S.chatCollapsed);
+}
+function onChatKey(e){
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    sendChat();
+  }
+}
+function quickChat(text){
+  document.getElementById('chatInput').value = text;
+  sendChat();
+}
+function sendChat(){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  const body = document.getElementById('chatBody');
+  // User msg
+  const u = document.createElement('div');
+  u.className = 'msg user';
+  u.innerHTML = `<div class="msg-av">K</div><div class="msg-bd"><div class="nm">YOU · ${fmtTime().slice(0,5)}</div><div class="tx">${escapeHtml(text)}</div></div>`;
+  body.appendChild(u);
+  body.scrollTop = body.scrollHeight;
+  // AI reply
+  setTimeout(()=>{
+    const a = document.createElement('div');
+    a.className = 'msg';
+    const reply = mockReply(text);
+    a.innerHTML = `<div class="msg-av">M</div><div class="msg-bd"><div class="nm">MY · ${fmtTime().slice(0,5)}</div><div class="tx">${reply}</div></div>`;
+    body.appendChild(a);
+    body.scrollTop = body.scrollHeight;
+  }, 600);
+}
+function mockReply(text){
+  const t = text.toLowerCase();
+  if(t.includes('数字') || t.includes('まとめ')){
+    return `今週: PV <b>${S.pv.toLocaleString()}</b> · users <b>${S.users.toLocaleString()}</b> · LP <b>${S.lp}</b> sessions。 先週 比 +12% で 順調。 詳しく は <span class="k">/analytics</span> へ。`;
+  }
+  if(t.includes('競合')){
+    return `Researcher-1 を 起動 した。 直近 30 KW を 抽出 中… 約 90 秒 で 結果。`;
+  }
+  if(t.includes('提案') || t.includes('記事')){
+    return `KW 候補 5 件 を 抽出 中: 「スマホ 副業」「AI ライター 比較」「ポイ活 始め 方」「メディア 自動 化」「SEO 完全 ガイド」。 どれ 進める？`;
+  }
+  return `了解。 <span class="k">${escapeHtml(text).slice(0, 40)}</span> を 処理 中。`;
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Toast
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let toastTimer = null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e)=>{
+  if(e.metaKey && e.key === 'k'){
+    e.preventDefault();
+    document.getElementById('chatInput').focus();
+  }
+});
+
+// Welcome
+setTimeout(()=>showToast('▶ MOCK: 全 ボタン 触って OK'), 800);
+</script>
+</body>
+</html>

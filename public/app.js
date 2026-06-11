@@ -28281,52 +28281,56 @@ async function _hydrateMockDashboard(agent){
 
   if(!agent || !agent.id) return;
 
-  // 既 GA4 snapshot を 流 用 (= Phase 3.3 で 専 用 endpoint と 入 れ 替 え)
-  try {
-    const ga = await api('GET', '/api/agents/' + agent.id + '/ga4').catch(()=>null);
-    if(ga){
-      const pv = ga.totalPv || ga.pageviews || 0;
-      const users = ga.totalUsers || ga.users || 0;
-      const setN = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v||0).toLocaleString(); };
-      setN('mbStatPv', pv);
-      setN('mbStatUsers', users);
-      setN('mbFunPvV', pv);
-      const arts = (agent.media && Array.isArray(agent.media.posts)) ? agent.media.posts.length : 0;
-      if(arts > 0){
-        const perArt = Math.round(pv / arts);
-        const c1El = document.getElementById('mbFunC1A');
-        if(c1El) c1El.textContent = perArt + ' PV';
-        const c1xEl = document.getElementById('mbFunC1');
-        if(c1xEl) c1xEl.textContent = 'conv ' + perArt + 'x';
-        const pvBar = document.getElementById('mbFunPvBar');
-        if(pvBar) pvBar.style.width = Math.min(100, Math.round(pv / (arts * 100) * 100)) + '%';
-        const pvMeta = document.getElementById('mbFunPv');
-        if(pvMeta) pvMeta.textContent = pv.toLocaleString() + ' views · ' + users.toLocaleString() + ' unique users';
-      }
-      // 取得 OK delta
-      const pvDelta = document.getElementById('mbStatPvDelta');
-      if(pvDelta){ pvDelta.textContent = 'GA4 連 携 中'; pvDelta.classList.add('up'); }
-      const usersDelta = document.getElementById('mbStatUsersDelta');
-      if(usersDelta){ usersDelta.textContent = '実 数 反 映'; usersDelta.classList.add('up'); }
-    }
-  } catch(e){ console.warn('ga4 fetch fail', e); }
+  const setN = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v||0).toLocaleString(); };
+  const setT = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = String(v); };
+  const setBar = (id, pct) => { const el = document.getElementById(id); if(el) el.style.width = Math.max(0, Math.min(100, pct)) + '%'; };
 
-  // 自前 PV (= /api/admin/media-stats) で LP 流入 取得 (= Phase 3.3 で /funnel に 移 行)
+  // ── LIVE METRICS (= 24h) = /media/stats?period=day
   try {
-    const stats = await api('GET', '/api/admin/media-stats').catch(()=>null);
-    if(stats && Array.isArray(stats.byAgent)){
-      const mine = stats.byAgent.find(a => a.agentId === agent.id);
-      if(mine){
-        // LP 流入 = utm_medium=*_lp の sessions (= 既 サーバ で 集計)
-        const lp = mine.lpSessions || mine.lp || 0;
-        const setN = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v||0).toLocaleString(); };
-        setN('mbStatLp', lp);
-        setN('mbFunLpV', lp);
-        const lpDelta = document.getElementById('mbStatLpDelta');
-        if(lpDelta){ lpDelta.textContent = '自前 計 測'; lpDelta.classList.add('up'); }
+    const day = await api('GET', '/api/agents/' + agent.id + '/media/stats?period=day').catch(()=>null);
+    if(day && day.has_media !== false){
+      setN('mbStatPv', day.pv || 0);
+      setN('mbStatUsers', day.sessions || 0);
+      setN('mbStatLp', day.lp_sessions || 0);
+      const pvDelta = document.getElementById('mbStatPvDelta');
+      if(pvDelta){
+        pvDelta.textContent = day.ga4_connected ? 'GA4 連 携 ✓' : '自前 計 測 ✓';
+        pvDelta.classList.add('up');
       }
+      const usersDelta = document.getElementById('mbStatUsersDelta');
+      if(usersDelta){ usersDelta.textContent = '24h unique'; usersDelta.classList.add('up'); }
+      const lpDelta = document.getElementById('mbStatLpDelta');
+      if(lpDelta){ lpDelta.textContent = 'utm_medium 計 測'; lpDelta.classList.add('up'); }
     }
-  } catch(e){ console.warn('media-stats fetch fail', e); }
+  } catch(e){ console.warn('[hydrate] day stats fail', e); }
+
+  // ── FUNNEL (= 月 間) = /media/funnel?period=month
+  try {
+    const f = await api('GET', '/api/agents/' + agent.id + '/media/funnel?period=month').catch(()=>null);
+    if(f && f.has_media !== false){
+      // STEP 1: articles
+      setN('mbFunArtV', f.articles || 0);
+      setT('mbFunArt', (f.articles || 0) + ' 本 公開 · 今月 (' + (f.days || 0) + ' 日 集計)');
+      const planCap = (typeof me === 'object' && me && me.plan === 'business') ? 100
+                    : (me && me.plan === 'pro') ? 50 : 20;
+      setBar('mbFunArtBar', (f.articles || 0) / planCap * 100);
+
+      // STEP 2: PV
+      setN('mbFunPvV', f.pv || 0);
+      setT('mbFunPv', (f.pv || 0).toLocaleString() + ' views · ' + (f.users || 0).toLocaleString() + ' unique users');
+      setBar('mbFunPvBar', Math.min(100, (f.pv || 0) / Math.max(1, (f.articles || 1) * 100) * 100));
+      setT('mbFunC1A', (f.conv_pv_per_article || 0) + ' PV');
+      setT('mbFunC1', 'conv ' + (f.conv_pv_per_article || 0) + 'x');
+
+      // STEP 3: LP
+      setN('mbFunLpV', f.lp || 0);
+      setT('mbFunLp', (f.lp || 0) + ' sessions · 記事 → LP 流入');
+      setBar('mbFunLpBar', f.pv > 0 ? Math.min(100, f.lp / f.pv * 100) : 0);
+      const dropPct = f.pv > 0 ? (100 - (f.conv_lp_rate || 0)).toFixed(1) : '0.0';
+      setT('mbFunC2A', dropPct + '%');
+      setT('mbFunC2', 'conv ' + (f.conv_lp_rate || 0) + '%');
+    }
+  } catch(e){ console.warn('[hydrate] funnel fail', e); }
 }
 
 // navTo を 拡 張 (= 既 stub の case 'home' を 上 書 き)

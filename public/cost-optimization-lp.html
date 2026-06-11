@@ -161,6 +161,27 @@
   .eff p{font-size:15px;color:var(--sub);line-height:1.65}
   @media(max-width:760px){.effects{grid-template-columns:1fr}}
 
+  /* hero 提供クレジット */
+  .hero-credit{margin-top:24px;font-size:13.5px;color:var(--sub);font-weight:500;letter-spacing:.01em}
+  .hero-credit b{color:var(--ink);font-weight:600}
+  .hero-credit .x{color:var(--accent);font-weight:700;margin:0 6px}
+
+  /* 運営会社（共同事業）バンド */
+  .pcards{display:flex;align-items:stretch;justify-content:center;gap:22px;margin-top:46px}
+  .pco{flex:1;max-width:380px;background:#fff;border:1px solid var(--hair);border-radius:20px;
+    padding:30px 30px;text-align:left;transition:.4s var(--easeout)}
+  .pco:hover{transform:translateY(-4px);box-shadow:0 26px 52px -28px rgba(20,40,80,.26);border-color:#cfe0f5}
+  .prole{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);background:#eaf3fe;
+    padding:5px 13px;border-radius:980px;margin-bottom:15px}
+  .pname{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:9px}
+  .pco p{font-size:14px;color:var(--sub);line-height:1.7}
+  .pcross{align-self:center;font-size:30px;font-weight:300;color:#c4ccd6;flex-shrink:0}
+  @media(max-width:640px){
+    .pcards{flex-direction:column;gap:14px;align-items:center}
+    .pco{width:100%;max-width:none}
+    .pcross{transform:none;font-size:24px}
+  }
+
   /* CHAOS MAP */
   .legend{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:54px}
   .lg{display:inline-flex;align-items:center;gap:9px;border-radius:980px;padding:9px 20px;font-size:14px;font-weight:600;
@@ -330,6 +351,7 @@
       <a href="#contact" class="btn btn-primary btn-lg">無料でコスト診断</a>
       <a href="#lineup" class="btn btn-ghost">商品ラインナップを見る</a>
     </div>
+    <p class="hero-credit reveal d3">提供：<b>株式会社PROTOCOL</b><span class="x">×</span><b>株式会社アイ・ステーション</b> の共同事業</p>
 
     <div class="herovis reveal d2">
       <div class="vtop">
@@ -439,6 +461,27 @@
       <div class="eff reveal"><div class="ic g"><svg class="icn" viewBox="0 0 24 24"><polyline points="3 7 9 13 13 9 21 17"/><polyline points="15 17 21 17 21 11"/></svg></div><h4>固定費削減</h4><p>ムダな支出を適正化し、毎月の固定費を削減します。</p></div>
       <div class="eff reveal d1"><div class="ic g"><svg class="icn" viewBox="0 0 24 24"><path d="M4 9a8 8 0 0 1 13.5-3.3L20 8"/><path d="M20 15a8 8 0 0 1-13.5 3.3L4 16"/><path d="M20 4v4h-4M4 20v-4h4"/></svg></div><h4>キャッシュフロー改善</h4><p>支出の最適化により、資金繰りの安定化と余力を創出します。</p></div>
       <div class="eff reveal d2"><div class="ic g"><svg class="icn" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="url(#gG)" stroke="none"/></svg></div><h4>本業への集中</h4><p>煩雑な見直し業務をお任せいただき、本業に集中できます。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- PARTNERSHIP -->
+<section class="block">
+  <div class="container center">
+    <p class="eyebrow reveal">PARTNERSHIP</p>
+    <h2 class="h-xl reveal d1">2社の共同事業として、<br>御社のコストに向き合います。</h2>
+    <div class="pcards">
+      <div class="pco reveal d1">
+        <span class="prole">窓口・受付</span>
+        <div class="pname">株式会社PROTOCOL</div>
+        <p>サービスのご案内、お問い合わせ・お申込みの受付、一次対応を担います。</p>
+      </div>
+      <span class="pcross reveal d2">×</span>
+      <div class="pco reveal d2">
+        <span class="prole">実務・運営</span>
+        <div class="pname">株式会社アイ・ステーション</div>
+        <p>コスト診断・改善提案・契約手続き・導入後フォローなど実務を担います。</p>
+      </div>
     </div>
   </div>
 </section>

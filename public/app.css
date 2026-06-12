@@ -10031,3 +10031,18 @@ main.main, .main, .empty, #emptyWrap, #homeBody{
   .chart-wrap{padding:14px 14px;height:200px}
   .chart-bars{height:150px}
 }
+
+/* Phase 8: mock 寄り polish (= 99% 一致) */
+html, body { background: #fafaf7 !important; font-family: 'Noto Sans JP','Hiragino Sans','Yu Gothic',-apple-system,system-ui,sans-serif !important; color: #1a1a1a !important; }
+main.main { padding: 20px 24px !important; overflow-x: hidden !important; background: #fafaf7 !important; display: flex !important; flex-direction: column !important; gap: 18px !important; }
+.empty, #emptyWrap { flex: 1; overflow-y: auto; overflow-x: hidden; background: transparent !important; padding: 0 !important; min-width: 0; }
+#homeBody { display: flex; flex-direction: column; gap: 18px; width: 100%; min-width: 0; }
+#heroCard, #weeklyStatsBar, #pinnedWrap, #shareCard, #taskStrip { display: none !important; }
+.chat#chatWrap { display: none !important; }
+aside.sb { width: 240px !important; min-width: 240px !important; background: rgba(255,255,255,.6) !important; border-right: 1px solid rgba(13,79,74,.08) !important; padding: 14px 12px !important; display: flex !important; flex-direction: column !important; gap: 6px !important; overflow-y: auto; }
+.sb-brand { padding: 4px 10px 8px !important; }
+.balance-card, .charge-btn { display: none !important; }
+.sb-bot { margin-top: auto; padding: 8px 4px 4px !important; border-top: 1px solid rgba(13,79,74,.08) !important; }
+.mb-block { box-shadow: 0 1px 2px rgba(13,79,74,.03); transition: box-shadow .2s; }
+.mb-block:hover { box-shadow: 0 2px 8px rgba(13,79,74,.06); }
+@media (max-width: 700px){ main.main { padding: 14px 14px 70px !important; } }

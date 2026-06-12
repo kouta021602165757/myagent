@@ -17928,7 +17928,8 @@ ${schemaTags}
     ${logoImg}
     <div class="b-meta">
       <div class="b-name">${name}</div>
-      ${media.tagline ? '<div class="b-tag">'+_mediaEsc(media.tagline)+'</div>' : ''}
+      <!-- tagline は フッター に 既 ある の で 削 除 -->
+
     </div>
   </a>
   <nav class="b-nav">
@@ -19390,7 +19391,7 @@ function _mediaRenderMinimalIndex(media, posts, opts){
   //   - feature 記事 1 件 = 60-80px display serif タイトル + meta
   //   - 横 に 2 件 サブ feature
   const heroPostBig = heroPosts[0];
-  const heroPostSub = heroPosts.slice(1, 3);
+  const heroPostSub = heroPosts.slice(1, 5);  // 2 → 4 個 に 増 やす
   // 装飾 = lp_brand_name or media.name の イニシ ャル
   const brandInitial = (name || 'M').charAt(0).toUpperCase();
   // 大 hero title (= 巨大 タイトル card)
@@ -19414,7 +19415,7 @@ function _mediaRenderMinimalIndex(media, posts, opts){
       <a href="${_mediaPublicUrl(media, p.slug)}" style="display:block;text-decoration:none;color:#fff;position:relative;overflow:hidden;border-radius:0;height:560px">
         <img loading="eager" decoding="async" src="${_mediaEsc(bigHero)}" alt="${_mediaEsc(p.title)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.55) saturate(.9);transition:transform .6s ease" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform=''">
         <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,61,57,.2) 0%,rgba(0,0,0,.8) 100%)"></div>
-        <div style="position:relative;z-index:1;padding:54px 60px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;max-width:980px">
+        <div style="position:relative;z-index:1;padding:42px 30px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;max-width:680px">
           ${p.category_name ? '<div style="font-family:'+s.brandFont+';font-size:11px;font-weight:900;color:'+accent+';letter-spacing:.28em;text-transform:uppercase;margin-bottom:18px">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
           <h1 style="font-family:'Times New Roman',Georgia,'Hiragino Mincho ProN','Yu Mincho',serif;font-size:clamp(36px,5.5vw,68px);font-weight:900;line-height:1.08;letter-spacing:-.025em;margin:0 0 22px;color:#fff;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${_mediaEsc(p.title)}</h1>
           ${p.excerpt ? '<p style="font-size:16px;line-height:1.7;color:rgba(255,255,255,.85);max-width:680px;margin:0 0 26px;letter-spacing:-.005em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+_mediaEsc((p.excerpt||'').slice(0,180))+'</p>' : ''}
@@ -19443,7 +19444,7 @@ function _mediaRenderMinimalIndex(media, posts, opts){
   };
   const heroSectionHTML = heroPostBig ? `
     <section style="background:#0a3d39;color:#fff;padding:0;position:relative">
-      <div style="max-width:1280px;margin:0 auto;padding:32px 60px 48px">
+      <div style="max-width:1100px;margin:0 auto;padding:32px 24px 48px">
         <div style="display:flex;align-items:center;gap:18px;padding-bottom:24px;margin-bottom:30px;border-bottom:1px solid rgba(255,255,255,.12)">
           <div style="font-family:'Times New Roman',Georgia,serif;font-size:32px;font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1">${name}</div>
           <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
@@ -19458,16 +19459,8 @@ function _mediaRenderMinimalIndex(media, posts, opts){
         </div>
       </div>
     </section>` : '';
-  // 旧 hero グリッド 5 件 を 残す = MOST POPULAR の 前 の 追 加 セクション
-  const heroBelowHTML = heroPosts.length >= 5 ? `
-    <section style="padding:64px 24px 40px;max-width:1280px;margin:0 auto">
-      <div style="font-family:${s.brandFont};font-size:11.5px;font-weight:900;color:${accent};letter-spacing:.22em;text-transform:uppercase;padding-bottom:20px;margin-bottom:28px;border-bottom:2px solid ${s.textColor}">▌ Editor's Picks</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px">
-        ${heroPostCard(heroPosts[2], { size:'small', idx:2 })}
-        ${heroPostCard(heroPosts[3], { size:'small', idx:3 })}
-        ${heroPostCard(heroPosts[4], { size:'small', idx:4 })}
-      </div>
-    </section>` : '';
+  // Editor's Picks 削 除 (= user 要 望)
+  const heroBelowHTML = '';
 
   // ── 横スクロール カルーセル (= 「今 週 の 注目」) ──
   const trendingHTML = trendingPosts.length > 0 ? `
@@ -19693,7 +19686,8 @@ ${schemaTags}
     ${logoImg}
     <div class="b-meta">
       <div class="b-name">${name}</div>
-      ${media.tagline ? '<div class="b-tag">'+_mediaEsc(media.tagline)+'</div>' : ''}
+      <!-- tagline は フッター に 既 ある の で 削 除 -->
+
     </div>
   </a>
   <nav class="b-nav">

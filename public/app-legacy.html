@@ -1,0 +1,2607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI3IiBmaWxsPSIjZmFmYWY3Ii8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSIjMGQ0ZjRhIi8+PHJlY3QgeD0iMTQiIHk9IjExIiB3aWR0aD0iNCIgaGVpZ2h0PSIxNCIgcng9IjIiIGZpbGw9IiMwZDRmNGEiIG9wYWNpdHk9Ii42NSIvPjxyZWN0IHg9IjIwIiB5PSIxNSIgd2lkdGg9IjQiIGhlaWdodD0iMTAiIHJ4PSIyIiBmaWxsPSIjMGQ0ZjRhIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<link rel="shortcut icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI3IiBmaWxsPSIjZmFmYWY3Ii8+PHJlY3QgeD0iOCIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTgiIHJ4PSIyIiBmaWxsPSIjMGQ0ZjRhIi8+PHJlY3QgeD0iMTQiIHk9IjExIiB3aWR0aD0iNCIgaGVpZ2h0PSIxNCIgcng9IjIiIGZpbGw9IiMwZDRmNGEiIG9wYWNpdHk9Ii42NSIvPjxyZWN0IHg9IjIwIiB5PSIxNSIgd2lkdGg9IjQiIGhlaWdodD0iMTAiIHJ4PSIyIiBmaWxsPSIjMGQ0ZjRhIiBvcGFjaXR5PSIuMzUiLz48L3N2Zz4=">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>MY AI Agent — AI マーケチームのダッシュボード</title>
+<meta name="description" content="30+ 名の AI マーケチームが SEO 記事 / X スレッド / LP 改善案 を毎日納品。 WordPress / Shopify / Instagram など 11 platform に直接投稿。">
+<!-- Stripe is only needed for billing/charge actions. defer = downloaded in
+     parallel with HTML parsing, executed after DOM. Was a parser-blocker. -->
+<script defer src="https://js.stripe.com/v3/"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Preload critical assets — browser starts downloading these in parallel
+     with HTML parse, before they're discovered in <script>/<link> tags below.
+     Reduces critical path latency 100-300ms on cold load. -->
+<link rel="preload" as="script" href="/app.js?v=1780981381853">
+<link rel="preload" as="style" href="/app.css?v=1780981381853">
+<!-- Preconnect to API origin so DNS + TLS handshake is ready before the first
+     fetch fires (= /api/me / /api/agents start with ~0ms connection latency). -->
+<link rel="preconnect" href="https://myaiagents.agency" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css?v=1780981381853">
+<!-- KaTeX & highlight.js — needed only when chat shows math/code blocks.
+     CSS uses media="print" trick + onload swap so it doesn't block first paint.
+     The JS is already defer'd. Saves a couple hundred ms on initial render
+     for the majority of users (most chats don't have math or code). -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous" media="print" onload="this.media='all'">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/styles/atom-one-dark.min.css" media="print" onload="this.media='all'">
+<script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/highlight.min.js"></script>
+</head>
+<body>
+
+<div class="loader" id="loader">
+  <div style="text-align:center">
+    <div class="loader-ring" style="margin:0 auto"></div>
+    <div id="loaderMsg" style="margin-top:14px;font-size:12.5px;color:rgba(255,255,255,.7);font-family:'Noto Sans JP',system-ui,sans-serif">読み込み 中…</div>
+    <button onclick="document.getElementById('loader').classList.add('gone')" style="margin-top:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.65);padding:7px 16px;border-radius:8px;font-size:11px;font-family:inherit;cursor:pointer;display:none" id="loaderSkipBtn">スキップ してアプリ を 開く →</button>
+  </div>
+</div>
+<script>
+// 2 秒 後 から スキップ button を 表示 (= ユーザ が 操作 不能 状態 を 救済)
+setTimeout(function(){
+  var btn = document.getElementById('loaderSkipBtn');
+  if(btn) btn.style.display = 'inline-block';
+  var msg = document.getElementById('loaderMsg');
+  if(msg) msg.textContent = 'サーバ 応答 が 遅延 中…';
+}, 2000);
+</script>
+
+<!-- 旧 First-run onboarding wizard は廃止。新規ユーザーは LP → signup →
+     /onboarding.html (スプラッシュ) → /app.html へ遷移。
+     旧 agent を持つユーザーは新ホームの「サイトに紐づける」UI で移行。 -->
+
+<div class="layout">
+  <!-- ── TOPBAR (= mock 56px) ──────────────────────────────── -->
+  <div class="mb-topbar">
+    <button class="mb-hamburger" onclick="_toggleMobileSidebar(true)" aria-label="メニュー">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <a class="mb-brand" href="/" style="text-decoration:none">
+      <svg class="mb-brand-mark" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#fafaf7"/>
+        <rect x="8" y="7" width="4" height="18" rx="2" fill="#0d4f4a"/>
+        <rect x="14" y="11" width="4" height="14" rx="2" fill="#0d4f4a" opacity=".65"/>
+        <rect x="20" y="15" width="4" height="10" rx="2" fill="#0d4f4a" opacity=".35"/>
+      </svg>
+      <span class="mb-brand-name">MY AI Agent</span>
+    </a>
+    <span class="mb-plan-badge" id="mbTopPlan">⚡ —</span>
+    <div class="mb-top-time">
+      <span><span class="mb-blink"></span> 24 AI ON</span>
+      <span id="mbTopClock">--:--:--</span>
+      <button class="mb-top-btn" onclick="if(typeof openSearch==='function')openSearch()">🔍 <span style="font-family:'DM Mono',monospace;font-size:10px;color:#71717a;margin-left:4px">⌘ K</span></button>
+      <button class="mb-top-icon-btn" onclick="if(typeof openSettings==='function')openSettings()" title="通知 / 設 定">🔔<span class="mb-top-badge">3</span></button>
+      <button class="mb-top-btn" onclick="_mbToggleChat()">⌘ CHAT</button>
+      <button class="mb-avatar-btn" onclick="if(typeof openSettings==='function')openSettings()" title="アカウント" id="mbTopAv">K</button>
+    </div>
+  </div>
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sb">
+    <!-- ━━ Phase 2 改 修: site switcher (= 既 agList を dropdown に 内 包) ━━ -->
+    <div class="sb-brand">
+      <a class="sb-logo" href="/" style="text-decoration:none;color:var(--text)">
+  <div style="display:flex;align-items:center;gap:7px">
+    <div style="display:flex;gap:2px;align-items:flex-end">
+      <div style="width:4px;height:18px;background:var(--text);border-radius:2px;"></div>
+      <div style="width:4px;height:12px;background:var(--text);border-radius:2px;opacity:.65;"></div>
+      <div style="width:4px;height:7px;background:var(--text);border-radius:2px;opacity:.35;"></div>
+    </div>
+    <span style="font-size:13px;font-weight:700;letter-spacing:.06em;">MY AI AGENT</span>
+  </div>
+</a>
+    </div>
+
+    <!-- site switcher (= dropdown) -->
+    <div class="site-switch">
+      <button class="site-btn" id="siteBtn" onclick="toggleSiteDD()">
+        <div class="site-logo" id="siteLogo">—</div>
+        <div class="site-info">
+          <div class="site-name" id="siteName">サイト 未 選 択</div>
+          <div class="site-url" id="siteUrl">サイト を 選 ぶ</div>
+        </div>
+        <span class="site-caret">▼</span>
+      </button>
+      <div class="site-dd" id="siteDD" style="display:none">
+        <!-- 既 ag-list は dropdown 内 に 維 持 (= app.js が 参 照) -->
+        <div class="ag-list" id="agList" style="max-height:none;overflow:visible"></div>
+        <div class="site-dd-sep"></div>
+        <button class="ag-add-site sb-add-site-top" onclick="closeSiteDD();openAddSiteModal()" style="margin:8px 4px 4px;width:auto">
+          <span class="ag-add-ic">+</span>
+          <span class="ag-add-tx">新 し い サイト を 追加</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Primary CTA (= 記事 を AI に 書 か せる) -->
+    <button class="primary-cta" id="primaryCta" onclick="openArticleGenModal()">
+      <span class="primary-cta-ic">⚡</span>
+      <span class="primary-cta-bd">
+        <span class="primary-cta-l">記事 を AI に 書 か せる</span>
+        <span class="primary-cta-s" id="primaryCtaSub">この サイト に 公 開</span>
+      </span>
+    </button>
+
+    <!-- Nav 5 個 -->
+    <div class="nav-section">
+      <div class="nav-section-h">この サイト で</div>
+      <button class="nav-btn active" data-view="home" onclick="navTo('home',this)"><span class="nav-icon">🏠</span> ダッシュ ボード</button>
+      <button class="nav-btn" data-view="media" onclick="navTo('media',this)"><span class="nav-icon">📰</span> メディア <span class="nav-badge" id="navMediaBadge">0</span></button>
+      <button class="nav-btn" data-view="analytics" onclick="navTo('analytics',this)"><span class="nav-icon">📊</span> 分析</button>
+      <button class="nav-btn" data-view="team" onclick="navTo('team',this)"><span class="nav-icon">🤖</span> AI チーム</button>
+      <button class="nav-btn" data-view="settings" onclick="navTo('settings',this)"><span class="nav-icon">⚙</span> 設定</button>
+    </div>
+
+    <!-- Plan card (= 使 用 量 + アップ動 線) -->
+    <div class="plan-card" id="planCard">
+      <div class="plan-card-head">
+        <span class="plan-card-name" id="planCardName">🆓 FREE</span>
+        <span class="plan-card-frac" id="planCardFrac">— / —</span>
+      </div>
+      <div class="plan-card-bar"><div class="plan-card-fill" id="planCardFill" style="width:0%"></div></div>
+      <div class="plan-card-msg" id="planCardMsg">プラン 情 報 を 取得 中...</div>
+      <button class="plan-card-upbtn" id="planCardUpBtn" style="display:none" onclick="openUpsellModal()">▲ プラン を 上げる</button>
+    </div>
+
+    <!-- 既 検索 button (= ⌘K) -->
+    <button class="sb-search-btn" onclick="openSearch()" title="Search (⌘K)" style="margin:8px 12px 4px">
+      <span style="font-size:12px">🔍</span>
+      <span style="flex:1;text-align:left;color:var(--text3)" data-i18n="navSearch">検索</span>
+      <kbd style="font-size:9px;background:rgba(9,9,11,.06);border:.5px solid var(--wire2);padding:1px 4px;border-radius:4px;color:var(--text3);font-family:'JetBrains Mono','SF Mono',monospace">⌘K</kbd>
+    </button>
+    <div class="sb-lbl" id="i18n-teamLabel" style="display:none">チーム</div>
+    <div class="sb-bot">
+      <div class="balance-card">
+        <div class="balance-row" style="display:none">
+          <span class="balance-lbl">残高</span>
+          <span class="balance-val" id="balVal">$0.00</span>
+        </div>
+        <div class="balance-sub" id="balSub" style="display:none">0 messages</div>
+        <button class="charge-btn" onclick="openCharge()">+ Add Credits</button>
+      </div>
+      <!-- ── User area (footer) ─────────────────────────────────────
+           2026-05-24: account-switcher popup を廃止。 名前は表示のみ、
+           設定 / ログアウト は ⚙ から settings modal の中で完結。 ─── -->
+      <div style="padding:0">
+        <!-- Row 1: user identity (avatar + name + plan badge) — non-interactive -->
+        <div style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;box-sizing:border-box">
+          <div class="user-av" id="userAv" style="width:34px;height:34px;border-radius:10px;flex-shrink:0;font-size:14px"></div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;gap:5px;min-width:0">
+              <span id="userName" style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;line-height:1.2"></span>
+              <span id="userFounderBadge" style="display:none;flex-shrink:0;background:linear-gradient(135deg,#c0ff5c,#a3e635);color:#0a0a0e;font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;letter-spacing:.02em;line-height:1;box-shadow:0 2px 5px rgba(163,230,53,.32)" title=""></span>
+            </div>
+            <div id="userPlanBadge" style="font-size:10.5px;color:var(--text3);font-weight:700;letter-spacing:.01em;line-height:1.2">Free</div>
+          </div>
+        </div>
+        <!-- Row 2: ⚙ 設定 (clean — no overlay popup blocking it) -->
+        <div style="display:flex;gap:6px;margin-top:6px;align-items:stretch">
+          <button type="button" onclick="openSettings()" title="設定" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:34px;background:#fafafa;border:1px solid #e5e5e7;border-radius:9px;cursor:pointer;color:#525252;padding:0 14px;font-family:inherit;font-size:12.5px;font-weight:700;transition:all .15s;box-sizing:border-box" onmouseover="this.style.background='rgba(192,255,92,.12)';this.style.borderColor='#a3e635';this.style.color='#1a1a1a'" onmouseout="this.style.background='#fafafa';this.style.borderColor='#e5e5e7';this.style.color='#525252'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span style="letter-spacing:.02em">設定</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ───────────────────────────────────────────── -->
+  <main class="main">
+    <button class="mobile-hamburger-empty" onclick="_toggleMobileSidebar(true)" title="メニュー" aria-label="メニュー">☰</button>
+    <div class="empty" id="emptyWrap">
+      <!-- HOME — fully rendered by renderHomeDashboard() into #homeBody.
+           Two states: new user (welcome + steps) / returning (hero + 図鑑 …). -->
+      <div id="homeBody"></div>
+    </div>
+    <!-- Mobile sidebar backdrop -->
+    <div class="sb-backdrop" id="sbBackdrop" onclick="_toggleMobileSidebar(false)"></div>
+    <div class="chat" id="chatWrap" style="display:none">
+      <!-- HERO card: AI チームの累計実績 (PV / ユーザー / 記事 / SNS)
+           mock-strategy-v3 SCENE 5 に合わせて chat-top の「上」に配置。
+           常に画面上端に見えるよう順序を入れ替え。 -->
+      <div id="heroCard" class="hero-card" style="display:none"></div>
+
+      <!-- Weekly stats bar — 「今週の動き」 1 行サマリー -->
+      <div id="weeklyStatsBar" class="weekly-stats-bar" style="display:none"></div>
+
+      <div class="chat-top" id="chatTop"></div>
+
+      <!-- Pinned messages banner (just below chat header) -->
+      <div id="pinnedWrap" class="pinned-wrap" style="display:none"></div>
+
+      <!-- Share URL panel (shown when 🔗 clicked) -->
+      <div id="shareCard" class="share-card" style="display:none"></div>
+
+      <!-- Task strip — sticky at top of chat (今週 top 3 タスク、 click で実行) -->
+      <div id="taskStrip" style="display:none"></div>
+
+      <div class="msgs-wrap">
+        <div class="msgs" id="msgs"></div>
+        <button class="fab-scroll" id="fabScroll" onclick="scrollMsgsToBottom()" title="最新へ" style="display:none">↓</button>
+      </div>
+
+      <div class="chat-foot">
+        <div class="chat-foot-inner">
+          <!-- Context-aware action cards (= AI が状況検知して 出す CTA。 例:
+               GA4 接続済 + 戦略未生成 → 「戦略・KPI・ロードマップを一気に作る」)。
+               JS が _renderChatActionCards() で innerHTML を populate する。 -->
+          <div class="chat-actions" id="chatActions" style="display:none"></div>
+          <div class="chips" id="chips"></div>
+
+          <!-- Inline hint when user types about posting/sending and the active
+               agent doesn't have Browser Extension paired/enabled. -->
+          <div id="extHintBanner" style="display:none;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(192,255,92,.32);border-radius:11px;padding:10px 13px;margin-bottom:8px;display:none;align-items:center;gap:10px;font-size:12.5px;color:var(--text-muted)">
+            <span style="font-size:18px;flex-shrink:0">💡</span>
+            <div style="flex:1;min-width:0;line-height:1.5">
+              <b style="color:var(--peach-dark)" id="extHintTitle">Posting needs Browser Extension</b><br>
+              <span id="extHintBody">Enable it to let this AI post to X / Slack / Gmail with your logged-in browser.</span>
+            </div>
+            <button type="button" id="extHintBtn" onclick="_extHintAction()" style="background:var(--peach);color:#0a0a0e;border:0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0">Enable →</button>
+            <button type="button" onclick="document.getElementById('extHintBanner').style.display='none'" style="background:transparent;border:0;color:var(--text-subtle);font-size:18px;cursor:pointer;line-height:1;padding:0 4px" aria-label="Dismiss">×</button>
+          </div>
+
+          <!-- (taskStrip は chat 上部に移動 — chatWrap 内 msgs-wrap の上) -->
+
+          <!-- Claude-style composer -->
+          <div class="composer" style="position:relative">
+            <input type="file" id="imgInput" accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.xlsx,.xls,text/plain,text/markdown,text/csv,text/tab-separated-values,text/html,application/json,application/xml,text/xml,.md,.markdown,.txt,.log,.csv,.tsv,.json,.xml,.yaml,.yml,.toml,.ini,.html,.htm,.css,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.c,.cc,.cpp,.h,.hpp,.cs,.sh,.bash,.zsh,.sql,.env,.dockerfile,.lock" multiple style="display:none" onchange="onImgSelect(event)">
+            <div id="editChipWrap" class="ec-wrap"></div>
+            <div class="composer-attach-strip" id="imgPreviewWrap" style="display:none"></div>
+            <!-- Slack-style @mention picker (hidden until "@" typed in a group) -->
+            <div id="mentionPicker" class="mention-picker" style="display:none" role="listbox" aria-label="Mentions"></div>
+            <!-- Slash command palette — appears when '/' is the first char of composer. -->
+            <div id="slashPalette" class="slash-palette" style="display:none" role="listbox"></div>
+            <textarea id="ci" placeholder="何をお願いしますか？ (ファイルや URL もドロップで添付可)" rows="1" oninput="exTA(this);_mentionOnInput(this);_extHintCheck(this.value);_slashOnInput(this.value)" onkeydown="_slashOnKeydown(event) || _mentionOnKeydown(event) || taKey(event)" oncompositionstart="_imeStart()" oncompositionend="_imeEnd()" onpaste="onComposerPaste(event)"></textarea>
+            <div class="composer-tools" id="composerTools">
+              <!-- 📱 mobile only: 「+」 で 詳細 ツール を 開閉 (= 6 アイコン 押し込み 対策) -->
+              <button class="tool-btn tool-more-btn" id="toolMoreBtn" onclick="document.getElementById('composerTools').classList.toggle('expanded');this.classList.toggle('on')" title="ツール" aria-label="ツールを開く" style="display:none">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+              <button class="tool-btn" onclick="document.getElementById('imgInput').click()" title="ファイルを添付 (画像/PDF/テキスト/コード)" id="attachBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </button>
+              <button class="tool-btn" id="urlBtn" onclick="openUrlAttach()" title="URL を読み込んで添付">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              </button>
+              <button class="tool-btn" id="micBtn" onclick="toggleMic()" title="音声入力">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </button>
+              <button class="tool-btn" id="codeBtn" onclick="insertCodeBlock()" title="コードブロック挿入 (\`\`\`)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              </button>
+              <button class="tool-btn" id="libraryBtn" onclick="_openArtifactLibrary()" title="作った成果物の一覧">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              </button>
+              <button class="tool-btn" id="chromeTool" title="" style="display:none">
+                <span style="font-size:14px">🌐</span><span style="font-size:12px;font-weight:700">Chrome</span>
+              </button>
+              <button class="tool-btn" id="huddleTool" onclick="_toggleHuddle()" title="チーム議論モード · メンバー全員が順に発言します" style="display:none">
+                <span style="font-size:14px">🤝</span><span style="font-size:12px;font-weight:700">Huddle</span>
+              </button>
+              <button class="tool-btn" id="stickerTool" onclick="_toggleStickerPicker(event)" title="スタンプ" style="display:none">
+                <span style="font-size:14px">😀</span>
+              </button>
+              <div class="tool-spacer"></div>
+              <button class="send-btn" id="sndBtn" onclick="sendMsg()" title="送信">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══ CREATE WIZARD OVERLAY ═══════════════════════════════ -->
+<div class="overlay" id="wizOverlay">
+  <div class="wizard">
+    <div class="wiz-top">
+      <div class="wiz-title" id="wizTitle" data-i18n="wizTitle">New agent</div>
+      <button class="wiz-close" onclick="closeWizard()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-progress"><div class="wiz-fill" id="wizFill" style="width:33%"></div></div>
+    <div class="wiz-body">
+
+      <!-- Step 0: Mode chooser (🆕 New / 📋 Template) -->
+      <div id="ws0">
+        <div id="agentModeTabs" style="display:flex;gap:6px;background:var(--cream2);padding:4px;border-radius:11px;margin-bottom:18px">
+          <button id="agentModeTabNew" type="button" onclick="setAgentMode('new')" style="flex:1;background:#fff;color:var(--text);border:0;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06)">🆕 <span data-i18n="agentModeNew">新規作成</span></button>
+          <button id="agentModeTabTpl" type="button" onclick="setAgentMode('tpl')" style="flex:1;background:transparent;color:var(--text2);border:0;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer">📋 <span data-i18n="agentModeTpl">テンプレートから</span></button>
+        </div>
+
+        <!-- 🆕 新規作成 -->
+        <div id="agentModeNew">
+          <div class="step-h" data-i18n="agentNewH">ゼロから作る</div>
+          <div class="step-s" data-i18n="agentNewS">アイコン・名前・スキル・性格を 1 つずつ自分で決めて、専属の AI を組み立てます。</div>
+          <div style="background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(192,255,92,.28);border-radius:13px;padding:18px;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+              <div style="font-size:42px;line-height:1">🤖</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:14px;font-weight:900;color:var(--peach-dark);letter-spacing:-.005em;margin-bottom:3px" data-i18n="agentNewCardH">あなた専属の AI を 1 体作る</div>
+                <div style="font-size:11.5px;color:var(--text2);line-height:1.65" data-i18n="agentNewCardD">5 ステップ (約 1 分) で完成 ・ いつでも編集可能 ・ DM タブから呼び出せます。</div>
+              </div>
+            </div>
+            <ul style="font-size:11.5px;color:var(--text2);line-height:1.85;margin:0;padding-left:22px">
+              <li data-i18n="agentNewLi1">アイコン (絵文字 or 画像アップロード) を選ぶ</li>
+              <li data-i18n="agentNewLi2">名前と「採用目的・業務内容」を書く (= persona)</li>
+              <li data-i18n="agentNewLi3">スキルを最大 3 つ選ぶ</li>
+              <li data-i18n="agentNewLi4">🌐 Web 検索 / Google Sheets 連携などの能力を有効化 (任意)</li>
+            </ul>
+          </div>
+          <div class="btn-row">
+            <button class="btn-back" type="button" onclick="closeWizard()" data-i18n="cancel">キャンセル</button>
+            <button class="btn-volt" type="button" onclick="startFromScratch()" style="border-radius:12px;padding:13px;font-weight:900" data-i18n="agentNewStart">▶ 作り始める</button>
+          </div>
+        </div>
+
+        <!-- 📋 テンプレート -->
+        <div id="agentModeTpl" style="display:none">
+          <div class="step-h" data-i18n="agentTplH">テンプレートから始める</div>
+          <div class="step-s" data-i18n="agentTplS">用途別のプリセットを選ぶと、性格とスキルを自動で設定。後から自由に編集できます。</div>
+          <div class="preset-grid" id="presetGrid"></div>
+          <div class="btn-row">
+            <button class="btn-back" type="button" onclick="closeWizard()" data-i18n="cancel">キャンセル</button>
+            <button class="btn-volt" id="usePresetBtn" disabled style="opacity:.5;cursor:not-allowed" onclick="useSelectedPreset()" data-i18n="agentTplUse">このテンプレートを使う →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1: Avatar -->
+      <div id="ws1" style="display:none">
+        <div class="step-h" data-i18n="ws1H">Pick an icon</div>
+        <div class="step-s" data-i18n="ws1S">Choose an emoji or upload an image</div>
+        <div class="av-preview" id="avPrev">🤖</div>
+        <div style="display:flex;justify-content:center;gap:8px;margin-bottom:14px">
+          <input type="file" id="avFile" accept="image/*" style="display:none" onchange="onAvatarUpload(event,'wizard')">
+          <button class="btn-back" type="button" onclick="document.getElementById('avFile').click()" style="font-size:12.5px;padding:8px 14px" data-i18n="ws1Upload">📸 Upload image</button>
+          <button class="btn-back" type="button" onclick="resetAvatarToEmoji('wizard')" style="font-size:12.5px;padding:8px 14px" data-i18n="ws1Reset">↻ Back to emoji</button>
+        </div>
+        <div class="av-grid" id="avGrid"></div>
+        <div class="btn-row">
+          <button class="btn-back" onclick="wStep(0)" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(2)" data-i18n="wsNext">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Name -->
+      <div id="ws2" style="display:none">
+        <div class="step-h" data-i18n="ws2H">Pick a name</div>
+        <div class="step-s" data-i18n="ws2S">Give this agent a name</div>
+        <div class="wiz-fld">
+          <label data-i18n="ws2Lbl">Agent name</label>
+          <input class="wiz-input" type="text" id="wName" placeholder="e.g. Tanaka the Writer" maxlength="20">
+        </div>
+        <div class="btn-row">
+          <button class="btn-back" onclick="wStep(1)" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(3)" data-i18n="wsNext">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Skills -->
+      <div id="ws3" style="display:none">
+        <div class="step-h" data-i18n="ws3H">Assign skills</div>
+        <div class="step-s" data-i18n="ws3S">What this agent is good at (multiple OK)</div>
+        <div class="skill-grid" id="skGrid"></div>
+        <div class="btn-row">
+          <button class="btn-back" onclick="wStep(2)" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(4)" data-i18n="wsNext">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Purpose -->
+      <div id="ws4" style="display:none">
+        <div class="step-h" data-i18n="ws4H">Hired for</div>
+        <div class="step-s" data-i18n="ws4S">What is this agent hired to do?</div>
+        <div class="wiz-fld">
+          <label data-i18n="ws4Lbl">Purpose</label>
+          <input class="wiz-input" type="text" id="wPurpose" placeholder="e.g. outbound prospecting, social posts, code review" maxlength="80">
+        </div>
+        <div class="btn-row">
+          <button class="btn-back" onclick="wStep(3)" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(5)" data-i18n="wsNext">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 5: Duties -->
+      <div id="ws5" style="display:none">
+        <div class="step-h" data-i18n="ws5H">Day-to-day duties</div>
+        <div class="step-s" data-i18n="ws5S">Concretely, what work will this agent handle every day?</div>
+        <div class="wiz-fld">
+          <label data-i18n="ws5Lbl">Duties</label>
+          <textarea class="per-ta" id="wDuties" placeholder="e.g. write outbound emails to a prospect list, summarize replies, schedule meetings" style="min-height:120px"></textarea>
+        </div>
+
+        <!-- Tools / Google Chrome integration -->
+        <div style="margin-top:6px;padding:14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:12px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px" data-i18n="ws5WebTool">🌐 Web search / URL fetch</div>
+              <div id="wChromeDesc" style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
+            </div>
+            <button type="button" class="s-sw" id="wChromeSw" onclick="toggleWizardChrome()"></button>
+          </div>
+        </div>
+
+        <!-- Tools / Google Sheets integration -->
+        <div style="margin-top:8px;padding:14px;background:var(--cream2);border:1px solid var(--wire2);border-radius:12px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px" data-i18n="ws5SheetsTool">📊 Google Sheets integration</div>
+              <div id="wSheetsDesc" style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5"></div>
+              <div id="wSheetsAccountRow" style="display:none;margin-top:8px;font-size:11.5px;color:var(--text3)"><span data-i18n="ws5SheetsConn">Connected as:</span> <b id="wSheetsEmail"></b></div>
+              <button type="button" id="wSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:8px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" data-i18n="ws5SheetsConnect">+ Connect Google account</button>
+              <div style="margin-top:6px;font-size:10.5px;color:var(--text3)"><a href="/setup-google-sheets.html" target="_blank" style="color:var(--text3);text-decoration:underline" data-i18n="ws5SheetsHelp">🔧 Setup guide if you can't connect</a></div>
+            </div>
+            <button type="button" class="s-sw" id="wSheetsSw" onclick="toggleWizardSheets()"></button>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-top:14px">
+          <button class="btn-back" onclick="wStep(4)" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" style="border-radius:12px;padding:13px;" onclick="wStep(6)" data-i18n="wsNext">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 6: Confirm -->
+      <div id="ws6" style="display:none">
+        <div class="step-h" data-i18n="ws6H">Review and finish!</div>
+        <div class="step-s" data-i18n="ws6S">Create this agent</div>
+        <div class="conf-hero" id="confHero"></div>
+        <div id="confPer"></div>
+        <div class="btn-row">
+          <button class="btn-back" onclick="confirmBack()" data-i18n="wsBack">← Back</button>
+          <button class="btn-volt" id="createBtn" style="border-radius:12px;padding:13px;" onclick="doCreate()" data-i18n="wsCreate">✨ Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TEAM GALLERY OVERLAY ════════════════════════════════ -->
+<div class="overlay" id="teamGalleryOverlay">
+  <div class="wizard" style="max-width:920px">
+    <div class="wiz-top">
+      <div class="wiz-title" data-i18n="teamGalleryTitle">🎯 Create AI Agent Team</div>
+      <button class="wiz-close" onclick="closeTeamGallery()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="padding:20px 24px 24px;max-height:78vh;overflow-y:auto">
+      <!-- Mode tabs: New / Template -->
+      <div id="teamModeTabs" style="display:flex;gap:6px;background:var(--cream2);padding:4px;border-radius:11px;margin-bottom:16px">
+        <button id="teamModeTabNew" type="button" onclick="setTeamMode('new')" style="flex:1;background:#fff;color:var(--text);border:0;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06)" data-i18n="teamGalleryTabNew">🆕 From scratch</button>
+        <button id="teamModeTabTpl" type="button" onclick="setTeamMode('tpl')" style="flex:1;background:transparent;color:var(--text2);border:0;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer" data-i18n="teamGalleryTabTpl">📋 From templates</button>
+      </div>
+
+      <!-- Mode: NEW (goal → AI generates team) -->
+      <div id="teamModeNew">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7" data-i18n="teamGalleryIntro">
+          <b>What would you like to automate?</b> Describe the goal — AI will design the agents you need and bundle them into a team.
+        </div>
+        <textarea id="newTeamGoal" rows="4" placeholder="e.g. Build & sell on Shopify / Grow my X (Twitter) to 30k followers / Automate customer support 24/7 / Ship a SaaS MVP" style="width:100%;padding:12px 14px;border:1px solid var(--wire2);border-radius:11px;background:#fff;font-size:13.5px;line-height:1.7;font-family:inherit;resize:vertical;min-height:96px"></textarea>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+          <button type="button" class="goal-chip" onclick="_setGoalText('Build &amp; sell on Shopify (product sourcing + visuals + storefront + social + revenue analysis)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit" data-i18n="teamGalleryChipEC">🛍 Build an e-commerce site</button>
+          <button type="button" class="goal-chip" onclick="_setGoalText('Grow my X (Twitter) to 30k followers (trend mining + post writing + scheduled publishing)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit" data-i18n="teamGalleryChipSNS">📱 Grow on social</button>
+          <button type="button" class="goal-chip" onclick="_setGoalText('Ship a SaaS MVP and publish (requirements + implementation + tests + deploy)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit" data-i18n="teamGalleryChipSaaS">💻 Ship a SaaS MVP</button>
+          <button type="button" class="goal-chip" onclick="_setGoalText('Automate customer support 24/7 (FAQ + reply drafts + escalation routing)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit" data-i18n="teamGalleryChipCS">🤝 Automate support</button>
+          <button type="button" class="goal-chip" onclick="_setGoalText('Grow a YouTube channel (concepts + scripts + thumbnail ideas + analytics)')" style="background:var(--cream2);border:1px solid var(--wire2);border-radius:99px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit" data-i18n="teamGalleryChipYT">🎬 YouTube</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:18px">
+          <button onclick="closeTeamGallery()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer" data-i18n="cancel">Cancel</button>
+          <button id="newTeamSubmit" onclick="submitGenerateTeam()" style="flex:1;background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:12px;font-size:13.5px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(192,255,92,.32)" data-i18n="teamGallerySubmit">✨ Let AI design your team</button>
+        </div>
+        <div style="font-size:10.5px;color:var(--text3);margin-top:10px;line-height:1.6" data-i18n="teamGalleryFootnote">
+          Takes ~15–30s. 4–10 agents are generated for your goal and the team launches right after.
+        </div>
+      </div>
+
+      <!-- Mode: TPL (templates) -->
+      <div id="teamModeTpl" style="display:none">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.7" data-i18n="teamGalleryTplIntro">
+          Pick a template and <b>launch in one click</b>. Multiple AI agents work together to automate the job.
+        </div>
+        <div id="teamGalleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TEAM ACTIVATION PROGRESS OVERLAY ═══════════════════════ -->
+<div class="overlay" id="teamActivateOverlay">
+  <div class="wizard" style="max-width:420px">
+    <div class="wiz-body" style="padding:36px 32px;text-align:center">
+      <div id="teamActIcon" style="font-size:64px;margin-bottom:14px">🎯</div>
+      <div id="teamActTitle" style="font-size:18px;font-weight:900;margin-bottom:6px" data-i18n="teamActTitle">Activating…</div>
+      <div id="teamActSub" style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6" data-i18n="teamActSub">Cloning agents…</div>
+      <div style="height:6px;background:var(--cream2);border-radius:3px;overflow:hidden;margin-bottom:14px">
+        <div id="teamActBar" style="height:100%;width:30%;background:linear-gradient(90deg,var(--peach),var(--peach-dark));border-radius:3px;transition:width .4s"></div>
+      </div>
+      <div id="teamActStatus" style="font-size:11.5px;color:var(--text3);font-weight:700"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TEAM EDIT OVERLAY ═══════════════════════════════════ -->
+<div class="overlay" id="teamEditOverlay">
+  <div class="wizard" style="max-width:620px">
+    <div class="wiz-top">
+      <div class="wiz-title" data-i18n="teamEditTitle">✏️ Edit team</div>
+      <button class="wiz-close" onclick="closeTeamEdit()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="padding:20px 24px 24px;max-height:78vh;overflow-y:auto">
+      <div style="display:grid;grid-template-columns:90px 1fr;gap:10px;margin-bottom:16px;align-items:start">
+        <label style="font-size:11px;font-weight:800;color:var(--text2);padding-top:11px" data-i18n="teamEditIconLbl">Icon</label>
+        <input id="teamEditEmoji" type="text" maxlength="3" style="width:64px;height:42px;text-align:center;font-size:22px;border:1px solid var(--wire2);border-radius:9px;background:#fff;font-family:inherit">
+        <label style="font-size:11px;font-weight:800;color:var(--text2);padding-top:11px" data-i18n="teamEditNameLbl">Team name</label>
+        <input id="teamEditName" type="text" style="width:100%;height:42px;padding:0 12px;border:1px solid var(--wire2);border-radius:9px;background:#fff;font-size:13px;font-family:inherit">
+      </div>
+      <div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px;letter-spacing:.04em" data-i18n="teamEditGoalLbl">What would you like to automate?</div>
+      <div style="font-size:10.5px;color:var(--text3);margin-bottom:8px;line-height:1.6" data-i18n="teamEditGoalSub">
+        This goal is passed to every team agent as context. Rewrite it any time the direction shifts.
+      </div>
+      <textarea id="teamEditGoal" rows="5" placeholder="e.g. Build & sell on Shopify (sourcing + visuals + storefront + social + analytics)" style="width:100%;padding:12px 14px;border:1px solid var(--wire2);border-radius:11px;background:#fff;font-size:13px;line-height:1.7;font-family:inherit;resize:vertical;min-height:110px"></textarea>
+      <div id="teamEditMsg" style="font-size:11px;font-weight:700;color:var(--rose);margin-top:8px;min-height:14px"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="closeTeamEdit()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer" data-i18n="cancel">Cancel</button>
+        <button id="teamEditSaveBtn" onclick="saveTeamEdit()" style="flex:1;background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(192,255,92,.32)" data-i18n="teamEditSave">💾 Save</button>
+      </div>
+
+      <!-- Store listing CTA — hidden 2026-05-24 (一旦非表示)
+      <div style="margin-top:22px;padding-top:16px;border-top:1px dashed var(--wire2)">
+        <div style="display:flex;align-items:flex-start;gap:12px;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(192,255,92,.28);border-radius:12px;padding:14px 14px">
+          <div style="font-size:24px;line-height:1.2">🏪</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:900;color:var(--peach-dark);margin-bottom:3px" data-i18n="teamStoreH">List on Agent Store</div>
+            <div id="teamStoreSubText" style="font-size:11.5px;color:var(--text2);line-height:1.6;margin-bottom:9px">
+              List the whole team on the Store so others can <b>clone it into their account in one click</b>. You earn 70% of the one-time price + 10% of usage.
+            </div>
+            <button id="teamListBtn" type="button" style="background:#fff;border:1px solid rgba(192,255,92,.5);color:var(--peach-dark);border-radius:9px;padding:8px 14px;font-size:11.5px;font-weight:800;cursor:pointer">+ Open listing form</button>
+          </div>
+        </div>
+      </div>
+      -->
+
+      <!-- Danger zone -->
+      <div style="margin-top:18px;padding:12px 14px;border:1px dashed rgba(239,68,68,.35);border-radius:11px;display:flex;align-items:center;gap:10px">
+        <div style="font-size:11px;color:var(--text2);font-weight:700;flex:1" data-i18n="teamDangerNote">⚠️ Deleting the team lets you choose whether to keep its members in DM or delete them too.</div>
+        <button id="teamDeleteBtn" type="button" style="background:#fff;border:1px solid rgba(239,68,68,.5);color:#dc2626;border-radius:8px;padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;flex-shrink:0" data-i18n="teamDeleteBtn">🗑 Delete team</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TEAM MEMBERS PANEL ═════════════════════════════════ -->
+<div class="overlay" id="teamMembersOverlay">
+  <div class="wizard" style="max-width:760px">
+    <div class="wiz-top">
+      <div class="wiz-title" id="teamMembersTitle">🎯 Team members</div>
+      <button class="wiz-close" onclick="closeTeamMembersPanel()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="padding:18px 22px 22px;max-height:78vh;overflow-y:auto">
+      <div id="teamMembersIntro" style="font-size:12.5px;color:var(--text2);line-height:1.65;margin-bottom:10px" data-i18n="teamMembersIntro">
+        These are the AI agents in this team. Mention any of them with <b>@name</b>. Click ✏️ on a row to edit persona, skills, or model.
+      </div>
+      <div id="teamMembersGoalRow" style="display:none;background:linear-gradient(135deg,#fff7ee,#ffe8d4);border:1px solid rgba(192,255,92,.28);border-radius:11px;padding:11px 13px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10.5px;font-weight:800;color:var(--peach-dark);letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px" data-i18n="teamMembersGoalH">Team goal</div>
+          <div id="teamMembersGoalText" style="font-size:12.5px;color:var(--text);line-height:1.65;white-space:pre-wrap"></div>
+        </div>
+        <button id="teamMembersGoalEditBtn" type="button" style="background:#fff;border:1px solid rgba(192,255,92,.32);color:var(--peach-dark);border-radius:8px;padding:7px 11px;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0" data-i18n="teamMembersGoalEdit">✏️ Edit</button>
+      </div>
+      <div id="teamMembersList" style="display:flex;flex-direction:column;gap:10px"></div>
+
+      <!-- Add member affordance (host only) -->
+      <div id="teamMembersAddRow" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2)">
+        <button id="teamMembersAddBtn" type="button" onclick="openAddTeamMember()" style="width:100%;background:#fff;border:2px dashed rgba(192,255,92,.42);color:var(--peach-dark);border-radius:11px;padding:14px;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:-.005em;transition:all .14s"><span data-i18n="teamMembersAddBtn">+ Add member</span> <span id="teamMembersCapHint" style="font-weight:600;color:var(--text-subtle);font-size:11px;margin-left:6px">(0/10)</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD-TEAM-MEMBER OVERLAY ════════════════════════════ -->
+<div class="overlay" id="addTeamMemberOverlay">
+  <div class="wizard" style="max-width:560px">
+    <div class="wiz-top">
+      <div class="wiz-title" data-i18n="addMemTitle">+ Add member</div>
+      <button class="wiz-close" onclick="closeAddTeamMember()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="padding:20px 24px 24px;max-height:78vh;overflow-y:auto">
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px" data-i18n="addMemIntro">
+        What kind of member do you want to add? Describe the role and tasks, and AI will assemble <b>name · icon · skills · persona</b>.
+      </div>
+      <textarea id="addMemDesc" rows="4" placeholder="e.g. SEO writer / competitive analyst / engineer who reviews code" style="width:100%;padding:12px 14px;border:1px solid var(--wire2);border-radius:11px;background:#fff;font-size:13.5px;line-height:1.7;font-family:inherit;resize:vertical;min-height:96px"></textarea>
+      <div id="addMemErr" style="font-size:11px;font-weight:700;color:var(--rose);margin-top:8px;min-height:14px"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="closeAddTeamMember()" style="flex:0 0 auto;background:var(--cream2);color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:10px 18px;font-size:12.5px;font-weight:700;cursor:pointer" data-i18n="cancel">Cancel</button>
+        <button id="addMemSubmitBtn" onclick="submitAddTeamMember()" style="flex:1;background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(192,255,92,.32)" data-i18n="addMemSubmit">✨ Let AI generate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AGENT STORE OVERLAY ════════════════════════════════ -->
+<div class="overlay" id="marketOverlay">
+  <div class="wizard storev2 storev3" style="max-width:1180px;height:auto;max-height:calc(100vh - 32px)">
+    <!-- App Store-style top bar: brand + close on right; tabs sit below -->
+    <div class="storev3-top">
+      <div class="storev3-brand">
+        <span class="storev3-brand-mark">M</span>
+        <span class="storev3-brand-name">Agent Store</span>
+      </div>
+      <div class="storev3-search">
+        <span style="font-size:13px">🔍</span>
+        <input id="marketSearch" placeholder="Search agents, teams, creators…" oninput="onMarketSearchInput()">
+        <kbd>⌘K</kbd>
+      </div>
+      <button class="storev3-close" onclick="closeMarket()" title="Close" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <!-- Tab nav (Today / Apps / Teams / Categories) -->
+    <div class="storev3-tabs" id="storev3Tabs">
+      <button class="storev3-tab active" data-tab="today"  onclick="setStoreTab('today')">Today</button>
+      <button class="storev3-tab"        data-tab="apps"   onclick="setStoreTab('apps')">Apps</button>
+      <button class="storev3-tab"        data-tab="teams"  onclick="setStoreTab('teams')">Teams</button>
+      <button class="storev3-tab"        data-tab="cats"   onclick="setStoreTab('cats')">Categories</button>
+    </div>
+    <!-- Body — sections render based on active tab -->
+    <div class="storev3-body" id="storev3Body">
+      <div id="storev3Today"></div>
+      <div id="storev3Apps"  style="display:none"></div>
+      <div id="storev3Teams" style="display:none"></div>
+      <div id="storev3Cats"  style="display:none"></div>
+      <div id="marketEmpty" class="storev3-empty" style="display:none">No matching agents — try a different search.</div>
+      <!-- legacy / unused but referenced by code -->
+      <div id="marketCats" style="display:none"></div>
+      <div id="marketTags" style="display:none"></div>
+      <select id="marketSort" style="display:none" onchange="setMarketSort(this.value)">
+        <option value="popular">popular</option><option value="recent">recent</option><option value="top_rated">top_rated</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PUBLISH SUCCESS MODAL ══════════════════════════════ -->
+<div class="overlay" id="publishSuccessOverlay">
+  <div class="ps-modal">
+    <div class="ps-hero">
+      <div class="ps-conf">🎉</div>
+      <div class="ps-h1">Agent Store に公開しました！</div>
+      <div class="ps-h2">いまが <b>最初のユーザー獲得チャンス</b>。<br>SNS でシェアして、最初の利用者を呼び込もう</div>
+      <button class="ps-close" onclick="closePublishSuccess()" aria-label="close">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="ps-body">
+      <div class="ps-thumb-lbl">📸 SNS 投稿時の見え方</div>
+      <div class="ps-thumb-wrap"><img id="psThumb" alt=""></div>
+
+      <div class="ps-tweet-preview">
+        <div class="lbl">📝 投稿文（コピー可・編集して使ってください）</div>
+        <textarea id="psTweetText" rows="3"></textarea>
+      </div>
+
+      <div class="ps-cta-h">📤 SNS で告知する</div>
+      <div class="ps-sns">
+        <a class="x" id="psSnsX" target="_blank" rel="noopener"><div class="ic">𝕏</div>X (Twitter)</a>
+        <a class="line" id="psSnsLine" target="_blank" rel="noopener"><div class="ic">💬</div>LINE</a>
+        <a class="fb" id="psSnsFb" target="_blank" rel="noopener"><div class="ic">📘</div>Facebook</a>
+      </div>
+
+      <div class="ps-cta-h">🔗 公開 URL</div>
+      <div class="ps-url-row">
+        <input class="ps-url-input" id="psUrlInput" readonly>
+        <button class="ps-copy-btn" onclick="psCopyUrl()">📋 コピー</button>
+      </div>
+
+      <div class="ps-tip">
+        💡 <b>シェアのコツ</b>: 「3ターン無料で試せる」を入れると、未登録ユーザーがクリックしやすくなります。クリエイターハンドルも書くとフォロワーが増えます。
+      </div>
+
+      <div class="ps-foot">
+        <button class="ps-skip" onclick="closePublishSuccess()">あとでシェアする</button>
+        <button class="ps-go" onclick="closePublishSuccess();openSettings();setTimeout(function(){var b=document.querySelector('.snav-item[data-tab=\'creator\']');if(b)switchStab(b,'s-creator');},100);">クリエイターダッシュボードへ →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SHARE LISTING MODAL ════════════════════════════════ -->
+<div class="overlay" id="shareListingOverlay">
+  <div class="wizard" style="max-width:540px">
+    <div class="wiz-top">
+      <div class="wiz-title">🔗 SNS でシェア</div>
+      <button class="wiz-close" onclick="closeShareListing()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body">
+      <div class="step-s" id="shareTargetTitle"></div>
+      <div style="margin:14px 0 18px">
+        <div style="font-size:11px;font-weight:800;color:var(--text3);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">SNS プレビュー</div>
+        <div style="background:var(--cream);border:1px solid var(--wire2);border-radius:11px;padding:6px;overflow:hidden">
+          <img id="shareThumb" alt="" style="display:block;width:100%;border-radius:7px;background:#fff;aspect-ratio:1200/630;object-fit:cover">
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;color:var(--text3);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">公開 URL</div>
+        <div style="display:flex;gap:6px"><input id="shareUrl" readonly style="flex:1;padding:10px 13px;border:1px solid var(--wire3);border-radius:8px;background:#fff;font-size:12.5px;font-family:'SF Mono',Menlo,monospace;color:var(--text);"><button onclick="_copyShareUrl()" style="padding:10px 16px;background:var(--peach);color:#0a0a0e;border:none;border-radius:8px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit">コピー</button></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px">
+        <a id="shareTw" target="_blank" rel="noopener" class="share-btn" style="flex:1;text-align:center;padding:11px;background:#0f1419;color:#fff;border-radius:10px;font-weight:800;font-size:13px;text-decoration:none;min-width:120px">𝕏 で投稿</a>
+        <a id="shareLine" target="_blank" rel="noopener" class="share-btn" style="flex:1;text-align:center;padding:11px;background:#06c755;color:#fff;border-radius:10px;font-weight:800;font-size:13px;text-decoration:none;min-width:120px">💬 LINE</a>
+        <a id="shareFb" target="_blank" rel="noopener" class="share-btn" style="flex:1;text-align:center;padding:11px;background:#1877f2;color:#fff;border-radius:10px;font-weight:800;font-size:13px;text-decoration:none;min-width:120px">📘 Facebook</a>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:14px;line-height:1.6">URL を貼り付けるだけで自動的にこのサムネイル画像が表示されます。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LISTING DETAIL MODAL ═══════════════════════════════ -->
+<div class="overlay" id="listingDetailOverlay">
+  <div class="wizard" style="max-width:780px">
+    <div class="wiz-top">
+      <div class="wiz-title" id="ldTitle" data-i18n="ldTitle">Agent details</div>
+      <button class="wiz-close" onclick="closeListingDetail()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="max-height:80vh;overflow:auto" id="ldBody">
+      <div class="creator-loading">読み込み中…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CHARGE OVERLAY ══════════════════════════════════════ -->
+<div class="overlay" id="chargeOverlay">
+  <div class="charge-modal bs-modal">
+
+    <!-- ── Screen 1: プラン選択 ─────────────────────────── -->
+    <div id="bsScreen1">
+      <div class="bs-hd">
+        <div class="bs-ti" data-i18n="bsPickHd">プランを選ぶ</div>
+        <button class="bs-x" onclick="closeCharge()" aria-label="閉じる">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="bs-body">
+        <div class="bs-tabs">
+          <button class="bs-tab active" data-tab="monthly" data-i18n="bsMonthlyTab" onclick="bsTab('monthly')">月額プラン</button>
+          <button class="bs-tab" data-tab="payg" data-i18n="bsPaygTab" onclick="bsTab('payg')">都度チャージ</button>
+        </div>
+
+        <!-- ── 月額タブ ── -->
+        <div id="bs-monthly" class="bs-tabc">
+          <div class="bs-curplan" id="bs-curplan"></div>
+
+          <div class="bs-plans">
+            <button type="button" class="bs-pc" data-plan="pro" onclick="bsPick('pro')">
+              <div class="bs-pc-nm">PRO</div>
+              <div class="bs-pc-pr">$12.99</div>
+              <div class="bs-pc-pm" data-i18n="bsPerMonth">/月（USD）</div>
+              <ul class="bs-pc-feat">
+                <li data-i18n="bsFeatPro1">$20 分のクレジット / 月</li>
+                <li data-i18n="bsFeat2">メッセージ無制限</li>
+                <li data-i18n="bsFeat3">全プリセット利用可</li>
+              </ul>
+              <span class="bs-pc-pick" data-i18n="bsPickPlan">このプランを選ぶ</span>
+            </button>
+
+            <button type="button" class="bs-pc popular" data-plan="business" onclick="bsPick('business')">
+              <div class="bs-pc-nm">BUSINESS</div>
+              <div class="bs-pc-pr">$32.99</div>
+              <div class="bs-pc-pm" data-i18n="bsPerMonth">/月（USD）</div>
+              <ul class="bs-pc-feat">
+                <li data-i18n="bsFeatBiz1">$60 分のクレジット / 月</li>
+                <li data-i18n="bsFeat2">メッセージ無制限</li>
+                <li data-i18n="bsFeat3">全プリセット利用可</li>
+              </ul>
+              <span class="bs-pc-pick" data-i18n="bsPickPlan">このプランを選ぶ</span>
+            </button>
+          </div>
+          <div class="bs-fineprint" data-i18n="bsFinePrint">クレジットは月初にリセット ・ いつでもキャンセル可能</div>
+        </div>
+
+        <!-- ── 都度チャージタブ ── -->
+        <div id="bs-payg" class="bs-tabc" style="display:none">
+          <div class="bs-curplan" id="bs-curbal"></div>
+
+          <div class="bs-payg-grid">
+            <button type="button" class="bs-payg-c sel" data-cents="699" onclick="bsPickPayg(699)">
+              <div class="bs-payg-nm">STARTER</div>
+              <div class="bs-payg-pr">$6.99</div>
+            </button>
+            <button type="button" class="bs-payg-c" data-cents="1999" onclick="bsPickPayg(1999)">
+              <div class="bs-payg-nm">STANDARD</div>
+              <div class="bs-payg-pr">$19.99</div>
+            </button>
+            <button type="button" class="bs-payg-c" data-cents="4999" onclick="bsPickPayg(4999)">
+              <div class="bs-payg-nm">PRO</div>
+              <div class="bs-payg-pr">$49.99</div>
+            </button>
+          </div>
+
+          <!-- 保存済カード一覧 (= bsInitPaygCard で動的 populate) -->
+          <div id="bs-saved-pms" style="display:none;margin-bottom:14px"></div>
+
+          <!-- 新規カード form (= 保存済カードがない時 or 「新しいカード」 クリック時) -->
+          <div id="bs-newcard-section">
+            <div class="bs-fld-lbl" data-i18n="bsCardLbl">カード情報</div>
+            <div id="bs-payg-card" class="bs-cardbox"></div>
+            <div id="bs-payg-err" class="bs-err"></div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text2);margin-top:8px">
+              <input type="checkbox" id="bs-save-card" checked style="margin:0;cursor:pointer">
+              <label for="bs-save-card" style="cursor:pointer">次回からカード情報の入力を省略する</label>
+            </div>
+          </div>
+
+          <button class="bs-go" id="bsPaygGo" onclick="bsPaygSubmit()">$6.99</button>
+          <div class="bs-trust" data-i18n="bsTrustOne">🔒 Stripe による安全な決済 ・ 一度限りの請求</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Screen 2: 月額決済 ─────────────────────────── -->
+    <div id="bsScreen2" style="display:none">
+      <div class="bs-hd">
+        <button class="bs-back" onclick="bsBack()" data-i18n="bsBackTxt">← 戻る</button>
+        <div class="bs-ti" data-i18n="bsPayHd">支払い情報</div>
+        <button class="bs-x" onclick="closeCharge()" aria-label="閉じる">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="bs-body">
+        <div class="bs-summary" id="bs-summary"></div>
+
+        <div class="bs-fld-lbl" data-i18n="bsCardLbl">カード情報</div>
+        <div id="bs-monthly-card" class="bs-cardbox"></div>
+        <div id="bs-monthly-err" class="bs-err"></div>
+
+        <button class="bs-go" id="bsMonthlyGo" onclick="bsSubscribeSubmit()">開始</button>
+        <div class="bs-trust" data-i18n="bsTrustSub">🔒 Stripe による安全な決済</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ── SETTINGS MODAL (new layout: side-nav, 8 tabs) ─────── -->
+<div class="modal-overlay gone" id="settingsModal">
+  <div class="settings-modal">
+    <div class="settings-hd">
+      <div class="settings-ti" data-i18n="sHd">設定</div>
+      <button class="settings-x" onclick="closeSettings()" aria-label="close">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="settings-layout">
+      <!-- LEFT NAV -->
+      <aside class="settings-nav" id="settingsNav">
+        <div class="snav-section" data-i18n="sNavGrpAccount">アカウント</div>
+        <button class="snav-item active" data-tab="account" onclick="switchStab(this,'s-account')"><span class="snav-ic">👤</span><span data-i18n="sNavAccount">アカウント</span></button>
+        <button class="snav-item" data-tab="security" onclick="switchStab(this,'s-security')"><span class="snav-ic">🔒</span><span data-i18n="sNavSecurity">セキュリティ</span></button>
+        <button class="snav-item" data-tab="notif" onclick="switchStab(this,'s-notif')"><span class="snav-ic">🔔</span><span data-i18n="sNavNotif">通知</span></button>
+
+        <div class="snav-section" data-i18n="sNavGrpBilling">課金</div>
+        <button class="snav-item" data-tab="billing" onclick="switchStab(this,'s-billing')"><span class="snav-ic">💳</span><span data-i18n="sNavBilling">プラン・お支払い</span></button>
+
+        <div class="snav-section" data-i18n="sNavGrpEnv">環境</div>
+        <button class="snav-item" data-tab="prefs" onclick="switchStab(this,'s-prefs')"><span class="snav-ic">🎨</span><span data-i18n="sNavPrefs">環境設定</span></button>
+
+        <div class="snav-section" data-i18n="sNavGrpAdv">高度</div>
+        <!-- Store hidden 2026-05-24 — 一旦非表示
+        <button class="snav-item" data-tab="creator" onclick="switchStab(this,'s-creator')"><span class="snav-ic">🏪</span><span data-i18n="sNavCreator">クリエイター</span><span class="snav-badge" data-i18n="sBadgeNew">NEW</span></button>
+        -->
+        <!-- Integrations tab hidden 2026-05-25 — per-site 接続 tab で代替 -->
+        <button class="snav-item" data-tab="memory" onclick="switchStab(this,'s-memory');_loadMemoryAll()"><span class="snav-ic">🧠</span><span>記憶</span></button>
+        <button class="snav-item" data-tab="data" onclick="switchStab(this,'s-data')"><span class="snav-ic">📦</span><span data-i18n="sNavData">データ</span></button>
+
+        <div class="snav-section" id="snavAdminSec" style="display:none">運営</div>
+        <button class="snav-item" id="snavAdminBtn" data-tab="admin" onclick="switchStab(this,'s-admin')" style="display:none"><span class="snav-ic">🛡</span><span>モデレーション</span></button>
+        <a class="snav-item" id="snavDashboardLink" href="/admin.html" target="_blank" style="display:none;text-decoration:none;color:inherit"><span class="snav-ic">📊</span><span>分析ダッシュボード</span><span class="snav-badge" style="background:rgba(99,102,241,.15);color:#a78bfa">NEW</span></a>
+
+        <div class="snav-section" data-i18n="sNavGrpDanger">危険</div>
+        <button class="snav-item danger" data-tab="danger" onclick="switchStab(this,'s-danger')"><span class="snav-ic">⚠️</span><span data-i18n="sNavDanger">アカウント削除</span></button>
+
+        <div class="snav-foot" style="margin-top:auto;padding:14px 12px 6px;border-top:1px solid var(--wire2);font-size:11px;color:var(--text3);font-weight:600;line-height:1.8;display:flex;flex-direction:column;gap:2px">
+          <a href="/terms.html" target="_blank" style="color:var(--text3);text-decoration:none">📜 利用規約</a>
+          <a href="/privacy.html" target="_blank" style="color:var(--text3);text-decoration:none">🔒 プライバシー</a>
+          <a href="/legal.html" target="_blank" style="color:var(--text3);text-decoration:none">⚖️ 特商法表記</a>
+        </div>
+      </aside>
+
+      <!-- RIGHT CONTENT -->
+      <main class="settings-content">
+
+        <!-- 👤 アカウント -->
+        <div id="s-account" class="snav-pane">
+          <h3 class="spane-h" data-i18n="sNavAccount">アカウント</h3>
+          <div class="spane-sub" data-i18n="sAccountSub">プロフィール情報とログイン中のアカウントを管理します。</div>
+
+          <div class="s-avatar-row">
+            <div class="s-av-lg" id="sAv"></div>
+            <div class="s-av-info">
+              <div class="s-av-nm" id="sEmail"></div>
+              <div class="s-av-since" id="sJoined"></div>
+            </div>
+          </div>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSecBasic">基本情報</div>
+            <div class="row2">
+              <div class="fld"><label data-i18n="sFldName">表示名</label><input id="sName" type="text" placeholder="名前"></div>
+              <div class="fld"><label data-i18n="sFldRole">ロール / 職業</label>
+                <select id="sRole">
+                  <option value="">—</option>
+                  <option value="founder">Founder / 起業家</option>
+                  <option value="marketer">マーケター</option>
+                  <option value="engineer">エンジニア</option>
+                  <option value="designer">デザイナー</option>
+                  <option value="sales">セールス</option>
+                  <option value="other">その他</option>
+                </select>
+              </div>
+            </div>
+            <div class="fld"><label data-i18n="sFldBio">自己紹介</label><textarea id="sBio" rows="3" placeholder=""></textarea></div>
+            <div class="fld">
+              <label>公開ハンドル (Public handle)</label>
+              <div style="display:flex;gap:6px;align-items:center">
+                <span style="font-size:13px;color:var(--text3);font-weight:700">/u/</span>
+                <input id="sHandle" type="text" maxlength="30" placeholder="username" pattern="[a-z0-9_]{3,30}" style="flex:1">
+                <button onclick="_saveHandle()" class="btn-primary" style="padding:8px 14px">保存</button>
+              </div>
+              <div id="sHandleStatus" style="font-size:11.5px;color:var(--text3);margin-top:4px"></div>
+            </div>
+            <!-- Founder 100 share row — only shown if user has a seat. -->
+            <div id="sFounderShare" class="fld" style="display:none;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid rgba(192,255,92,.32);border-radius:12px;padding:14px;margin-top:6px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                <span style="background:linear-gradient(135deg,#c0ff5c,#a3e635);color:#0a0a0e;font-size:13px;font-weight:900;padding:5px 13px;border-radius:999px;box-shadow:0 4px 12px rgba(163,230,53,.3)">★ <span id="sFounderSeatTxt"></span></span>
+                <span style="font-size:13px;font-weight:700;color:var(--peach-dark)">Founder 100 — first 100 creators</span>
+              </div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:10px">あなたは MY AI AGENT の <b>最初の 100 人のクリエイター</b> です。プロフィールには永久にバッジが付き、BUSINESS プランが 1 ヶ月無料に。社会的証明として SNS でシェアしましょう。</div>
+              <button onclick="_tweetFounderBadge()" style="background:#000;color:#fff;border:0;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">𝕏 ツイートでシェア</button>
+              <button onclick="_copyFounderTweet()" style="background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:6px">📋 コピー</button>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSecLocale">ローカリゼーション</div>
+            <div class="row2">
+              <div class="fld"><label data-i18n="sFldTz">タイムゾーン</label>
+                <select id="sTz">
+                  <option value="auto">自動 (端末設定)</option>
+                  <option value="Asia/Tokyo">(GMT+9) Asia/Tokyo</option>
+                  <option value="UTC">(GMT+0) UTC</option>
+                  <option value="America/New_York">(GMT-5) America/New_York</option>
+                  <option value="America/Los_Angeles">(GMT-8) America/Los_Angeles</option>
+                  <option value="Europe/London">(GMT+0) Europe/London</option>
+                </select>
+              </div>
+              <div class="fld"><label data-i18n="sFldLang">言語</label>
+                <select id="sLang">
+                  <option value="auto">自動検出</option>
+                  <option value="ja">日本語</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <div class="btn-row"><button class="btn-primary" onclick="saveProfile()" data-i18n="sBtnSave">変更を保存</button></div>
+
+          <section class="spane-section" style="border-top:1px solid var(--wire2);padding-top:24px;margin-top:30px">
+            <div class="spane-section-h" data-i18n="sSecAcctSwitch">アカウントの切替</div>
+            <div class="spane-tip" data-i18n="sAcctSwitchTip">複数のアカウントを保存して、ワンクリックで切替できます。</div>
+            <div id="sAccountList" class="s-acct-list"></div>
+            <div class="btn-row">
+              <button class="btn-ghost" style="flex:1" onclick="addAnotherAccount()" data-i18n="sBtnAddAccount">+ 別のアカウントを追加</button>
+              <button class="btn-ghost danger" onclick="logoutAllAccounts()" data-i18n="sBtnLogoutAll">すべてログアウト</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- 🔒 セキュリティ -->
+        <div id="s-security" class="snav-pane" style="display:none">
+          <h3 class="spane-h" data-i18n="sNavSecurity">セキュリティ</h3>
+          <div class="spane-sub" data-i18n="sSecuritySub">パスワード・連携アカウント・ログインセッションを管理します。</div>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSecPassword">パスワード</div>
+            <div class="fld"><label data-i18n="sFldCurPw">現在のパスワード</label><input id="sCurPw" type="password" placeholder="••••••••"></div>
+            <div class="row2">
+              <div class="fld"><label data-i18n="sFldNewPw">新しいパスワード</label><input id="sNewPw" type="password" placeholder="8文字以上"></div>
+              <div class="fld"><label data-i18n="sFldConfPw">確認</label><input id="sConfPw" type="password" placeholder="もう一度"></div>
+            </div>
+            <button class="btn-primary" onclick="changePassword()" data-i18n="sBtnChangePw">パスワードを変更</button>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSec2FA">二段階認証</div>
+            <div class="s-toggle">
+              <div class="lbl">
+                <div class="t" data-i18n="s2FATotpT">認証アプリ (TOTP)</div>
+                <div class="d" data-i18n="s2FATotpD">Google Authenticator / Authy などで追加コードを要求</div>
+              </div>
+              <span class="s-pill s-pill-soon" data-i18n="sBadgeSoon">近日対応</span>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSecLinked">連携アカウント</div>
+            <div id="sLinkedAccts"></div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sSecSessions">アクティブセッション</div>
+            <div class="s-sess-box">
+              <div class="s-sess">
+                <div class="ic">💻</div>
+                <div class="meta">
+                  <div class="dev"><span data-i18n="sSessThis">このデバイス</span> <span class="s-now">● <span data-i18n="sSessCurrent">現在</span></span></div>
+                  <div class="loc" id="sSessUA"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">最近のログイン</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:8px">
+              不審なログインがあれば <a href="#" onclick="event.preventDefault();const e=document.querySelector('.snav-item[data-tab=\'security\']');switchStab(e,'s-security');document.getElementById('sCurPw').focus()" style="color:var(--peach-dark);font-weight:700">パスワードを変更</a>してください。
+            </div>
+            <div id="sLoginLog" class="s-sess-box" style="font-size:12px;color:var(--text3)">読み込み中…</div>
+          </section>
+        </div>
+
+        <!-- 🔔 通知 -->
+        <div id="s-notif" class="snav-pane" style="display:none">
+          <h3 class="spane-h" data-i18n="sNavNotif">通知</h3>
+          <div class="spane-sub" data-i18n="sNotifSub">どんな通知をいつ受け取るかを管理します。設定はこのブラウザに保存されます。</div>
+
+          <section class="spane-section">
+            <div class="spane-section-h">🔔 グループ通知 (有効)</div>
+            <div class="s-toggle" id="mentionEmailToggle" onclick="_toggleMentionEmail()" style="cursor:pointer">
+              <div class="lbl">
+                <div class="t">@メンションでメール通知</div>
+                <div class="d">グループで @&lt;あなたの名前&gt; とメンションされた時、メールで通知 (5 分内に同じ送信元からの連投は 1 通のみ)</div>
+              </div>
+              <div class="s-sw" id="mentionEmailSw"></div>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sNotifEmail">その他メール通知</div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifBalT">残高アラート</div><div class="d" data-i18n="sNotifBalD">残高が $1.00 を下回ったらメール</div></div><div class="s-sw" data-pref="notif_balance"></div></div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifSubT">月額プラン更新通知</div><div class="d" data-i18n="sNotifSubD">サブスク更新の数日前に予告</div></div><div class="s-sw" data-pref="notif_renewal"></div></div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifRcptT">領収書（請求書）</div><div class="d" data-i18n="sNotifRcptD">決済完了時に PDF を自動送付</div></div><div class="s-sw" data-pref="notif_receipt"></div></div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifProdT">プロダクト更新</div><div class="d" data-i18n="sNotifProdD">新機能・新プリセット情報</div></div><div class="s-sw" data-pref="notif_product"></div></div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifWeekT">週次サマリー</div><div class="d" data-i18n="sNotifWeekD">エージェント別の利用統計を毎週月曜に</div></div><div class="s-sw" data-pref="notif_weekly"></div></div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sNotifPush">ブラウザプッシュ</div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sNotifPushT">プッシュ通知</div><div class="d" data-i18n="sNotifPushD">エージェント応答完了時などに通知</div></div><span class="s-pill s-pill-soon" data-i18n="sBadgeSoon">近日対応</span></div>
+          </section>
+
+          <div style="font-size:11px;color:var(--text3);margin-top:8px" data-i18n="sNotifDelivery">※ メール送信機能は順次有効化されます。設定だけ先に保存できます。</div>
+        </div>
+
+        <!-- 💳 プラン・お支払い -->
+        <div id="s-billing" class="snav-pane" style="display:none">
+          <h3 class="spane-h" data-i18n="sNavBilling">プラン・お支払い</h3>
+          <div class="spane-sub" data-i18n="sBillingSub">プラン・残高・取引履歴を管理します。</div>
+
+          <section class="spane-section">
+            <div class="row2">
+              <div class="s-bal-card s-bal-plan">
+                <div class="s-bal-lbl" data-i18n="sCurPlan">現在のプラン</div>
+                <div id="sb-plan" class="s-bal-val">Free</div>
+                <div id="sb-plan-sub" class="s-bal-sub"></div>
+              </div>
+              <div class="s-bal-card">
+                <div class="s-bal-lbl" data-i18n="sBalance">残高</div>
+                <div id="sb-bal" class="s-bal-val">$0.00</div>
+                <div id="sb-msg" class="s-bal-sub"></div>
+              </div>
+            </div>
+          </section>
+
+          <div class="btn-row">
+            <button class="btn-primary" style="flex:1" onclick="closeSettings();openCharge()" data-i18n="sAddCredits">+ クレジット追加 / プラン変更</button>
+            <button id="sb-cancel-btn" class="btn-ghost" onclick="cancelSubscription()" data-i18n="sCancel" style="display:none">解約</button>
+          </div>
+
+          <section class="spane-section">
+            <div class="spane-section-h">用途別 消費 <span style="color:var(--text3);font-weight:500;text-transform:none;letter-spacing:0">（過去30日）</span></div>
+            <div id="sb-breakdown" class="s-history-box" style="padding:0"></div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h"><span data-i18n="sTxHistory">取引履歴</span> <span style="color:var(--text3);font-weight:500;text-transform:none;letter-spacing:0" data-i18n="sLast30">（最新30件）</span></div>
+            <div id="sb-history" class="s-history-box"></div>
+          </section>
+        </div>
+
+        <!-- 🎨 環境設定 -->
+        <div id="s-prefs" class="snav-pane" style="display:none">
+          <h3 class="spane-h" data-i18n="sNavPrefs">環境設定</h3>
+          <div class="spane-sub" data-i18n="sPrefsSub">見た目と挙動をカスタマイズします。設定はこのブラウザに保存されます。</div>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sPrefsTheme">テーマ</div>
+            <div class="row3 s-theme-grid">
+              <button class="s-theme-c" data-theme="light" onclick="setTheme('light')">
+                <div class="s-theme-prv" style="background:linear-gradient(135deg,#fdf8f3,#f5ebe0);border:1px solid var(--wire2)"></div>
+                <div class="s-theme-nm" data-i18n="sThemeLight">ライト</div>
+              </button>
+              <button class="s-theme-c" data-theme="dark" onclick="setTheme('dark')">
+                <div class="s-theme-prv" style="background:linear-gradient(135deg,#1c1c22,#0d0d10);border:1px solid rgba(255,255,255,.1)"></div>
+                <div class="s-theme-nm" data-i18n="sThemeDark">ダーク</div>
+              </button>
+              <button class="s-theme-c" data-theme="auto" onclick="setTheme('auto')">
+                <div class="s-theme-prv" style="background:linear-gradient(135deg,#fdf8f3 50%,#1a0a00 50%)"></div>
+                <div class="s-theme-nm" data-i18n="sThemeAuto">自動</div>
+                <div class="s-theme-sub" data-i18n="sThemeAutoSub">OS設定に追従</div>
+              </button>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">🌐 Language / 言語</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:9px" data-i18n="sLangNote">Choose your language. The page will reload to apply.</div>
+            <div class="row2 s-theme-grid" id="langPicker">
+              <button class="s-theme-c" data-lang="en" onclick="setLang('en')">
+                <div class="s-theme-prv" style="background:linear-gradient(180deg,#012169 0%,#012169 33%,#fff 33%,#fff 66%,#c8102e 66%);display:flex;align-items:center;justify-content:center;font-size:22px">🇺🇸</div>
+                <div class="s-theme-nm">English</div>
+                <div class="s-theme-sub">Default</div>
+              </button>
+              <button class="s-theme-c" data-lang="ja" onclick="setLang('ja')">
+                <div class="s-theme-prv" style="background:linear-gradient(135deg,#fff,#fff 49%,#bc002d 50%,#bc002d 51%,#fff 51%);border:1px solid var(--wire2);display:flex;align-items:center;justify-content:center;font-size:22px">🇯🇵</div>
+                <div class="s-theme-nm">日本語</div>
+                <div class="s-theme-sub">Japanese</div>
+              </button>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">🔍 表示倍率</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:9px">大きすぎる / 圧迫感がある時は縮小してください。スマホは常に 100%。</div>
+            <div class="row3 s-theme-grid">
+              <button class="s-theme-c" data-uiscale="0.75" onclick="setUiScale(75);_markUiScale(75)"><div class="s-theme-prv" style="background:linear-gradient(135deg,#fdf8f3,#f5ebe0);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">75%</div><div class="s-theme-nm">小</div></button>
+              <button class="s-theme-c" data-uiscale="0.9"  onclick="setUiScale(90);_markUiScale(90)"><div class="s-theme-prv" style="background:linear-gradient(135deg,#fdf8f3,#f5ebe0);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--peach-dark);font-weight:800">90%</div><div class="s-theme-nm">標準</div><div class="s-theme-sub">推奨</div></button>
+              <button class="s-theme-c" data-uiscale="1.0"  onclick="setUiScale(100);_markUiScale(100)"><div class="s-theme-prv" style="background:linear-gradient(135deg,#fdf8f3,#f5ebe0);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2)">100%</div><div class="s-theme-nm">大</div></button>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sPrefsBehav">既定の動作</div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sBehavEnterT">Enter キーでメッセージ送信</div><div class="d" data-i18n="sBehavEnterD">OFF にすると改行のみ。送信は Cmd/Ctrl+Enter</div></div><div class="s-sw" data-pref="behav_enter_send"></div></div>
+            <div class="s-toggle"><div class="lbl"><div class="t" data-i18n="sBehavLastT">起動時に最後のチャットを開く</div><div class="d" data-i18n="sBehavLastD">OFF にすると常に「チームを作ろう」画面で起動</div></div><div class="s-sw" data-pref="behav_open_last"></div></div>
+          </section>
+        </div>
+
+        <!-- 🏪 クリエイター -->
+        <div id="s-creator" class="snav-pane" style="display:none">
+          <h3 class="spane-h">🏪 クリエイター</h3>
+          <div class="spane-sub">作ったエージェントを出店して、買い切り価格の 70% + 利用料の 10% を収益として受け取ります。</div>
+
+          <!-- KPIs -->
+          <div class="creator-kpis" id="creatorKpis">
+            <div class="ck"><div class="ck-lbl">出店中</div><div class="ck-val" id="ckListed">—</div></div>
+            <div class="ck"><div class="ck-lbl">累計利用回数</div><div class="ck-val" id="ckUses">—</div></div>
+            <div class="ck"><div class="ck-lbl">利用可能残高</div><div class="ck-val" id="ckBalance">—</div><div class="ck-sub" id="ckBalanceSub" style="font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:600"></div></div>
+            <div class="ck"><div class="ck-lbl">累計収益</div><div class="ck-val" id="ckEarnings">—</div></div>
+          </div>
+
+          <section class="spane-section">
+            <div class="spane-section-h">過去30日の収益</div>
+            <div id="creatorChart"></div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">エージェント別（今月）</div>
+            <div id="creatorByAgent"></div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">最近の収益</div>
+            <div id="creatorRecent"></div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" style="display:flex;align-items:center;gap:10px">
+              <span style="flex:1">マイ出店</span>
+              <button class="btn-ghost" onclick="loadCreatorDashboard()" style="font-size:11.5px;color:var(--text3);font-weight:700;padding:4px 10px;border-radius:6px;background:transparent;border:1px solid var(--wire2);cursor:pointer">↻ 更新</button>
+            </div>
+            <div id="creatorList" class="creator-list">
+              <div class="creator-loading">読み込み中…</div>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">出店フロー</div>
+            <div class="creator-flow">
+              <div class="cf-step"><span class="cf-num">1</span><div><b>エージェントを編集</b><div class="cf-d">サイドバーで対象エージェントを開き、⚙ から編集パネルを表示</div></div></div>
+              <div class="cf-step"><span class="cf-num">2</span><div><b>「🏪 Agent Store に出店」を開く</b><div class="cf-d">編集パネル内のオレンジ枠から出店フォームへ</div></div></div>
+              <div class="cf-step"><span class="cf-num">3</span><div><b>公開情報を入力 → 公開</b><div class="cf-d">タイトル・説明・カテゴリを入れて出店すると、即座にAgent Store に掲載</div></div></div>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">💴 出金（Stripe Connect）</div>
+            <div id="creatorPayout" class="creator-list">
+              <div class="creator-loading">読み込み中…</div>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h">クリエイターサポート</div>
+            <div class="creator-help">
+              <div class="ch-item">
+                <div class="ch-q">💰 収益還元はいつ確定？</div>
+                <div class="ch-a">利用者が支払う買い切り価格の <b>70%</b> + AI 利用料の <b>10%</b> が「未確定残高」に計上され、7 日後に「利用可能残高」に確定します。</div>
+              </div>
+              <div class="ch-item">
+                <div class="ch-q">💴 出金はいつできる？</div>
+                <div class="ch-a">利用可能残高が <b>¥1,000</b> に到達すると Stripe Connect 経由で出金可能になります（出金機能は近日リリース）。</div>
+              </div>
+              <div class="ch-item">
+                <div class="ch-q">📜 公開ガイドライン</div>
+                <div class="ch-a">他者の知的財産・個人情報を扱うエージェント、違法/有害コンテンツの生成に特化したエージェントは公開禁止。違反が見つかった場合は即座に取り下げられます。</div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 🛡 モデレーション (admin only) -->
+        <div id="s-admin" class="snav-pane" style="display:none">
+          <h3 class="spane-h">🛡 モデレーション</h3>
+          <div class="spane-sub">通報された出店を確認し、削除/復元します。</div>
+          <section class="spane-section">
+            <div class="spane-section-h" style="display:flex;align-items:center;gap:10px">
+              <span style="flex:1">通報キュー</span>
+              <button class="btn-ghost" onclick="loadAdminReports()" style="font-size:11.5px;color:var(--text3);font-weight:700;padding:4px 10px;border-radius:6px;background:transparent;border:1px solid var(--wire2);cursor:pointer">↻ 更新</button>
+            </div>
+            <div id="adminReports" class="creator-list">
+              <div class="creator-loading">読み込み中…</div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 🔌 Integrations panel removed 2026-05-25 — per-site 接続 tab で代替 -->
+
+        <!-- 🧠 記憶 — unified "what AI remembers about you" page -->
+        <div id="s-memory" class="snav-pane" style="display:none">
+          <h3 class="spane-h">🧠 記憶</h3>
+          <div class="spane-sub">AI があなたについて覚えていること一覧です。個別に ON/OFF 切替・削除できます (GDPR 対応)。</div>
+
+          <!-- Stats summary -->
+          <section class="spane-section">
+            <div id="memStats" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text2)">
+              <span>読み込み中…</span>
+            </div>
+          </section>
+
+          <!-- Filter + bulk actions row -->
+          <section class="spane-section" style="padding-top:0">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+              <button onclick="_memFilter('all')" id="memFAll" class="mem-chip on">すべて</button>
+              <button onclick="_memFilter('active')" id="memFAct" class="mem-chip">有効</button>
+              <button onclick="_memFilter('disabled')" id="memFDis" class="mem-chip">OFF</button>
+              <button onclick="_memFilter('user')" id="memFUsr" class="mem-chip">全体共有</button>
+              <button onclick="_memFilter('agent')" id="memFAg" class="mem-chip">Agent 別</button>
+              <div style="flex:1"></div>
+              <button onclick="_memExport()" style="background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">📥 JSON エクスポート</button>
+              <button onclick="_memDeleteAll()" style="background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">🗑 全削除 (GDPR)</button>
+            </div>
+            <div id="memAllList" style="display:flex;flex-direction:column;gap:7px">
+              <div style="text-align:center;padding:30px;color:var(--text3);font-size:12.5px">読み込み中…</div>
+            </div>
+          </section>
+
+          <!-- Inject minimal scoped CSS once -->
+          <style>
+            .mem-chip{background:#fff;border:1px solid var(--wire2);border-radius:99px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit}
+            .mem-chip.on{background:var(--peach);color:#0a0a0e;border-color:var(--peach)}
+            .mem-row{background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;transition:all .15s}
+            .mem-row.dis{opacity:.5}
+            .mem-row .mem-src{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--peach-dark);background:var(--cream2);padding:2px 7px;border-radius:99px;white-space:nowrap;flex-shrink:0}
+            .mem-row .mem-src.user{background:#e0f2fe;color:#0369a1}
+            .mem-row .mem-tx{font-size:12.5px;line-height:1.55;color:var(--text);flex:1;min-width:0}
+            .mem-row .mem-meta{font-size:10px;color:var(--text3);margin-top:2px;letter-spacing:.01em}
+            .mem-row .mem-toggle{background:transparent;border:1px solid var(--wire2);border-radius:99px;padding:3px 9px;font-size:10.5px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit;flex-shrink:0}
+            .mem-row .mem-toggle.on{background:#d1fae5;border-color:#86efac;color:#059669}
+            .mem-row .mem-del{background:transparent;border:1px solid transparent;border-radius:99px;padding:3px 7px;font-size:11px;cursor:pointer;color:#dc2626;font-family:inherit;flex-shrink:0}
+            .mem-row .mem-del:hover{background:#fee2e2;border-color:#fecaca}
+          </style>
+        </div>
+
+        <!-- 📦 データ -->
+        <div id="s-data" class="snav-pane" style="display:none">
+          <h3 class="spane-h" data-i18n="sNavData">データ</h3>
+          <div class="spane-sub" data-i18n="sDataSub">データのエクスポート・インポート・削除を行います。</div>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sDataExport">エクスポート</div>
+            <div class="s-conn-row">
+              <div class="ic">📦</div>
+              <div class="meta">
+                <div class="n">完全データエクスポート (GDPR)</div>
+                <div class="s">サーバーに保存された全データを JSON でダウンロード</div>
+              </div>
+              <button class="btn-ghost" onclick="exportFullData()">ダウンロード</button>
+            </div>
+            <div class="s-conn-row">
+              <div class="ic">📄</div>
+              <div class="meta">
+                <div class="n" data-i18n="sDataExportAgentsT">エージェントと会話履歴</div>
+                <div class="s" data-i18n="sDataExportAgentsD">JSON 形式・全エージェント＋全チャット</div>
+              </div>
+              <button class="btn-ghost" onclick="exportData('agents')" data-i18n="sBtnDownload">ダウンロード</button>
+            </div>
+            <div class="s-conn-row">
+              <div class="ic">📊</div>
+              <div class="meta">
+                <div class="n" data-i18n="sDataExportTxT">取引履歴 (CSV)</div>
+                <div class="s" data-i18n="sDataExportTxD">確定申告などにご利用いただけます</div>
+              </div>
+              <button class="btn-ghost" onclick="exportData('history')" data-i18n="sBtnDownload">ダウンロード</button>
+            </div>
+          </section>
+
+          <!-- AI 長期記憶 -->
+          <section class="spane-section">
+            <div class="spane-section-h">🧠 AI 長期記憶</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:9px">
+              全エージェントが共通で参照する記憶。あなたの好み・役職・プロジェクト情報などを書いておくと、AI が文脈に応じて活用します。
+              チャット中に <code style="font-family:'JetBrains Mono','SF Mono',monospace;background:var(--bg-100);padding:0 4px;border-radius:3px;font-size:11px">/remember &lt;内容&gt;</code> でも追加可能。
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+              <input id="memInput" placeholder="例: 私は株式会社 PROTOCOL の代表で、AI スタートアップを運営してます" style="flex:1;padding:9px 12px;border:.5px solid var(--wire2);border-radius:8px;font-size:12.5px;color:var(--text);font-family:inherit;background:#fff" maxlength="500">
+              <button class="btn-volt" onclick="_addMemory()" style="padding:0 18px;font-size:12px">追加</button>
+            </div>
+            <div id="memList" style="display:flex;flex-direction:column;gap:5px;max-height:240px;overflow-y:auto"></div>
+          </section>
+
+          <!-- リマインダー -->
+          <section class="spane-section">
+            <div class="spane-section-h">⏰ スケジュール送信 / リマインダー</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:9px">
+              指定した日時に AI から通知が届きます。例: "明日 9 時に、商談準備の確認" など。
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;margin-bottom:8px">
+              <input id="remAt" type="datetime-local" style="padding:9px 12px;border:.5px solid var(--wire2);border-radius:8px;font-size:12.5px;color:var(--text);font-family:inherit;background:#fff">
+              <input id="remText" placeholder="リマインダー内容" style="padding:9px 12px;border:.5px solid var(--wire2);border-radius:8px;font-size:12.5px;color:var(--text);font-family:inherit;background:#fff" maxlength="200">
+              <button class="btn-volt" onclick="_addReminder()" style="padding:0 18px;font-size:12px">追加</button>
+            </div>
+            <div id="remList" style="display:flex;flex-direction:column;gap:5px;max-height:240px;overflow-y:auto"></div>
+          </section>
+
+          <!-- 紹介プログラム -->
+          <section class="spane-section">
+            <div class="spane-section-h">🎁 紹介プログラム</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
+              友達があなたの紹介リンクから登録すると、<b>あなたと友達それぞれに ¥500</b> 進呈されます。
+            </div>
+            <div class="s-conn-row" style="flex-direction:column;align-items:stretch;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="ic">🔗</div>
+                <div class="meta">
+                  <div class="n">あなたの紹介リンク</div>
+                  <div class="s" id="sRefStats">読み込み中…</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <input id="sRefUrl" readonly value="" style="flex:1;padding:8px 11px;border:.5px solid var(--wire2);border-radius:8px;font-size:11.5px;color:var(--text);font-family:'JetBrains Mono','SF Mono',monospace;background:var(--bg-100)">
+                <button class="btn-ghost" onclick="_copyRefUrl()">コピー</button>
+                <button class="btn-ghost" onclick="_shareRef()">共有</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sDataImport">インポート</div>
+            <div class="s-conn-row">
+              <div class="ic">📥</div>
+              <div class="meta">
+                <div class="n" data-i18n="sDataImportT">エージェントを読み込む</div>
+                <div class="s" data-i18n="sDataImportD">JSON ファイルから一括インポート</div>
+              </div>
+              <input type="file" id="sImportFile" accept=".json,application/json" style="display:none" onchange="importAgentsFile(this)">
+              <button class="btn-ghost" onclick="document.getElementById('sImportFile').click()" data-i18n="sBtnSelectFile">ファイル選択</button>
+            </div>
+          </section>
+
+          <section class="spane-section">
+            <div class="spane-section-h" data-i18n="sDataClear">クリア</div>
+            <div class="s-conn-row warn">
+              <div class="ic">🗑</div>
+              <div class="meta">
+                <div class="n" data-i18n="sDataClearT">全チャット履歴を削除</div>
+                <div class="s" data-i18n="sDataClearD">エージェント自体は残します。会話のみ消去（取り消し不可）</div>
+              </div>
+              <button class="btn-danger" onclick="clearAllChatHistory()" data-i18n="sBtnDelete">削除する</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- ⚠️ アカウント削除 -->
+        <div id="s-danger" class="snav-pane" style="display:none">
+          <h3 class="spane-h" style="color:var(--rose)" data-i18n="sNavDanger">アカウント削除</h3>
+          <div class="spane-sub" data-i18n="sDangerSub">この操作は取り消せません。慎重に行ってください。</div>
+
+          <div class="s-danger-box">
+            <h4 data-i18n="sDangerH">アカウントを完全削除</h4>
+            <p data-i18n="sDangerBody">全てのエージェント・会話・残高・サブスクリプションが永久に削除されます。サブスクは自動的に解約されます。</p>
+            <div class="fld"><label data-i18n="sDangerConfirmLbl">「削除する」と入力して確認</label><input id="sDelConfirm" type="text" placeholder="削除する"></div>
+            <button class="btn-danger" onclick="deleteAccount()" data-i18n="sDangerCta">アカウントを完全削除する</button>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── エージェント編集パネル (シンプル化版) ──
+     上半分 = 常時表示 (名前 / 業務 / モデル) ・80% のユーザーはここで完結
+     下半分 = アコーディオン (ツール連携 / ナレッジ / 高度な設定 / 危険ゾーン)
+     -->
+<style>
+  /* `flex-shrink:0` is critical — the edit-panel body is a flex column,
+     and without it the <details> elements get crushed to almost-zero height
+     when the model-pill row wraps to 2 rows (or other expansion above). */
+  .ea-acc{background:#fff;border:1px solid var(--wire2);border-radius:11px;overflow:hidden;flex-shrink:0}
+  .ea-acc > summary{
+    list-style:none;padding:13px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;
+    font-size:13px;font-weight:800;color:var(--text);user-select:none;
+    line-height:1.4;min-height:44px;box-sizing:border-box;
+  }
+  .ea-acc > summary::-webkit-details-marker{display:none}
+  .ea-acc > summary::marker{display:none}
+  /* The label span has flex:1 to claim leftover space, so the count + arrow
+     pin to the right consistently — with or without a count text. */
+  .ea-acc > summary > span:first-child{flex-shrink:0;font-size:15px;line-height:1}
+  .ea-acc > summary .ea-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ea-acc > summary .cnt{font-size:11px;color:var(--text3);font-weight:700;flex-shrink:0}
+  .ea-acc > summary::after{content:'›';color:var(--text3);font-size:16px;font-weight:700;transition:.15s;transform:rotate(0);margin-left:8px;flex-shrink:0}
+  .ea-acc[open] > summary::after{transform:rotate(90deg)}
+  .ea-acc > summary:hover{background:var(--cream2)}
+  .ea-acc[open] > summary{border-bottom:1px solid var(--wire2)}
+  .ea-acc-body{padding:12px 14px;display:flex;flex-direction:column;gap:11px;background:#fdfcfa}
+  .ea-row{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1px solid var(--wire)}
+  .ea-row:last-child{border-bottom:0}
+  .ea-row > div{flex:1;min-width:0}
+  .ea-row .hd{font-size:12.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .ea-row .desc{font-size:10.5px;color:var(--text3);margin-top:2px;line-height:1.55}
+  .ea-mpill{
+    padding:7px 12px;border-radius:99px;background:#fff;border:1.5px solid var(--wire2);
+    cursor:pointer;font-size:11.5px;font-weight:700;color:var(--text2);
+    display:inline-flex;align-items:center;gap:5px;transition:.12s;font-family:inherit;
+  }
+  .ea-mpill:hover{border-color:var(--peach-dark);color:var(--peach-dark)}
+  .ea-mpill.on{background:var(--peach);color:#0a0a0e;border-color:var(--peach-dark);box-shadow:0 2px 6px rgba(192,255,92,.25)}
+  /* Hide compatibility-only fields (kept so saveEditAgent works) */
+  #editPurposeRow{display:none !important}
+</style>
+<div id="editPanel" style="position:fixed;top:0;right:-380px;bottom:0;width:360px;background:var(--cream);border-left:1px solid rgba(180,120,80,.2);box-shadow:-8px 0 24px rgba(0,0,0,.1);z-index:400;display:flex;flex-direction:column;transition:right .25s cubic-bezier(.4,0,.2,1);">
+  <!-- Compact header -->
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 18px 12px;border-bottom:1px solid rgba(180,120,80,.12)">
+    <div style="position:relative">
+      <div id="editAgAvatar" style="font-size:22px;width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#fff7ee,rgba(192,255,92,.30));overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer" onclick="document.getElementById('avFileEdit').click()"></div>
+      <div style="position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;background:#fff;border:1px solid var(--wire2);border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;pointer-events:none">📸</div>
+      <input type="file" id="avFileEdit" accept="image/*" style="display:none" onchange="onAvatarUpload(event,'edit')">
+    </div>
+    <div style="flex:1;min-width:0">
+      <div id="editAgName2" style="font-size:14.5px;font-weight:900;color:var(--text);letter-spacing:-.01em"></div>
+      <div id="editAgSkills" style="font-size:10.5px;color:var(--text3);margin-top:1px"></div>
+    </div>
+    <button onclick="closeEditAgent()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1;padding:6px;margin:-6px">×</button>
+  </div>
+
+  <div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px;flex:1;overflow-y:auto">
+
+    <!-- 名前 -->
+    <div>
+      <label style="display:block;font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">名前</label>
+      <input id="editName" type="text" placeholder="例：Sales AI" style="width:100%;background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 13px;color:var(--text);font-size:13.5px;font-family:inherit;outline:none;box-sizing:border-box;transition:border-color .12s" onfocus="this.style.borderColor='var(--peach)';this.style.boxShadow='0 0 0 3px rgba(192,255,92,.12)'" onblur="this.style.borderColor='var(--wire2)';this.style.boxShadow=''">
+    </div>
+
+    <!-- 採用目的: 後方互換のため hidden で保持 -->
+    <div id="editPurposeRow">
+      <input id="editPurpose" type="text" maxlength="80">
+    </div>
+
+    <!-- 業務内容 (主要フィールド) -->
+    <div>
+      <label style="display:block;font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">何をする AI?</label>
+      <textarea id="editDuties" placeholder="例：見込み客リストへのメール作成、返信整理、面談日程の調整" rows="5" style="width:100%;background:#fff;border:1px solid var(--wire2);border-radius:10px;padding:10px 13px;color:var(--text);font-size:13.5px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.62;min-height:100px;transition:border-color .12s" onfocus="this.style.borderColor='var(--peach)';this.style.boxShadow='0 0 0 3px rgba(192,255,92,.12)'" onblur="this.style.borderColor='var(--wire2)';this.style.boxShadow=''"></textarea>
+    </div>
+
+    <!-- AI モデル (ピル一行) -->
+    <div>
+      <label style="display:block;font-size:10.5px;font-weight:800;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">AI モデル</label>
+      <div id="editModelGroup" style="display:flex;flex-wrap:wrap;gap:5px">
+        <button type="button" data-model="auto"   onclick="_setEditModel('auto')"   class="model-pick ea-mpill" title="クエリの複雑度で Fast/Smart を自動切替 — 推奨">✨ Auto</button>
+        <button type="button" data-model="haiku"  onclick="_setEditModel('haiku')"  class="model-pick ea-mpill" title="Claude Haiku 4.5 · 高速 + 低コスト">⚡ Fast</button>
+        <button type="button" data-model="sonnet" onclick="_setEditModel('sonnet')" class="model-pick ea-mpill" title="Claude Sonnet 4.6 · 高品質 + バランス">🎯 Smart</button>
+        <button type="button" data-model="opus"   onclick="_setEditModel('opus')"   class="model-pick ea-mpill" title="Claude Opus 4.7 · 最高品質">🧠 Best</button>
+      </div>
+      <input type="hidden" id="editModel" value="auto">
+    </div>
+
+    <!-- ━━ アコーディオン: ツール連携 ━━ -->
+    <details class="ea-acc">
+      <summary>
+        <span>🔌</span>
+        <span class="ea-label">ツール連携</span>
+        <span class="cnt" id="editToolsCnt">—</span>
+      </summary>
+      <div class="ea-acc-body">
+        <!-- 1. Web 検索 / URL 取得 -->
+        <div class="ea-row">
+          <div>
+            <div class="hd">🌐 Web 検索 / URL 取得</div>
+            <div class="desc" id="editChromeDesc"></div>
+          </div>
+          <button type="button" class="s-sw" id="editChromeSw" onclick="toggleEditChrome()"></button>
+        </div>
+
+        <!-- 2. ブラウザ拡張連携 -->
+        <div class="ea-row">
+          <div>
+            <div class="hd">🧩 ブラウザ拡張 <span style="background:rgba(99,102,241,.12);color:#a78bfa;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:800;letter-spacing:.04em">BETA</span> <span id="editExtConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 7px;border-radius:99px;font-size:9.5px;font-weight:800"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#10b981"></span>接続中</span></div>
+            <div class="desc" id="editExtDesc"></div>
+            <div id="editExtAccountRow" style="display:none;margin-top:5px;font-size:10.5px;color:var(--text3)">接続中: <b id="editExtDeviceId"></b> · <a href="#" id="editExtReconnect" onclick="event.preventDefault();reconnectExtension()" style="display:none;color:#a78bfa;font-weight:700">🔄 再接続</a><span id="editExtReconnectSep" style="display:none"> · </span><a href="#" onclick="event.preventDefault();disconnectExtension()" style="color:#ef4444">切断</a></div>
+            <button type="button" id="editExtConnectBtn" onclick="connectExtension()" style="display:none;margin-top:6px;background:var(--cream);color:#a78bfa;border:1px solid #6366f1;border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">＋ ペアリング</button>
+          </div>
+          <button type="button" class="s-sw" id="editExtSw" onclick="toggleEditExtension()"></button>
+        </div>
+
+        <!-- 3. Google スプレッドシート連携 -->
+        <div class="ea-row">
+          <div>
+            <div class="hd">📊 Google スプレッドシート <span id="editSheetsConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 7px;border-radius:99px;font-size:9.5px;font-weight:800"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#10b981"></span>接続中</span></div>
+            <div class="desc" id="editSheetsDesc"></div>
+            <div id="editSheetsAccountRow" style="display:none;margin-top:5px;font-size:10.5px;color:var(--text3)">接続中: <b id="editSheetsEmail"></b> · <a href="#" onclick="event.preventDefault();disconnectGoogleSheets()" style="color:#ef4444">切断</a></div>
+            <button type="button" id="editSheetsConnectBtn" onclick="connectGoogleSheets()" style="display:none;margin-top:6px;background:#fff;color:#0f9d58;border:1px solid #0f9d58;border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">＋ Google アカウント接続</button>
+          </div>
+          <button type="button" class="s-sw" id="editSheetsSw" onclick="toggleEditSheets()"></button>
+        </div>
+
+        <!-- 4. GitHub 連携 -->
+        <div class="ea-row">
+          <div>
+            <div class="hd">🐙 GitHub <span id="editGitHubConnBadge" style="display:none;align-items:center;gap:4px;background:rgba(16,185,129,.12);color:#0f9d58;padding:1px 7px;border-radius:99px;font-size:9.5px;font-weight:800"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#10b981"></span>接続中</span></div>
+            <div class="desc" id="editGitHubDesc">あなたの GitHub repo を AI が読めるようになります (README / コード / Issue)。ChatGPT に絶対できない「自分のコードを理解した上での回答」が可能に。</div>
+            <div id="editGitHubAccountRow" style="display:none;margin-top:5px;font-size:10.5px;color:var(--text3)">接続中: <b id="editGitHubLogin"></b> · <a href="#" onclick="event.preventDefault();disconnectGitHub()" style="color:#ef4444">切断</a></div>
+            <button type="button" id="editGitHubConnectBtn" onclick="openGitHubConnect()" style="display:none;margin-top:6px;background:#fff;color:#0f172a;border:1px solid #475569;border-radius:7px;padding:6px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">＋ Personal Access Token を登録</button>
+          </div>
+          <button type="button" class="s-sw" id="editGitHubSw" onclick="toggleEditGitHub()"></button>
+        </div>
+      </div>
+    </details>
+
+    <!-- ━━ アコーディオン: ナレッジベース ━━ -->
+    <details class="ea-acc" id="editKbBox">
+      <summary>
+        <span>📚</span>
+        <span class="ea-label">ナレッジベース</span>
+        <span class="cnt" id="editKbCnt">—</span>
+      </summary>
+      <div class="ea-acc-body">
+        <div class="desc" style="font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:6px">PDF・DOCX・テキストを登録すると、関連する質問でこの AI が自動で参照します。</div>
+        <div id="editKbList" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow:auto"></div>
+        <input type="file" id="editKbInput" accept=".txt,.md,.markdown,.csv,.tsv,.json,.html,.xml,.yaml,.yml,.docx,.pdf,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/plain,text/markdown,text/csv" multiple style="display:none" onchange="onKbFileSelect(event)">
+        <button type="button" onclick="document.getElementById('editKbInput').click()" style="margin-top:6px;width:100%;background:#fff;color:#047857;border:1px solid #10b981;border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit">＋ ドキュメントを追加</button>
+      </div>
+    </details>
+
+    <!-- ━━ アコーディオン: 高度な設定 ━━ -->
+    <details class="ea-acc">
+      <summary>
+        <span>⚙</span>
+        <span class="ea-label">高度な設定</span>
+      </summary>
+      <div class="ea-acc-body">
+        <!-- Webhook -->
+        <div id="editWhBox">
+          <div class="hd" style="font-size:12.5px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px">🔗 Webhook</div>
+          <div class="desc" style="font-size:10.5px;color:var(--text3);margin-top:3px;line-height:1.55">外部サービスから POST すると、AI が JSON で応答。Zapier・GitHub・Slack 等から呼び出せます。</div>
+          <div id="editWhStatus" style="margin-top:8px"></div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button id="editWhToggle" type="button" onclick="_whToggle()" style="flex:1;background:#fff;color:#0369a1;border:1px solid #0ea5e9;border-radius:7px;padding:8px;font-weight:700;font-size:11.5px;cursor:pointer;font-family:inherit">Webhook を有効化</button>
+            <button id="editWhRotate" type="button" onclick="_whRotate()" style="display:none;background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:7px;padding:8px 11px;font-size:11px;cursor:pointer;font-family:inherit">URL 再生成</button>
+          </div>
+        </div>
+
+        <!-- スケジュール -->
+        <div id="editSchedBox" style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2)">
+          <div class="hd" style="font-size:12.5px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px">⏰ スケジュール実行</div>
+          <div class="desc" style="font-size:10.5px;color:var(--text3);margin-top:3px;line-height:1.55">毎日 / 毎時 のタイミングで自動的に AI を走らせ、結果をチャットまたはメールで受け取れます。</div>
+          <div id="editSchedList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;max-height:160px;overflow:auto"></div>
+          <button type="button" onclick="_schedOpenForm()" style="margin-top:8px;width:100%;background:#fff;color:#b45309;border:1px solid #f59e0b;border-radius:7px;padding:8px;font-weight:700;font-size:11.5px;cursor:pointer;font-family:inherit">＋ 新しいスケジュール</button>
+        </div>
+
+        <!-- グループ作成 -->
+        <div id="editGroupBox" style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2)">
+          <div class="hd" style="font-size:12.5px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px">🤝 グループ化</div>
+          <div id="editGroupDesc" class="desc" style="font-size:10.5px;color:var(--text3);margin-top:3px;line-height:1.55">仲間を招待して、このエージェントと一緒に話せるグループを作ります</div>
+          <button id="editGroupBtn" type="button" onclick="_promoteToGroupFromEdit()" style="margin-top:8px;width:100%;background:#fff;color:#4338ca;border:1px solid rgba(99,102,241,.4);border-radius:7px;padding:8px;font-weight:700;font-size:11.5px;cursor:pointer;font-family:inherit">＋ グループ化して招待</button>
+        </div>
+
+        <!-- Store 出店 — hidden 2026-05-24 (一旦非表示)
+        <div id="editListingBox" style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2)">
+          <div class="hd" style="font-size:12.5px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px">🏪 Agent Store に出店</div>
+          <div id="editListingDesc" class="desc" style="font-size:10.5px;color:var(--text3);margin-top:3px;line-height:1.55">買い切り価格の 70% + 利用料の 10% が収益になります</div>
+          <button id="editListingBtn" type="button" onclick="openListingForm(window._editAgentId)" style="margin-top:8px;width:100%;background:#fff;color:var(--peach-dark);border:1px solid var(--peach);border-radius:7px;padding:8px;font-weight:700;font-size:11.5px;cursor:pointer;font-family:inherit">＋ 出店フォーム</button>
+        </div>
+        -->
+
+        <!-- データ -->
+        <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--wire2);display:flex;flex-direction:column;gap:5px">
+          <div class="hd" style="font-size:12.5px;font-weight:800;color:var(--text)">📥 データ</div>
+          <button type="button" onclick="exportChatForEditAgent('md')" style="background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:7px;padding:8px;font-weight:600;font-size:11.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;margin-top:4px">📥 Markdown でエクスポート</button>
+          <button type="button" onclick="exportChatForEditAgent('json')" style="background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:7px;padding:8px;font-weight:600;font-size:11.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px">📦 JSON でエクスポート</button>
+          <button type="button" onclick="closeEditAgent();openBookmarks()" style="background:#fff;color:var(--text);border:1px solid var(--wire2);border-radius:7px;padding:8px;font-weight:600;font-size:11.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px">★ ブックマーク一覧</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- ━━ アコーディオン: 危険ゾーン ━━ -->
+    <details class="ea-acc" style="border-color:rgba(239,68,68,.25)">
+      <summary style="color:#dc2626">
+        <span>⚠️</span>
+        <span class="ea-label">削除</span>
+      </summary>
+      <div class="ea-acc-body" style="background:rgba(239,68,68,.03)">
+        <div class="desc" style="font-size:11px;color:var(--text2);line-height:1.55">このエージェントと会話履歴がすべて削除されます。元に戻せません。</div>
+        <button onclick="deleteAgent()" style="width:100%;background:#fff;color:#dc2626;border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;margin-top:8px">🗑 このエージェントを削除</button>
+      </div>
+    </details>
+  </div>
+
+  <!-- Sticky footer: 保存 -->
+  <div style="padding:12px 18px;border-top:1px solid var(--wire);background:#fff;display:flex;gap:8px">
+    <button onclick="closeEditAgent()" style="flex:1;background:#fff;color:var(--text2);border:1px solid var(--wire2);border-radius:9px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">キャンセル</button>
+    <button onclick="saveEditAgent()" style="flex:2;background:var(--peach);color:#0a0a0e;border:0;border-radius:9px;padding:11px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(192,255,92,.25)">保存</button>
+  </div>
+</div>
+
+<!-- ══ LISTING FORM OVERLAY (#4 出店フォーム) ════════════════ -->
+<div class="overlay" id="listingOverlay">
+  <div class="wizard" style="max-width:640px">
+    <div class="wiz-top">
+      <div class="wiz-title" id="listingTitle" data-i18n="listingTitleNew">🏪 List on Agent Store</div>
+      <button class="wiz-close" onclick="closeListingForm()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="max-height:75vh;overflow:auto">
+      <div id="listingAgentBar" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--cream2);border:1px solid var(--wire2);border-radius:12px;margin-bottom:18px">
+        <div id="listingAgentAv" style="width:40px;height:40px;border-radius:10px;background:var(--cream3);display:flex;align-items:center;justify-content:center;font-size:22px"></div>
+        <div style="flex:1;min-width:0">
+          <div id="listingAgentName" style="font-weight:800;font-size:14px;color:var(--text)"></div>
+          <div id="listingAgentSk" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+        </div>
+      </div>
+
+      <div class="step-h" data-i18n="listingFormH">Listing details</div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px"><span data-i18n="listingTitleLbl">Title</span> <span style="color:var(--rose)">*</span></label>
+        <input id="lsTitle" maxlength="60" placeholder="e.g. Sales Follow-up AI — drafts replies in 30 seconds" style="width:100%;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);box-sizing:border-box">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" data-i18n="listingTitleHint">Shown on cards and search results (max 60 characters).</div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px"><span data-i18n="listingDescLbl">Description</span> <span style="color:var(--rose)">*</span></label>
+        <textarea id="lsDesc" maxlength="500" rows="4" placeholder="What this agent does and when it's useful (20–500 characters)" style="width:100%;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13.5px;font-family:inherit;color:var(--text);box-sizing:border-box;resize:vertical;line-height:1.6"></textarea>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" data-i18n="listingDescHint">The detail blurb users see. Keep it short — make the value obvious.</div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px"><span data-i18n="listingCatLbl">Category</span> <span style="color:var(--rose)">*</span></label>
+        <div id="lsCats" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px" data-i18n="listingTagsLbl">Tags (up to 5, optional)</label>
+        <div id="lsTags" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" data-i18n="listingTagsHint">Help the right users find your agent.</div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px" data-i18n="listingDemosLbl">Demo prompts (up to 3, optional)</label>
+        <input id="lsDemo1" maxlength="120" placeholder="e.g. Write a follow-up email to Acme Inc. after our meeting" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;margin-bottom:6px;box-sizing:border-box;font-family:inherit;color:var(--text)">
+        <input id="lsDemo2" maxlength="120" placeholder="e.g. Soft re-engagement message to a stalled prospect" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;margin-bottom:6px;box-sizing:border-box;font-family:inherit;color:var(--text)">
+        <input id="lsDemo3" maxlength="120" placeholder="e.g. Stay-in-touch note to a lost deal" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;box-sizing:border-box;font-family:inherit;color:var(--text)">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" data-i18n="listingDemosHint">One-click examples users can run. Good demos = more clones.</div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px"><span data-i18n="listingPriceLbl">Price</span> <span style="color:var(--rose)">*</span></label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsPriceMode" value="free" checked onchange="lsTogglePriceMode()" style="margin:0"><span data-i18n="listingPriceFree">🎁 Free</span></label>
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsPriceMode" value="paid" onchange="lsTogglePriceMode()" style="margin:0"><span data-i18n="listingPricePaid">💰 Paid</span></label>
+        </div>
+        <div id="lsPriceWrap" style="display:none">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:14px;font-weight:800;color:var(--text)">¥</span>
+            <input id="lsPrice" type="number" min="100" max="100000" step="100" placeholder="1980" style="width:140px;padding:11px 14px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:14px;font-family:inherit;color:var(--text);box-sizing:border-box">
+            <span style="font-size:12px;color:var(--text3)">¥100–¥100,000</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:6px" data-i18n="listingPriceHint">Charged from the buyer's balance at purchase time.</div>
+        </div>
+      </div>
+
+      <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fcd34d;border-radius:12px;padding:14px 18px;margin-bottom:18px">
+        <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:6px" data-i18n="listingRevH">💰 Revenue share</div>
+        <div style="font-size:12px;color:#78350f;line-height:1.6" data-i18n="listingRevD"><b>70%</b> of the one-time price + <b>10%</b> of usage (chat cost) is automatically credited to your available balance.</div>
+      </div>
+
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px" data-i18n="listingVisLbl">Visibility</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsVis" value="public" checked style="margin:0"><span data-i18n="listingVisPublic">🌐 Public on Agent Store</span></label>
+          <label class="market-cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="lsVis" value="unlisted" style="margin:0"><span data-i18n="listingVisUnlisted">🔗 Unlisted (link only)</span></label>
+        </div>
+      </div>
+
+      <div class="btn-row" style="justify-content:space-between;margin-top:24px;gap:10px">
+        <button id="lsUnpublishBtn" class="btn-back" style="display:none;color:var(--rose);border-color:rgba(239,68,68,.3)" onclick="unpublishListing()" data-i18n="listingUnpublish">Unpublish listing</button>
+        <div style="display:flex;gap:10px;margin-left:auto">
+          <button class="btn-back" onclick="closeListingForm()" data-i18n="cancel">Cancel</button>
+          <button class="btn-volt" id="lsSubmitBtn" onclick="submitListing()" data-i18n="listingSubmit">Publish →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- パネル背景オーバーレイ -->
+<div id="editPanelOverlay" onclick="closeEditAgent()" style="display:none;position:fixed;inset:0;background:rgba(45,26,14,.3);z-index:399;backdrop-filter:blur(2px)"></div>
+
+<!-- ══ REPORT LISTING MODAL ════════════════════════════════ -->
+<div class="overlay" id="reportOverlay">
+  <div class="wizard" style="max-width:480px">
+    <div class="wiz-top">
+      <div class="wiz-title">⚠ 出店を通報</div>
+      <button class="wiz-close" onclick="closeReportListing()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body">
+      <div class="step-s">通報対象: <b id="reportTarget"></b></div>
+      <div style="font-size:12px;color:var(--text3);margin:8px 0 14px;line-height:1.6">運営が確認します。3 件以上の通報が集まると自動的に非公開になります。</div>
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">理由 <span style="color:var(--rose)">*</span></label>
+        <div id="reportReasons" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div class="form-row">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">詳細（任意）</label>
+        <textarea id="reportDetail" rows="3" maxlength="500" placeholder="状況の詳細など" style="width:100%;padding:10px 13px;border:1px solid var(--wire3);border-radius:10px;background:#fff;font-size:13px;font-family:inherit;color:var(--text);box-sizing:border-box;resize:vertical;line-height:1.6"></textarea>
+      </div>
+      <div class="btn-row" style="justify-content:flex-end;gap:10px;margin-top:18px">
+        <button class="btn-back" onclick="closeReportListing()">キャンセル</button>
+        <button class="btn-volt" id="reportSubmitBtn" onclick="submitReportListing()">通報する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CHAT-LEVEL OPTIONS MENU (⋯ button) ═══════════════════ -->
+<!-- Export / Bookmarks moved into the agent edit panel (above delete) -->
+<div id="chatMenu" class="chat-menu" style="display:none">
+  <button id="chatMenuEditAg" onclick="closeChatMenu();const a=agents.find(x=>x.id===activeId);if(a&&!a._is_joined_group)openEditAgent(activeId);">⚙ エージェントを編集</button>
+  <button id="chatMenuGrpSet" onclick="closeChatMenu();openGroupSettings(activeId)" style="display:none">⚙ グループ設定</button>
+</div>
+<style>
+.chat-menu{
+  position:fixed;z-index:1100;
+  background:#fff;border-radius:11px;border:.5px solid var(--wire2);
+  box-shadow:0 16px 36px rgba(9,9,11,.14),0 4px 10px rgba(9,9,11,.05);
+  padding:5px;min-width:220px;
+  animation:rpicker-in .14s ease-out;
+}
+.chat-menu button{
+  display:block;width:100%;text-align:left;padding:8px 12px;
+  border:0;background:transparent;cursor:pointer;font-family:inherit;
+  font-size:12.5px;color:var(--text);border-radius:7px;
+}
+.chat-menu button:hover{background:rgba(9,9,11,.04);}
+.chat-menu-div{height:.5px;background:var(--wire);margin:4px 6px;}
+.m-act.bm{font-size:13px !important;padding:0 6px !important;}
+.m-act.bm.bm-on{color:#f59e0b;}
+.m-act.pin{font-size:13px !important;padding:0 6px !important;}
+.m-act.pin.pin-on{color:var(--peach-dark);}
+
+/* Pinned messages banner — shown below chat header */
+.pinned-wrap{
+  background:linear-gradient(180deg,rgba(192,255,92,.06),rgba(192,255,92,.02));
+  border-bottom:.5px solid rgba(192,255,92,.18);padding:6px 14px;display:flex;flex-direction:column;gap:3px;
+}
+.pinned-item{
+  display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:7px;
+  border:0;background:rgba(255,255,255,.7);cursor:pointer;width:100%;text-align:left;font-family:inherit;
+  font-size:11.5px;color:var(--text);
+  transition:background .12s;
+}
+.pinned-item:hover{background:#fff;}
+.pinned-item .pin-ic{font-size:11px;flex-shrink:0;}
+.pinned-item .pin-who{font-weight:700;color:var(--peach-dark);flex-shrink:0;}
+.pinned-item .pin-txt{
+  flex:1;min-width:0;color:var(--text2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+</style>
+
+<!-- ══ BOOKMARKS LIST OVERLAY ═══════════════════════════════ -->
+<div class="overlay" id="bookmarksOverlay" onclick="if(event.target===this)closeBookmarks()">
+  <div class="search-modal">
+    <div class="search-h">
+      <span style="font-size:14px">★</span>
+      <span style="flex:1;font-weight:700;color:var(--text);font-size:14px">ブックマーク</span>
+      <button onclick="closeBookmarks()" style="background:rgba(9,9,11,.05);border:0;border-radius:50%;width:24px;height:24px;cursor:pointer;color:var(--text2);font-size:13px">×</button>
+    </div>
+    <div class="search-results" id="bookmarksList"></div>
+  </div>
+</div>
+
+<!-- ══ GLOBAL SEARCH (⌘K) ════════════════════════════════════ -->
+<div class="overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+  <div class="search-modal">
+    <div class="search-h">
+      <span style="font-size:14px">🔍</span>
+      <input id="searchInput" type="text" placeholder="メッセージ・エージェント名で検索…" oninput="_runSearch(this.value)" onkeydown="_searchKey(event)">
+      <kbd>esc</kbd>
+    </div>
+    <div class="search-results" id="searchResults">
+      <div class="search-empty">⌘K でいつでも開ける · 全エージェントの履歴を横断検索</div>
+    </div>
+  </div>
+</div>
+<style>
+.search-modal{
+  width:600px;max-width:calc(100vw - 32px);max-height:70vh;
+  background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.18);
+  display:flex;flex-direction:column;overflow:hidden;
+  animation:searchIn .18s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes searchIn{from{opacity:0;transform:translateY(-12px) scale(.96);}}
+.search-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:.5px solid var(--wire);}
+.search-h input{
+  flex:1;border:0;outline:0;font-size:14.5px;color:var(--text);font-family:inherit;
+  letter-spacing:-.005em;background:transparent;
+}
+.search-h input::placeholder{color:var(--text3);}
+.search-h kbd{
+  font-size:9.5px;background:var(--bg-100);border:.5px solid var(--wire2);
+  padding:2px 6px;border-radius:5px;color:var(--text3);font-family:'JetBrains Mono','SF Mono',monospace;
+}
+.search-results{flex:1;overflow-y:auto;padding:6px;}
+.search-empty{padding:32px 16px;text-align:center;font-size:12px;color:var(--text3);}
+.search-result{
+  display:block;padding:9px 12px;border-radius:8px;cursor:pointer;
+  border:0;background:transparent;width:100%;text-align:left;font-family:inherit;
+  margin-bottom:2px;
+}
+.search-result:hover, .search-result.sel{background:rgba(192,255,92,.08);}
+.search-result.sel{background:rgba(192,255,92,.14);}
+.search-result .sr-h{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3);margin-bottom:2px;}
+.search-result .sr-icon{
+  width:18px;height:18px;border-radius:5px;display:flex;align-items:center;
+  justify-content:center;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#0a0a0e;font-size:11px;flex-shrink:0;
+}
+.search-result .sr-agent{font-weight:700;color:var(--text);}
+.search-result .sr-when{margin-left:auto;font-size:10px;}
+.search-result .sr-body{font-size:12.5px;color:var(--text);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.search-result .sr-body mark{background:rgba(192,255,92,.3);color:var(--peach-dark);font-weight:700;border-radius:2px;padding:0 1px;}
+</style>
+
+<!-- ══ GROUP SETTINGS MODAL ══════════════════════════════════ -->
+<div class="overlay" id="grpSetOverlay" onclick="if(event.target===this)closeGroupSettings()">
+  <div class="wizard" style="max-width:480px">
+    <div class="wiz-top">
+      <div class="wiz-title">⚙ グループ設定</div>
+      <button class="wiz-close" onclick="closeGroupSettings()"><svg width="12" height="12" viewbox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <input type="hidden" id="grpSetActiveId">
+    <div class="wiz-body" style="padding:14px 22px 18px">
+
+      <!-- グループ名 (host only — disabled for members) -->
+      <div class="grpset-h">グループ情報</div>
+      <div class="grpset-row">
+        <label class="grpset-lbl">名前</label>
+        <div style="display:flex;gap:8px;flex:1">
+          <input id="grpSetName" type="text" class="grpset-input" placeholder="グループ名">
+          <button id="grpSetRenameBtn" class="grpset-btn primary" onclick="_grpSettingsRename()">保存</button>
+        </div>
+      </div>
+      <div id="grpSetNameNote" style="display:none;font-size:11px;color:var(--text3);margin:3px 0 0;padding-left:2px"></div>
+
+      <!-- 通知設定 (per-user) -->
+      <div class="grpset-h">通知</div>
+      <div class="grpset-radio-row" onclick="_grpSettingsNotifyPref('all')">
+        <input type="radio" name="grpset-notif" id="grpSetNotif_all" value="all">
+        <label for="grpSetNotif_all">
+          <div class="grpset-radio-h">🔔 すべての発言</div>
+          <div class="grpset-radio-d">グループ内の全てのメッセージで通知</div>
+        </label>
+      </div>
+      <div class="grpset-radio-row" onclick="_grpSettingsNotifyPref('mentions')">
+        <input type="radio" name="grpset-notif" id="grpSetNotif_mentions" value="mentions">
+        <label for="grpSetNotif_mentions">
+          <div class="grpset-radio-h">📣 メンションのみ</div>
+          <div class="grpset-radio-d">@あなた でメンションされた時のみ通知</div>
+        </label>
+      </div>
+      <div class="grpset-radio-row" onclick="_grpSettingsNotifyPref('mute')">
+        <input type="radio" name="grpset-notif" id="grpSetNotif_mute" value="mute">
+        <label for="grpSetNotif_mute">
+          <div class="grpset-radio-h">🔕 ミュート</div>
+          <div class="grpset-radio-d">通知しない (バッジは表示)</div>
+        </label>
+      </div>
+
+      <!-- 送金 (member only — not for host) -->
+      <div id="grpSetContributeSection" style="display:none">
+        <div class="grpset-h">💰 グループへ送金</div>
+        <div style="font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:9px">
+          AI 利用料はホストが負担しています。残高をシェアすることもできます。
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px">
+          <button class="grpset-amount" data-amt="100" onclick="_grpSettingsPickAmount(100)">¥100</button>
+          <button class="grpset-amount" data-amt="500" onclick="_grpSettingsPickAmount(500)">¥500</button>
+          <button class="grpset-amount" data-amt="1000" onclick="_grpSettingsPickAmount(1000)">¥1,000</button>
+          <button class="grpset-amount" data-amt="3000" onclick="_grpSettingsPickAmount(3000)">¥3,000</button>
+          <button class="grpset-amount" data-amt="5000" onclick="_grpSettingsPickAmount(5000)">¥5,000</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:13px;color:var(--text2);font-weight:700">¥</span>
+          <input id="grpSetContribAmount" type="number" class="grpset-input" placeholder="100 〜 50,000" min="100" max="50000" style="flex:1">
+          <button class="grpset-btn primary" onclick="_grpSettingsContribute()">送金する</button>
+        </div>
+        <div id="grpSetContribInfo" style="margin-top:8px;font-size:10.5px;color:var(--text3);line-height:1.5"></div>
+      </div>
+
+      <!-- AI 応答設定 (host only) -->
+      <div id="grpSetAiSection" style="display:none">
+        <div class="grpset-h">AI の応答</div>
+        <div class="grpset-radio-row" onclick="_grpSettingsAiRespond('auto')">
+          <input type="radio" name="grpset-airespond" id="grpSetAi_auto" value="auto">
+          <label for="grpSetAi_auto">
+            <div class="grpset-radio-h">🤖 自動 (推奨)</div>
+            <div class="grpset-radio-d">小グループ (3人以下) は毎回応答 ・ 大グループは @AI のみ</div>
+          </label>
+        </div>
+        <div class="grpset-radio-row" onclick="_grpSettingsAiRespond('always')">
+          <input type="radio" name="grpset-airespond" id="grpSetAi_always" value="always">
+          <label for="grpSetAi_always">
+            <div class="grpset-radio-h">💬 毎回応答</div>
+            <div class="grpset-radio-d">人数に関係なく、すべての発言に AI が応答</div>
+          </label>
+        </div>
+        <div class="grpset-radio-row" onclick="_grpSettingsAiRespond('mention')">
+          <input type="radio" name="grpset-airespond" id="grpSetAi_mention" value="mention">
+          <label for="grpSetAi_mention">
+            <div class="grpset-radio-h">🏷 @AI のみ</div>
+            <div class="grpset-radio-d">@AI と呼ばれた時だけ応答 (コスト節約)</div>
+          </label>
+        </div>
+      </div>
+
+      <!-- エージェント編集 (host only) -->
+      <div id="grpSetEditAgentSection" style="display:none">
+        <div class="grpset-h">AI エージェント</div>
+        <button class="grpset-btn primary" style="width:100%" onclick="_grpSettingsEditAgent()">🤖 エージェントを編集 (名前・スキル・性格)</button>
+        <div style="font-size:10.5px;color:var(--text3);margin-top:6px;line-height:1.55">アイコン・スキル・採用目的・業務内容を編集できます。</div>
+      </div>
+
+      <!-- 招待設定 (host only) -->
+      <div id="grpSetInviteSection" style="display:none">
+        <div class="grpset-h">招待設定</div>
+        <div class="grpset-radio-row" onclick="_grpSettingsToggleApproval(false)">
+          <input type="radio" name="grpset-approval" id="grpSetApproval_off" value="false">
+          <label for="grpSetApproval_off">
+            <div class="grpset-radio-h">🌐 リンクを知っていれば誰でも参加</div>
+            <div class="grpset-radio-d">URL/QR を持っている人は即時参加可能</div>
+          </label>
+        </div>
+        <div class="grpset-radio-row" onclick="_grpSettingsToggleApproval(true)">
+          <input type="radio" name="grpset-approval" id="grpSetApproval_on" value="true">
+          <label for="grpSetApproval_on">
+            <div class="grpset-radio-h">🔒 ホストの承認が必要</div>
+            <div class="grpset-radio-d">参加リクエストをあなたが承認すると参加できます</div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 所有権移譲 (host only, hidden when alone) -->
+      <div id="grpSetTransferSection" style="display:none">
+        <div class="grpset-h">所有権の移譲</div>
+        <div style="font-size:11px;color:var(--text3);line-height:1.55;margin-bottom:8px">
+          移譲後は新しいホストの残高から AI 利用料が消費されるようになります
+        </div>
+        <div style="display:flex;gap:8px">
+          <select id="grpSetTransferTo" class="grpset-input" style="flex:1"></select>
+          <button class="grpset-btn primary" onclick="_grpSettingsTransfer()">移譲</button>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div style="margin-top:18px;padding-top:14px;border-top:.5px solid var(--wire)">
+        <button id="grpSetDangerBtn" class="grpset-btn danger" style="width:100%">グループを退出</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.grpset-h{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;padding:10px 0 6px;}
+.grpset-row{display:flex;align-items:center;gap:10px;padding:8px 0;}
+.grpset-lbl{font-size:12px;color:var(--text2);font-weight:600;width:60px;flex-shrink:0;}
+.grpset-input{
+  flex:1;padding:8px 11px;border:.5px solid var(--wire2);border-radius:8px;font-size:12.5px;
+  color:var(--text);font-family:inherit;background:#fff;outline:0;
+}
+.grpset-input:focus{border-color:var(--peach);box-shadow:0 0 0 3px rgba(192,255,92,.15);}
+.grpset-input:disabled{background:var(--bg-100);color:var(--text3);cursor:not-allowed;}
+.grpset-btn{
+  padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:inherit;letter-spacing:-.005em;border:0;
+}
+.grpset-btn.primary{background:var(--ink);color:#fff;}
+.grpset-btn.primary:hover{background:#1a1a1a;}
+.grpset-btn.danger{background:rgba(239,68,68,.08);color:#dc2626;border:.5px solid rgba(239,68,68,.3);font-weight:700;padding:10px;}
+.grpset-btn.danger:hover{background:rgba(239,68,68,.16);}
+.grpset-radio-row{
+  display:flex;align-items:flex-start;gap:10px;padding:9px 11px;border-radius:9px;cursor:pointer;
+  border:.5px solid var(--wire);background:#fff;margin-bottom:4px;
+  transition:background .12s, border-color .12s;
+}
+.grpset-radio-row:hover{background:var(--bg-100);border-color:var(--wire2);}
+.grpset-radio-row input[type=radio]{accent-color:var(--peach);margin-top:2px;flex-shrink:0;}
+.grpset-radio-row label{flex:1;cursor:pointer;}
+.grpset-radio-h{font-size:12px;font-weight:700;color:var(--text);letter-spacing:-.005em;}
+.grpset-radio-d{font-size:10.5px;color:var(--text3);margin-top:1px;line-height:1.45;}
+.grpset-amount{
+  background:#fff;border:.5px solid var(--wire2);color:var(--text);
+  border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:inherit;letter-spacing:-.005em;
+  transition:transform .12s, border-color .12s, background .12s;
+}
+.grpset-amount:hover{background:var(--peach-soft);border-color:var(--peach);transform:translateY(-1px);}
+.grpset-amount.selected{background:var(--peach);color:#0a0a0e;border-color:var(--peach);}
+
+/* Reactions */
+.m-reactions{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;padding:0 4px;}
+/* Empty reactions: no layout space when idle. Hover reveals the "+" only
+   when there's a real reason to add one. (opacity:0 used to leave a
+   ghost gap below every message — fix.) */
+.m-reactions.empty{display:none;}
+.m:hover .m-reactions.empty{display:flex;}
+.reaction{
+  display:inline-flex;align-items:center;gap:3px;
+  background:#fff;border:.5px solid var(--wire2);color:var(--text);
+  padding:2px 8px 2px 6px;border-radius:999px;font-size:11px;font-weight:600;
+  cursor:pointer;font-family:inherit;letter-spacing:-.005em;
+  transition:transform .12s, background .12s, border-color .12s;
+}
+.reaction:hover{transform:translateY(-1px);background:rgba(192,255,92,.06);border-color:rgba(192,255,92,.3);}
+.reaction.mine{background:rgba(192,255,92,.12);border-color:rgba(192,255,92,.3);color:var(--peach-dark);}
+.reaction.add{
+  padding:2px 8px;background:transparent;color:var(--text3);font-size:11px;font-weight:700;
+}
+.reaction.add:hover{background:rgba(9,9,11,.04);}
+.reaction .r-em{font-size:13px;line-height:1;}
+.reaction .r-n{font-size:10.5px;font-weight:700;}
+
+.reaction-picker{
+  position:fixed;z-index:1000;
+  background:#fff;border:.5px solid var(--wire2);border-radius:11px;
+  padding:6px;display:flex;gap:3px;
+  box-shadow:0 10px 28px rgba(9,9,11,.12),0 3px 8px rgba(9,9,11,.05);
+  animation:rpicker-in .14s ease-out;
+}
+@keyframes rpicker-in{from{opacity:0;transform:translateY(4px) scale(.95);}to{opacity:1;transform:translateY(0) scale(1);}}
+.reaction-picker button{
+  width:30px;height:30px;border:0;background:transparent;cursor:pointer;
+  font-size:18px;border-radius:7px;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .12s, background .12s;
+}
+.reaction-picker button:hover{background:var(--bg-100);transform:scale(1.15);}
+
+/* Read receipt — WhatsApp/LINE-style check icons next to time stamp.
+   .m-read.delivered = ✓ (one tick, gray) = sent but nobody read it yet.
+   .m-read.read      = ✓✓ (two ticks, peach) = at least one other member read. */
+.m-read{
+  display:inline-flex;align-items:center;gap:2px;
+  font-size:11px;font-weight:700;margin-left:5px;
+  letter-spacing:-.04em;line-height:1;
+}
+.m-read.delivered{color:var(--text3);}
+.m-read.read{color:var(--peach-dark);}
+.m-read .m-read-n{
+  font-size:9.5px;font-weight:700;margin-left:1px;
+  padding:1px 5px;border-radius:8px;
+  background:rgba(192,255,92,.12);color:var(--peach-dark);
+}
+</style>
+
+<!-- ══ GROUP MEMBER PANEL ════════════════════════════════════ -->
+<div class="overlay" id="grpMemberOverlay" onclick="if(event.target===this)closeMemberPanel()">
+  <div class="wizard" style="max-width:420px">
+    <div class="wiz-top">
+      <div class="wiz-title">👥 メンバー — <span id="grpMemberTitle"></span></div>
+      <button class="wiz-close" onclick="closeMemberPanel()"><svg width="12" height="12" viewbox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="wiz-body" style="padding:14px 20px 18px">
+      <div id="grpMemberList" style="display:flex;flex-direction:column;max-height:380px;overflow-y:auto;margin-bottom:14px"></div>
+      <div id="grpMemberFoot" style="display:flex;gap:8px"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+.mem-row{display:flex;align-items:center;gap:11px;padding:8px 4px;border-bottom:.5px solid var(--wire);}
+.mem-row:last-child{border-bottom:0;}
+.mem-av{width:34px;height:34px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;box-shadow:0 2px 4px rgba(9,9,11,.1);}
+.mem-meta{flex:1;min-width:0;}
+.mem-name{font-size:12.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:4px;}
+.mem-sub{font-size:10.5px;color:var(--text3);margin-top:1px;}
+.mem-rm{background:rgba(239,68,68,.08);border:0;border-radius:50%;width:24px;height:24px;color:#dc2626;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:inherit;}
+.mem-rm:hover{background:rgba(239,68,68,.18);}
+
+.sys-row{display:flex;justify-content:center;margin:10px 0;}
+.sys-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:999px;
+  background:rgba(99,102,241,.08);border:.5px solid rgba(99,102,241,.18);
+  font-size:11px;font-weight:600;color:#4338ca;letter-spacing:-.005em;
+}
+.mention.ai{
+  display:inline-flex;align-items:center;
+  background:rgba(192,255,92,.14);color:var(--peach-dark);
+  padding:0 5px;border-radius:4px;font-weight:700;
+}
+.m.u.other .m-av{box-shadow:0 2px 5px rgba(9,9,11,.12);}
+</style>
+
+<!-- ══ GROUP CREATE / INVITE MODALS ══════════════════════════ -->
+<div class="overlay" id="grpCreateOverlay" onclick="if(event.target===this)closeCreateGroup()">
+  <div class="wizard" style="max-width:480px">
+    <div class="wiz-top">
+      <div class="wiz-title">🤝 グループを作成</div>
+      <button class="wiz-close" onclick="closeCreateGroup()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="wiz-body" style="padding:18px 24px 24px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.55">
+        グループに常駐させる AI エージェントを選んでください。<br>
+        <span style="color:var(--text3);font-size:12px">→ 招待リンクが発行され、仲間を招待できます</span>
+      </div>
+      <div id="grpCreateList" style="display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto"></div>
+      <div style="margin-top:14px;padding:11px 13px;background:rgba(99,102,241,.06);border:.5px solid rgba(99,102,241,.18);border-radius:9px;font-size:11.5px;color:#4338ca;line-height:1.5">
+        💡 まだ AI を持っていない場合は、先に <b>「AI と DM を始める」</b> でエージェントを作ってください
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="grpInviteOverlay" onclick="if(event.target===this)closeInviteModal()">
+  <div class="wizard" style="max-width:520px">
+    <div class="wiz-top">
+      <div class="wiz-title">📨 メンバーを招待</div>
+      <button class="wiz-close" onclick="closeInviteModal()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="wiz-body" style="padding:18px 24px 24px">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase;font-weight:700">グループ</div>
+      <div id="grpInviteName" style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:18px;letter-spacing:-.012em"></div>
+
+      <div style="display:grid;grid-template-columns:160px 1fr;gap:18px;align-items:start">
+        <div style="background:#fff;border:1px solid var(--wire2);border-radius:11px;padding:8px;text-align:center">
+          <img id="grpInviteQR" style="width:144px;height:144px;display:block;margin:0 auto" alt="QR">
+          <div style="font-size:9.5px;color:var(--text3);margin-top:6px;font-weight:600">QR で読み取り</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase">招待リンク</div>
+          <div style="display:flex;align-items:center;gap:6px;background:rgba(9,9,11,.04);padding:8px 10px;border-radius:8px;margin-bottom:11px">
+            <span id="grpInviteUrl" style="flex:1;font-size:11.5px;font-family:'JetBrains Mono','SF Mono',monospace;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+            <button id="grpShareCopy" style="background:var(--ink);color:#fff;border:0;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em">コピー</button>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase">他のチャネル</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:11px">
+            <button id="grpShareLine" class="btn-back" style="font-size:11px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">💬</span>LINE</button>
+            <button id="grpShareMail" class="btn-back" style="font-size:11px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">📧</span>メール</button>
+            <button id="grpShareSms" class="btn-back" style="font-size:11px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:14px">📱</span>SMS</button>
+          </div>
+
+          <div style="background:rgba(192,255,92,.06);border:.5px solid rgba(192,255,92,.18);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--peach-dark);line-height:1.5;margin-bottom:5px">
+            <div style="display:flex;justify-content:space-between"><span>有効期限</span><span id="grpInviteExp" style="font-weight:700"></span></div>
+            <div style="display:flex;justify-content:space-between;margin-top:3px"><span>最大人数</span><span id="grpInviteMax" style="font-weight:700"></span></div>
+          </div>
+          <!-- Welcome message + default role (host config) — saved on blur -->
+          <div style="margin-top:8px;background:#fff;border:.5px solid var(--wire2);border-radius:8px;padding:9px 11px">
+            <div style="font-size:10.5px;font-weight:700;color:var(--text2);margin-bottom:5px;letter-spacing:.02em">📣 新メンバー向けウェルカムメッセージ <span style="color:var(--text3);font-weight:500">(任意, 400 字まで)</span></div>
+            <textarea id="grpInviteWelcome" placeholder="例: ようこそ! このチームでは LP の A/B テストを進めています。まずは PM AI に「現状把握」と話しかけてみてください。" maxlength="400" rows="3" style="width:100%;background:transparent;border:0;border-bottom:1px solid var(--wire2);padding:4px 0;font-size:12px;font-family:inherit;color:var(--text);resize:vertical;outline:none"></textarea>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+              <label style="font-size:10.5px;font-weight:700;color:var(--text2)">新メンバーの権限:</label>
+              <select id="grpInviteRole" style="background:#fff;border:1px solid var(--wire2);border-radius:6px;padding:3px 7px;font-size:11px;font-weight:700;color:var(--text);font-family:inherit;cursor:pointer">
+                <option value="contributor" selected>メンバー (送信可)</option>
+                <option value="admin">管理者 (権限変更可)</option>
+                <option value="reader">閲覧専用 (送信不可)</option>
+              </select>
+              <button onclick="_saveInviteConfig()" style="margin-left:auto;background:var(--peach);color:#0a0a0e;border:0;border-radius:6px;padding:5px 11px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">保存</button>
+            </div>
+          </div>
+          <div style="font-size:10.5px;color:var(--text3);line-height:1.5;margin-top:8px">
+            💰 招待された人は <b style="color:var(--text)">無料</b> でこのグループを使えます<br>
+            AI 利用料はあなた (ホスト) の残高から消費
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.grp-pick{
+  display:flex;align-items:center;gap:11px;padding:9px 12px;
+  border-radius:9px;border:.5px solid var(--wire2);background:#fff;cursor:pointer;
+  font-family:inherit;text-align:left;width:100%;
+  transition:transform .12s, border-color .12s;
+}
+.grp-pick:hover{transform:translateY(-1px);border-color:var(--peach);background:rgba(192,255,92,.04);}
+.grp-pick-av{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#0a0a0e}
+.grp-pick-body{flex:1;min-width:0;}
+.grp-pick-nm{font-size:12.5px;font-weight:700;color:var(--text);}
+.grp-pick-d{font-size:10.5px;color:var(--text3);margin-top:1px;}
+</style>
+
+<!-- ══ CREATOR PROFILE MODAL ══════════════════════════════ -->
+<div class="overlay" id="creatorProfileOverlay">
+  <div class="wizard" style="max-width:780px">
+    <div class="wiz-top">
+      <div class="wiz-title" id="cpTitle">クリエイター</div>
+      <button class="wiz-close" onclick="closeCreatorProfile()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="wiz-body" style="max-height:75vh;overflow:auto" id="cpBody">
+      <div class="creator-loading">読み込み中…</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="tdot"></div><span id="toastMsg"></span></div>
+
+<!-- defer = the 250KB-gzipped app.js downloads in parallel with HTML parsing,
+     and executes after DOM is ready. With this off, the script was a hard
+     blocker between body markup and first paint. Order is preserved with the
+     small inline scripts below (which set window._isJa, cookie consent, and
+     Sentry) — none of them depend on globals defined in app.js. -->
+<script defer src="/app.js?v=1780981381853"></script>
+
+<script>
+(function(){
+  var lang = navigator.language || navigator.userLanguage || 'ja';
+  var isJa = lang.startsWith('ja');
+  var params = new URLSearchParams(location.search);
+  if(params.get('lang')==='en') isJa=false;
+  if(params.get('lang')==='ja') isJa=true;
+  if(isJa) return;
+  var map = {
+    'MY AI AGENT': 'MY AI AGENT',
+    'チーム': 'Team',
+    '+ 新しいエージェント': '+ New agent',
+    '残高': 'Balance',
+    '0メッセージ利用': '0 messages used',
+    '+ 残高チャージ': '+ Add credits',
+    'ログアウト': 'Log out',
+    'チームを作ろう': 'Build your team',
+    '専門スキルを持つAIエージェントを作って、': 'Create AI agents with specialized skills,',
+    '仕事を任せましょう。': 'and delegate your work.',
+    '最初のエージェントを作る →': 'Create your first agent →',
+    '何をお願いしますか？（Shift+Enterで改行）': 'What would you like help with? (Shift+Enter for newline)',
+    '新しいエージェント': 'New agent',
+    'アイコンを選ぶ': 'Choose an icon',
+    '名前をつける': 'Name your agent',
+    'スキルを選ぶ': 'Choose skills',
+    '完了': 'Done',
+    '次へ': 'Next',
+    '戻る': 'Back',
+    '作成する': 'Create',
+    '送信': 'Send',
+    '設定': 'Settings',
+    'プロフィール': 'Profile',
+    'セキュリティ': 'Security',
+    'お支払い': 'Billing',
+    '危険': 'Danger',
+    '表示名': 'Display name',
+    '保存する': 'Save',
+    '現在のパスワード': 'Current password',
+    '新しいパスワード': 'New password',
+    '新しいパスワード（確認）': 'Confirm new password',
+    'パスワードを変更': 'Change password',
+    '現在の残高': 'Current balance',
+    'チャージ金額を選択してください。': 'Select top-up amount.',
+    'アカウントを削除': 'Delete account',
+    'エージェントを編集': 'Edit agent',
+    'エージェント名': 'Agent name',
+    '性格・追加指示（任意）': 'Persona & instructions (optional)',
+    'このエージェントを削除': 'Delete this agent',
+  };
+  window._i18nMap = map;
+  window._isJa = false;
+})();
+</script>
+
+<!-- ══ COOKIE CONSENT BANNER (EU/UK) ═══════════════════════════ -->
+<div id="cookieBanner" style="display:none;position:fixed;left:14px;right:14px;bottom:14px;z-index:1500;max-width:520px;margin:0 auto;background:#fff;border:1px solid var(--wire2);border-radius:14px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.18);font-family:inherit">
+  <div style="display:flex;align-items:flex-start;gap:10px">
+    <div style="font-size:22px;line-height:1">🍪</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">クッキーの利用について</div>
+      <div style="font-size:11.5px;color:var(--text2);line-height:1.55">
+        サービス改善・利用状況の分析・ログイン状態維持のため Cookie とローカルストレージを使用します。詳細は <a href="/privacy.html" target="_blank" style="color:var(--peach-dark);font-weight:700">プライバシーポリシー</a> をご覧ください。
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <button onclick="_cookieDecide('all')" style="background:linear-gradient(135deg,var(--peach),var(--peach-dark));color:#0a0a0e;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">すべて許可</button>
+        <button onclick="_cookieDecide('essential')" style="background:transparent;color:var(--text2);border:.5px solid var(--wire2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">必須のみ</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function _initCookieBanner(){
+  try {
+    if(localStorage.getItem('cookie:consent')) return;
+    document.addEventListener('DOMContentLoaded', () => {
+      const el = document.getElementById('cookieBanner');
+      if(el) el.style.display = 'block';
+    });
+  } catch(e){}
+})();
+function _cookieDecide(level){
+  try {
+    localStorage.setItem('cookie:consent', level); // 'all' | 'essential'
+    localStorage.setItem('cookie:consent_at', new Date().toISOString());
+  } catch(e){}
+  const el = document.getElementById('cookieBanner');
+  if(el) el.style.display = 'none';
+  // If essential-only, disable analytics tracking
+  if(level === 'essential' && window.gtag){
+    try { window['ga-disable-' + (window._GA_ID||'G-XXX')] = true; } catch(e){}
+  }
+}
+</script>
+
+<!-- ══ Phase 4: 記事 生成 modal (= AI 推 薦 KW + 複数 選 択 + 一 括 生 成) ══ -->
+<div class="modal-bg" id="mbGenModal" onclick="if(event.target===this)closeMbGenModal()">
+  <div class="modal gen-modal">
+    <div class="modal-head"><span>⚡</span> <span>記事 を AI に 書 か せる</span><button class="modal-x" onclick="closeMbGenModal()">×</button></div>
+    <div class="modal-body">
+      <div class="gen-sect">
+        <div class="gen-sect-h">
+          <span class="gen-sect-dot"></span> AI が 提 案 する 今 旬 の 記事 タイトル
+          <span style="margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--text3);letter-spacing:.04em;text-transform:none">☐ チェック で 複 数 · ⚡ で 1 件 即 起 動</span>
+        </div>
+        <div class="gen-kw-list" id="mbGenKwList">
+          <div style="padding:24px;text-align:center;color:var(--text3);font-family:var(--mono);font-size:11px">読み込み 中...</div>
+        </div>
+      </div>
+      <div class="gen-sect">
+        <div class="gen-sect-h"><span class="gen-sect-dot" style="background:var(--text3)"></span> または、 自分 で 指 定</div>
+        <div class="gen-or">OR</div>
+        <div class="gen-input-wrap">
+          <input class="gen-input" id="mbGenKwInput" placeholder="KW を 入 力 (例: スマホ で 記事 生 成)" onkeydown="if(event.key==='Enter')mbGenStartCustom()">
+          <button class="gen-go" onclick="mbGenStartCustom()">⚡ 起 動</button>
+        </div>
+        <div class="gen-opts">
+          <label class="gen-opt"><input type="checkbox" id="mbGenOptAeo"> AEO モード <span class="gen-opt-tag">AI 検 索 最適 化</span></label>
+          <label class="gen-opt"><input type="checkbox" id="mbGenOptEnd" checked> end_card 強 化 <span class="gen-opt-tag">LP 流 入 +30%</span></label>
+        </div>
+      </div>
+    </div>
+    <div class="gen-summary" id="mbGenSummary">
+      <div class="gen-summary-info">
+        <div class="gen-summary-h">
+          <span class="gen-summary-count" id="mbGenSumCount">0 件 選 択</span> まとめ て 生 成
+        </div>
+        <div class="gen-summary-rows">
+          <span>月 cap 残 <b id="mbGenSumCap">— / —</b></span>
+          <span>·</span>
+          <span>推 定 完了 <b id="mbGenSumTime">約 — 分</b></span>
+        </div>
+      </div>
+      <button class="gen-batch-go" id="mbGenBatchGo" onclick="mbGenStartBatch()">⚡ <span id="mbGenBatchLbl">一 括 生 成</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Phase 6: 課金 動機 系 modal 群 ══════════════════════════ -->
+
+<!-- Welcome modal (= 初 ログイン 即 価値 体感) -->
+<div class="modal-bg" id="mbWelcomeModal" onclick="if(event.target===this){}">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head" style="background:var(--cream2)"><span>✨</span> <span>MY AI Agent へ ようこそ</span></div>
+    <div class="modal-body">
+      <div class="welcome-stage" id="mbWelStage1">
+        <div class="welcome-hero">「書く」 から 解 放 さ れ よう。</div>
+        <div class="welcome-sub">AI チーム が <b>KW 調 査 → 8,000 字 記事 → 公 開 → SNS 拡 散</b> を <b>90 秒</b> で 自動 化。 まず <b>1 件 を 実 際 に 公 開 し て 体 感</b> し て み ましょう。</div>
+        <div class="welcome-cta">
+          <button class="btn btn-ghost" onclick="mbCloseWelcome(true)">後 で やる</button>
+          <button class="btn btn-go" onclick="mbWelAutoPublish()">▶ AI に 任 せ て 1 件 公 開</button>
+        </div>
+      </div>
+      <div class="welcome-stage" id="mbWelStage2" style="display:none">
+        <div class="welcome-hero" style="font-size:22px">AI チーム が 動 い て い ます</div>
+        <div class="welcome-demo">
+          <div class="wd-row" id="mbWdRow1"><span class="wd-ic" id="mbWdIc1">1</span><span>🔍 KW Strategist が 月 間 検索 量 を 算 出 中...</span></div>
+          <div class="wd-row" id="mbWdRow2"><span class="wd-ic" id="mbWdIc2">2</span><span>📝 SEO Writer が 8,000 字 の 本文 を 執 筆 中...</span></div>
+          <div class="wd-row" id="mbWdRow3"><span class="wd-ic" id="mbWdIc3">3</span><span>🖼 Designer が アイ キャッチ 画像 を 生 成 中...</span></div>
+          <div class="wd-row" id="mbWdRow4"><span class="wd-ic" id="mbWdIc4">4</span><span>⚡ Publisher が CMS へ 公 開 中...</span></div>
+          <div class="wd-row" id="mbWdRow5"><span class="wd-ic" id="mbWdIc5">5</span><span>📡 SNS Distributor が 拡 散 中...</span></div>
+        </div>
+        <div style="font-size:11.5px;color:var(--text2);text-align:center;font-family:var(--mono)">推 定 残り <span id="mbWelEta">28</span> 秒</div>
+      </div>
+      <div class="welcome-stage" id="mbWelStage3" style="display:none">
+        <div class="welcome-hero" style="color:var(--green)">🎉 公 開 完了!</div>
+        <div class="welcome-sub">AI チーム が 1 件 を 完 成 し、 サイト に 公 開 し まし た。 <b>毎日 自動 で 起きる</b> 体 験 です。</div>
+        <div class="welcome-result show">
+          <div class="welcome-result-title">📰 公 開 さ れ た 記事</div>
+          <div style="font-size:13px;color:var(--text);margin:4px 0;font-weight:700">「副業 ブログ で 月 5 万 円 稼ぐ ロード マップ」</div>
+          <div style="font-size:11px;color:var(--text2);font-family:var(--mono);margin-bottom:8px">8,234 字 · 公 開 から 12 秒 後</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
+            <div style="text-align:center"><div class="welcome-result-num">1</div><div style="font-size:10px;color:var(--text2);font-family:var(--mono)">RECORDS</div></div>
+            <div style="text-align:center"><div class="welcome-result-num">¥3K</div><div style="font-size:10px;color:var(--text2);font-family:var(--mono)">外注 換 算</div></div>
+            <div style="text-align:center"><div class="welcome-result-num">90秒</div><div style="font-size:10px;color:var(--text2);font-family:var(--mono)">所 要</div></div>
+          </div>
+        </div>
+        <div class="welcome-cta">
+          <button class="btn btn-ghost" onclick="mbCloseWelcome(true)">後 で やる</button>
+          <button class="btn btn-go" onclick="mbCloseWelcome(false);openArticleGenModal()">▶ 自分 の KW で 書 か せる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upsell modal -->
+<div class="modal-bg" id="mbUpsellModal" onclick="if(event.target===this)mbCloseUpsell()">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-head" style="background:var(--cream2)"><span>📈</span> <span>プラン を アップ グレード</span><button class="modal-x" onclick="mbCloseUpsell()">×</button></div>
+    <div class="modal-body">
+      <div style="font-size:17px;font-weight:700">あと <span id="mbUpsellLeft" style="color:var(--rose)">—</span> 本 で 今 月 の cap に 到 達</div>
+      <div class="upsell-roi">
+        🌱 今 月 すで に <b>¥<span id="mbUpsellSaved">—</span> 相 当</b> の 外 注 コスト を 節 約。<br>
+        ➕ PRO へ アップ で <b>+ 30 本 / 月</b> · <b>¥1,950 / 月</b> で <b>+ ¥90,000 / 月 効 果</b>。
+      </div>
+      <div class="upsell-row">
+        <div class="upsell-col">
+          <div class="upsell-col-name">FREE</div>
+          <div class="upsell-col-price">¥0<small> / 月</small></div>
+          <ul><li>月 20 本 ま で</li><li>1 サイト</li><li>基 本 SEO</li></ul>
+        </div>
+        <div class="upsell-col pro">
+          <div class="upsell-col-name">PRO</div>
+          <div class="upsell-col-price">¥1,950<small> / 月</small></div>
+          <ul><li><b>月 30 本 + 既 存 20</b></li><li>3 サイト</li><li>AEO + リライト 自動</li><li>SNS 自動 シェア</li></ul>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:6px">いつ でも 解 約 OK · 日 割 り 返 金 対 応</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="mbCloseUpsell()">後 で</button>
+      <button class="btn btn-go" onclick="mbCloseUpsell();if(typeof openCharge==='function'){openCharge();if(typeof bsTab==='function')setTimeout(()=>bsTab('monthly'),200);}">▶ PRO に アップ する</button>
+    </div>
+  </div>
+</div>
+
+<!-- Churn (= 退会 防止) wizard -->
+<div class="modal-bg" id="mbChurnModal" onclick="if(event.target===this)mbCloseChurn()">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-head" style="background:var(--rose-soft);color:var(--rose)"><span>😢</span> <span id="mbChurnTitle">退会 する 前 に</span><button class="modal-x" onclick="mbCloseChurn()">×</button></div>
+    <div class="modal-body">
+      <div class="churn-step active" id="mbChurnStep1">
+        <div style="font-size:16px;font-weight:700">本 当 に お 別 れ し ます か？</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.65;margin:10px 0">これ まで <b id="mbChurnStat">— 記事 を 公 開</b>、 累計 <b id="mbChurnSaved">¥— 相 当</b> の 外 注 費 を 節 約。 退 会 で 全 data が <b>削除</b> されます。</div>
+        <div class="churn-pause">
+          <div class="churn-pause-title">💤 まず は「一時 停 止」 し て み ません か？</div>
+          <div class="churn-pause-desc">1 ヶ月 〜 6 ヶ月 の 課金 停止 が 可能。 サイト と 記事 は <b>そのまま 保 持</b>、 いつ でも 再 開 可能。</div>
+          <button class="btn btn-go" style="width:100%" onclick="mbChurnPause()">▶ 1 ヶ月 一時 停 止 する</button>
+        </div>
+        <div style="text-align:center"><a onclick="mbChurnNext(2)" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);text-decoration:underline;cursor:pointer">それ でも 退会 し たい</a></div>
+      </div>
+      <div class="churn-step" id="mbChurnStep2">
+        <div style="font-size:15px;font-weight:700">退会 の 理 由 を 教 え て く だ さ い</div>
+        <div style="font-size:12px;color:var(--text2);margin:6px 0">改 善 の ため。 1 つ 選 ん で く だ さ い。</div>
+        <div class="churn-reasons">
+          <div class="churn-reason-btn" data-reason="price" onclick="mbChurnReason(this,'price')"><span class="churn-reason-ic">💰</span><span>料金 が 高い</span></div>
+          <div class="churn-reason-btn" data-reason="quality" onclick="mbChurnReason(this,'quality')"><span class="churn-reason-ic">📝</span><span>記事 の 品質 が 期 待 通り で は な かった</span></div>
+          <div class="churn-reason-btn" data-reason="usage" onclick="mbChurnReason(this,'usage')"><span class="churn-reason-ic">📉</span><span>使う 頻度 が 落 ち た</span></div>
+          <div class="churn-reason-btn" data-reason="missing" onclick="mbChurnReason(this,'missing')"><span class="churn-reason-ic">🔧</span><span>欲しい 機能 が 無い</span></div>
+          <div class="churn-reason-btn" data-reason="other" onclick="mbChurnReason(this,'other')"><span class="churn-reason-ic">💬</span><span>そ の 他</span></div>
+        </div>
+      </div>
+      <div class="churn-step" id="mbChurnStep3">
+        <div class="churn-offer">
+          <div class="churn-offer-tag" id="mbChurnOfferTag">特 別 オファー</div>
+          <div class="churn-offer-title" id="mbChurnOfferTitle">2 ヶ月 半額 で 続 け ません か？</div>
+          <div class="churn-offer-desc" id="mbChurnOfferDesc">期間 後 は 通 常 料 金 に 戻 ります (= 解 約 自由)。</div>
+          <button class="churn-offer-accept" onclick="mbChurnAcceptOffer()">▶ オファー を 受 ける</button>
+        </div>
+        <div style="text-align:center"><a onclick="mbChurnNext(4)" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);text-decoration:underline;cursor:pointer">退 会 を 進 め る</a></div>
+      </div>
+      <div class="churn-step" id="mbChurnStep4">
+        <div style="font-size:15px;color:var(--rose);font-weight:700">⚠️ 最 終 確 認</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.65;margin:10px 0">続 行 する に は、 下 の 欄 に <b>退 会 します</b> と 正 確 に 入 力 し て く だ さ い。</div>
+        <input type="text" id="mbChurnConfirm" placeholder="退 会 します" oninput="mbChurnOnConfirm()" style="width:100%;padding:11px 13px;border:1px solid var(--wire);border-radius:8px;font-size:13.5px;font-family:inherit;outline:none">
+        <div id="mbChurnConfirmStatus" style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-top:6px">— 「退 会 します」 と 入力</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="mbChurnBack" onclick="mbChurnBack()" style="display:none">← 戻る</button>
+      <button class="btn btn-ghost" onclick="mbCloseChurn()">キャンセル</button>
+      <button class="btn" id="mbChurnGo" style="background:var(--rose);color:#fff;display:none;opacity:.5;cursor:not-allowed" disabled onclick="mbChurnConfirmDelete()">退 会 を 実 行</button>
+    </div>
+  </div>
+</div>
+
+<!-- Onboarding tour -->
+<div class="tour-bg" id="mbTourBg">
+  <div class="tour-hole" id="mbTourHole"></div>
+  <div class="tour-card" id="mbTourCard">
+    <div class="tour-card-h"><span>オンボーディング</span><span class="step" id="mbTourStepBadge">1 / 5</span></div>
+    <div class="tour-card-t" id="mbTourT">タイトル</div>
+    <div class="tour-card-d" id="mbTourD">説明</div>
+    <div class="tour-prog" id="mbTourProg"></div>
+    <div class="tour-card-acts">
+      <a class="skip" onclick="mbTourEnd(true)">skip</a>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" id="mbTourBack" onclick="mbTourBack()" style="display:none">戻る</button>
+      <button class="btn btn-go" id="mbTourNext" onclick="mbTourNext()">次 へ →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Sentry (env-gated) ════════════════════════════════════ -->
+<script>
+(function _initSentry(){
+  // Sentry DSN is injected server-side via meta tag when SENTRY_DSN env is set.
+  const dsnMeta = document.querySelector('meta[name="sentry-dsn"]');
+  const dsn = dsnMeta ? dsnMeta.content : '';
+  if(!dsn || !/^https?:\/\//.test(dsn)) return;
+  const s = document.createElement('script');
+  s.src = 'https://browser.sentry-cdn.com/7.119.0/bundle.min.js';
+  s.crossOrigin = 'anonymous';
+  s.onload = function(){
+    if(window.Sentry) {
+      try { window.Sentry.init({dsn, tracesSampleRate: 0.1}); }
+      catch(e){ console.warn('[Sentry] init failed:', e.message); }
+    }
+  };
+  document.head.appendChild(s);
+})();
+</script>
+
+</body>
+</html>

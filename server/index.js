@@ -19385,25 +19385,88 @@ function _mediaRenderMinimalIndex(media, posts, opts){
       </article>`;
   };
 
-  const heroSectionHTML = heroPosts.length > 0 ? `
-    <section style="padding:36px 24px 28px;max-width:1100px;margin:0 auto">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-        <div style="font-family:${s.brandFont};font-size:11.5px;font-weight:800;color:${accent};letter-spacing:.12em;text-transform:uppercase">▌ 編 集 部 厳 選</div>
-        <div style="font-size:10.5px;color:${s.mutedColor}">${posts.length} 記事 公開 中</div>
+  // 🆕 magazine cover hero (= Forbes / Vogue 級)
+  //   - dark teal full-bleed 背景 = editorial 高 級 感
+  //   - feature 記事 1 件 = 60-80px display serif タイトル + meta
+  //   - 横 に 2 件 サブ feature
+  const heroPostBig = heroPosts[0];
+  const heroPostSub = heroPosts.slice(1, 3);
+  // 装飾 = lp_brand_name or media.name の イニシ ャル
+  const brandInitial = (name || 'M').charAt(0).toUpperCase();
+  // 大 hero title (= 巨大 タイトル card)
+  const renderHeroBig = (p) => {
+    if(!p) return '';
+    let bigHero = p.hero_image_url;
+    if(!bigHero || (typeof bigHero === 'string' && bigHero.startsWith('data:image/svg'))){
+      try { bigHero = _svgHeroForArticle(p, media); } catch(_){}
+    }
+    const relTime = (() => {
+      const t = Date.parse(p.published_at || 0);
+      if(!t) return _mediaFmtDate(p.published_at);
+      const days = Math.floor((Date.now() - t) / 86400000);
+      if(days === 0) return 'TODAY';
+      if(days === 1) return 'YESTERDAY';
+      if(days < 7) return days + ' DAYS AGO';
+      if(days < 30) return Math.floor(days/7) + ' WEEKS AGO';
+      return Math.floor(days/30) + ' MONTHS AGO';
+    })();
+    return `
+      <a href="${_mediaPublicUrl(media, p.slug)}" style="display:block;text-decoration:none;color:#fff;position:relative;overflow:hidden;border-radius:0;height:560px">
+        <img loading="eager" decoding="async" src="${_mediaEsc(bigHero)}" alt="${_mediaEsc(p.title)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.55) saturate(.9);transition:transform .6s ease" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform=''">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,61,57,.2) 0%,rgba(0,0,0,.8) 100%)"></div>
+        <div style="position:relative;z-index:1;padding:54px 60px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;max-width:980px">
+          ${p.category_name ? '<div style="font-family:'+s.brandFont+';font-size:11px;font-weight:900;color:'+accent+';letter-spacing:.28em;text-transform:uppercase;margin-bottom:18px">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
+          <h1 style="font-family:'Times New Roman',Georgia,'Hiragino Mincho ProN','Yu Mincho',serif;font-size:clamp(36px,5.5vw,68px);font-weight:900;line-height:1.08;letter-spacing:-.025em;margin:0 0 22px;color:#fff;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${_mediaEsc(p.title)}</h1>
+          ${p.excerpt ? '<p style="font-size:16px;line-height:1.7;color:rgba(255,255,255,.85);max-width:680px;margin:0 0 26px;letter-spacing:-.005em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+_mediaEsc((p.excerpt||'').slice(0,180))+'</p>' : ''}
+          <div style="display:flex;align-items:center;gap:14px;font-family:${s.brandFont};font-size:11px;color:rgba(255,255,255,.7);letter-spacing:.12em;font-weight:700">
+            <span style="text-transform:uppercase">${relTime}</span>
+            <span style="opacity:.4">·</span>
+            <span style="text-transform:uppercase">${_mediaEsc(authorName).slice(0, 30)}</span>
+          </div>
+        </div>
+      </a>`;
+  };
+  const renderHeroSub = (p, i) => {
+    if(!p) return '';
+    let subHero = p.hero_image_url;
+    if(!subHero || (typeof subHero === 'string' && subHero.startsWith('data:image/svg'))){
+      try { subHero = _svgHeroForArticle(p, media); } catch(_){}
+    }
+    return `
+      <a href="${_mediaPublicUrl(media, p.slug)}" style="display:flex;gap:18px;text-decoration:none;color:#fff;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,.15);transition:opacity .2s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
+        <img loading="lazy" decoding="async" src="${_mediaEsc(subHero)}" alt="${_mediaEsc(p.title)}" style="width:120px;height:90px;object-fit:cover;flex-shrink:0;filter:saturate(.92);border-radius:2px">
+        <div style="flex:1;min-width:0">
+          ${p.category_name ? '<div style="font-family:'+s.brandFont+';font-size:9.5px;font-weight:900;color:'+accent+';letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
+          <h3 style="font-family:'Times New Roman',Georgia,'Hiragino Mincho ProN','Yu Mincho',serif;font-size:16px;font-weight:800;line-height:1.32;letter-spacing:-.012em;margin:0;color:#fff;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${_mediaEsc(p.title)}</h3>
+        </div>
+      </a>`;
+  };
+  const heroSectionHTML = heroPostBig ? `
+    <section style="background:#0a3d39;color:#fff;padding:0;position:relative">
+      <div style="max-width:1280px;margin:0 auto;padding:32px 60px 48px">
+        <div style="display:flex;align-items:center;gap:18px;padding-bottom:24px;margin-bottom:30px;border-bottom:1px solid rgba(255,255,255,.12)">
+          <div style="font-family:'Times New Roman',Georgia,serif;font-size:32px;font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1">${name}</div>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
+          <div style="font-family:${s.brandFont};font-size:10.5px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.16em;text-transform:uppercase">${posts.length} STORIES · 今 週 ${recent7d > 0 ? recent7d : 0} 本</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:48px">
+          <div>${renderHeroBig(heroPostBig)}</div>
+          <div style="display:flex;flex-direction:column;gap:24px;padding-top:8px">
+            <div style="font-family:${s.brandFont};font-size:11px;font-weight:900;color:${accent};letter-spacing:.22em;text-transform:uppercase;padding-bottom:14px;border-bottom:2px solid rgba(255,255,255,.2)">▌ Top Stories</div>
+            ${heroPostSub.map((p, i) => renderHeroSub(p, i)).join('')}
+          </div>
+        </div>
       </div>
-      ${heroPosts.length >= 5 ? `
-        <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;grid-template-rows:auto auto;gap:16px" class="hero-grid">
-          <div style="grid-row:1/3;grid-column:1/2">${heroPostCard(heroPosts[0], { size:'big', idx:0 })}</div>
-          <div>${heroPostCard(heroPosts[1], { size:'small', idx:1 })}</div>
-          <div>${heroPostCard(heroPosts[2], { size:'small', idx:2 })}</div>
-          <div>${heroPostCard(heroPosts[3], { size:'small', idx:3 })}</div>
-          <div>${heroPostCard(heroPosts[4], { size:'small', idx:4 })}</div>
-        </div>
-      ` : `
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
-          ${heroPosts.map((p, i) => heroPostCard(p, { size:'small', idx:i })).join('')}
-        </div>
-      `}
+    </section>` : '';
+  // 旧 hero グリッド 5 件 を 残す = MOST POPULAR の 前 の 追 加 セクション
+  const heroBelowHTML = heroPosts.length >= 5 ? `
+    <section style="padding:64px 24px 40px;max-width:1280px;margin:0 auto">
+      <div style="font-family:${s.brandFont};font-size:11.5px;font-weight:900;color:${accent};letter-spacing:.22em;text-transform:uppercase;padding-bottom:20px;margin-bottom:28px;border-bottom:2px solid ${s.textColor}">▌ Editor's Picks</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px">
+        ${heroPostCard(heroPosts[2], { size:'small', idx:2 })}
+        ${heroPostCard(heroPosts[3], { size:'small', idx:3 })}
+        ${heroPostCard(heroPosts[4], { size:'small', idx:4 })}
+      </div>
     </section>` : '';
 
   // ── 横スクロール カルーセル (= 「今 週 の 注目」) ──
@@ -19500,8 +19563,9 @@ function _mediaRenderMinimalIndex(media, posts, opts){
       </section>
     `
   ) : (
-    // ホーム: 新 マガジン レイアウト
+    // ホーム: magazine cover hero + editor's picks + trending
     `${heroSectionHTML}
+    ${heroBelowHTML}
     ${trendingHTML}
     ${(() => {
       // ── MOST POPULAR ranking (= Forbes 風 番 号 付 ranking) ──

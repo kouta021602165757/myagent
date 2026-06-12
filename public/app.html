@@ -2789,16 +2789,90 @@ window._mb_api = async function(method, path, body){
           window._mb_realDataLoaded = true;
         } catch(e){ console.warn('[hydrate] fail', e); }
       };
-      // loadActiveSite を hook = 呼 ばれ る たび に 直 後 に 実 data で 上 書 き
+      // loadActiveSite を hook = 呼 ばれ る たび に **全 view** を 実 data で 上 書 き
       if(typeof window.loadActiveSite === 'function' && !window._mb_loadHooked){
         window._mb_loadHooked = true;
         const _orig = window.loadActiveSite;
         window.loadActiveSite = function(){
           _orig.apply(this, arguments);
           window._mb_realDataLoaded = false;
-          if(window._mb_hydrate){
-            setTimeout(() => window._mb_hydrate(window.activeSiteIdx || 0), 150);
+          setTimeout(() => {
+            const idx = window.activeSiteIdx || 0;
+            // ① dashboard (= LIVE METRICS + FUNNEL + WORKING + RECOMMENDED + FEED)
+            if(window._mb_hydrate) window._mb_hydrate(idx);
+            // ② メディア tab 設 定
+            if(window._mbLoadMediaSettings) window._mbLoadMediaSettings();
+            // ③ 分 析 view (= chart + rank list)
+            if(window._mbLoadAnalytics) window._mbLoadAnalytics();
+            // ④ メディア tab 記 事 一 覧
+            const s = SITES[idx];
+            if(s && s._raw && s._raw.media_posts_idx){
+              s.posts = s._raw.media_posts_idx.filter(p => p && p.status !== 'draft').slice(0, 50).map(p => ({
+                ti: p.title || p.slug || '(無 題)', slug: p.slug || '',
+                date: p.published_at ? new Date(p.published_at).toISOString().slice(5,10) : '',
+                pv: p.pv || 0, lp: p.lp || 0, t: '↑',
+              }));
+              window._mb_artListExpanded = false;  // 5 件 表 示 に reset
+              if(typeof renderArtList === 'function') renderArtList(s.posts);
+            }
+            // ⑤ AI チーム view = active publish-jobs で 上 書 き
+            if(window._mbHydrateTeamView) window._mbHydrateTeamView(idx);
+          }, 150);
+        };
+      }
+
+      // AI チーム view 更新 (= mock sample を 殺 し て active jobs で 描 画)
+      window._mbHydrateTeamView = async function(siteIdx){
+        const s = SITES[siteIdx];
+        if(!s || !s._raw || !s._raw.id) return;
+        const agentId = s._raw.id;
+        try {
+          const aj = await window._mb_api('GET', '/api/agents/' + agentId + '/publish-jobs?active=1').catch(()=>null);
+          const teamGrids = document.querySelectorAll('#view-team .team-grid');
+          if(teamGrids.length === 0) return;
+          // 上 段 = 動 い て いる (= 1 つ 目 の team-grid)
+          const active = teamGrids[0];
+          if(active){
+            if(aj && Array.isArray(aj.jobs) && aj.jobs.length > 0){
+              const _esc = (x) => String(x||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+              const palette = ['', 'purple', 'amber'];
+              active.innerHTML = aj.jobs.slice(0,6).map((j,i) => {
+                const cls = palette[i % 3];
+                const role = j.status === 'generating' ? 'WRITING' : j.status === 'pending' ? 'QUEUE' : 'PUBLISHING';
+                const title = _esc(j.title || j.keyword || '記事 生 成');
+                const elapsed = j.created_at ? Math.floor((Date.now() - new Date(j.created_at).getTime())/1000) : 0;
+                const av = role.charAt(0);
+                return `
+                  <div class="team-card ${cls}">
+                    <div class="team-head"><div class="team-av">${av}</div><div><div class="team-name">${role}-${i+1}</div><div class="team-role">RECORD · ${role}</div></div></div>
+                    <div class="team-status"><span class="pulse"></span> ${role} · ${elapsed}s</div>
+                    <div class="team-bd">${title}</div>
+                    <div class="team-stat-row"><span>状 態</span><b>${j.status || '?'}</b></div>
+                  </div>
+                `;
+              }).join('');
+            } else {
+              active.innerHTML = '<div style="grid-column:1/-1;padding:30px 20px;text-align:center;color:var(--text3);font-size:13px">💤 現 在 動 い て いる AI チーム は い ま せ ん</div>';
+            }
+            // crumb 「3 active · 21 idle」 を 動 的 に
+            const head = active.previousElementSibling;
+            if(head && head.classList.contains('block-head')){
+              const right = head.querySelector('.right');
+              if(right) right.textContent = (aj && aj.jobs ? aj.jobs.length : 0) + ' active · 24 名 雇 用 中';
+            }
           }
+          // 下 段 = 待 機 中 (= 2 つ 目 の team-grid) = サイト 関 係 な し で 維 持
+        } catch(e){ console.warn('[team] fail', e); }
+      };
+
+      // AI チーム nav に 切替 時 に も 自動 取得
+      const _prevNav2 = window.navTo;
+      if(typeof window.navTo === 'function' && !window._mb_navTeamHooked){
+        window._mb_navTeamHooked = true;
+        const _prev = window.navTo;
+        window.navTo = function(view, btn){
+          _prev.apply(this, arguments);
+          if(view === 'team') setTimeout(() => window._mbHydrateTeamView(window.activeSiteIdx || 0), 100);
         };
       }
 

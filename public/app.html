@@ -2728,6 +2728,64 @@ window._mb_api = async function(method, path, body){
           }
           // delta (= mock sample) 全 hidden
           document.querySelectorAll('.stat-delta').forEach(el => { el.style.display = 'none'; });
+
+          // ★ WORKING AGENTS = active publish-jobs で 上 書 き
+          try {
+            const aj = await window._mb_api('GET', '/api/agents/' + agentId + '/publish-jobs?active=1').catch(()=>null);
+            const wg = document.querySelector('#view-home .work-grid');
+            if(wg){
+              if(aj && Array.isArray(aj.jobs) && aj.jobs.length > 0){
+                const _esc = (x) => String(x||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+                wg.innerHTML = aj.jobs.slice(0, 3).map((j, i) => {
+                  const cls = ['', 'purple', 'amber'][i] || '';
+                  const state = j.status === 'generating' ? 'WRITING' : j.status === 'pending' ? 'PENDING' : 'PUBLISHING';
+                  const title = _esc(j.title || j.keyword || '記事 生 成 中');
+                  const elapsed = j.created_at ? Math.floor((Date.now() - new Date(j.created_at).getTime())/1000) : 0;
+                  return `
+                    <div class="work-card ${cls}">
+                      <div class="work-state"><span class="pulse"></span> ${state} · ${elapsed}s</div>
+                      <div class="work-title">${title}</div>
+                      <div class="work-meta">⚡ ${j.status || ''}</div>
+                      <div class="work-bar"><div class="work-bar-fill" style="width:${j.status==='generating'?60:20}%"></div></div>
+                    </div>
+                  `;
+                }).join('');
+              } else {
+                wg.innerHTML = '<div style="grid-column:1/-1;padding:30px 20px;text-align:center;color:var(--text3);font-size:13px">💤 現 在 動 い て いる AI チーム は い ま せ ん · 「⚡ 記 事 を AI に 書 か せる」 で 起 動</div>';
+              }
+            }
+          } catch(e){ console.warn('[working] fail', e); }
+
+          // ★ RECOMMENDED ACTIONS = 準 備 中 表 示
+          const sg = document.querySelector('#view-home .sug-grid');
+          if(sg){
+            sg.innerHTML = '<div style="grid-column:1/-1;padding:30px 20px;text-align:center;color:var(--text3);font-size:13px">🚧 AI 提 案 機 能 は 準 備 中 です · 近 日 公 開 予 定</div>';
+          }
+
+          // ★ ACTIVITY FEED = 全 publish-jobs 履 歴 で 上 書 き
+          try {
+            const all = await window._mb_api('GET', '/api/agents/' + agentId + '/publish-jobs?limit=10').catch(()=>null);
+            const feed = document.getElementById('feed');
+            if(feed){
+              if(all && Array.isArray(all.jobs) && all.jobs.length > 0){
+                const _esc = (x) => String(x||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+                feed.innerHTML = all.jobs.slice(0, 10).map(j => {
+                  const t = j.created_at ? new Date(j.created_at).toTimeString().slice(0,5) : '--:--';
+                  let tag = 'QUEUE', cls = '';
+                  if(j.status === 'completed'){ tag = 'PUBLISH'; cls = ''; }
+                  else if(j.status === 'failed'){ tag = 'ERROR'; cls = 'red'; }
+                  else if(j.status === 'generating'){ tag = 'WRITING'; cls = 'amber'; }
+                  const msg = _esc(j.title || j.keyword || '(no title)');
+                  return `<div class="feed-row"><span class="feed-time">${t}</span><span class="feed-tag ${cls}">${tag}</span><span class="feed-msg">${msg}</span><a class="feed-link">→</a></div>`;
+                }).join('');
+              } else {
+                feed.innerHTML = '<div style="padding:30px 20px;text-align:center;color:var(--text3);font-size:13px">📋 ま だ 履 歴 が あ り ま せ ん · 記 事 生 成 で 追 加</div>';
+              }
+              const fc = document.getElementById('feedCount');
+              if(fc) fc.textContent = (all && all.jobs ? all.jobs.length : 0) + ' events';
+            }
+          } catch(e){ console.warn('[feed] fail', e); }
+
           window._mb_realDataLoaded = true;
         } catch(e){ console.warn('[hydrate] fail', e); }
       };

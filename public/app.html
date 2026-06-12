@@ -2703,6 +2703,26 @@ window._mb_api = async function(method, path, body){
             setBar('funPvBar', Math.min(100, (f.pv||0) / Math.max(1, (f.articles||1) * 100) * 100));
             setBar('funLpBar', f.pv > 0 ? Math.min(100, (f.lp||0)/f.pv * 100) : 0);
           }
+          // sparkline = 数 値 が 0 な ら 全 bar 平 ら (= 3%)、 非 0 な ら 既 高 さ 維 持
+          const flattenSpark = (id, isZero) => {
+            const el = document.getElementById(id);
+            if(!el) return;
+            el.querySelectorAll('.b').forEach(b => {
+              if(isZero) b.style.height = '3%';
+            });
+          };
+          flattenSpark('sparkPv', !day || !day.pv);
+          flattenSpark('sparkUsers', !day || !day.sessions);
+          flattenSpark('sparkLp', !day || !day.lp_sessions);
+          // delta 表 示 = data な し な ら 「— vs 先 週」 等 に
+          const setDelta = (id, hasData) => {
+            const el = document.getElementById(id);
+            if(!el) return;
+            if(!hasData) el.style.visibility = 'hidden';
+          };
+          setDelta('funC1A', day && day.pv);
+          // delta (= 「+12.4% vs 先 週」 等 mock sample) を 全部 隠 す
+          document.querySelectorAll('.stat-delta').forEach(el => { el.style.display = 'none'; });
           window._mb_realDataLoaded = true;
         } catch(e){ console.warn('[hydrate] fail', e); }
       };
@@ -2891,6 +2911,7 @@ setInterval(()=>{
   if(Math.random() < 0.08){ S.lpT += 1; animNum('statLp', S.lp, S.lpT); S.lp = S.lpT; }
 }, 4000);
 setInterval(()=>{
+  if(window._mb_realDataLoaded) return;  // 実 data load 後 は random 動 か ない
   ['sparkPv','sparkUsers','sparkLp'].forEach(id => {
     const el = document.getElementById(id);
     if(!el) return;

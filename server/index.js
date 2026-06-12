@@ -17403,45 +17403,47 @@ function _svgHeroForArticle(post, media){
   const pal = _svgPaletteFor(tpl, media && media.brand_color);
   const category = String(post && post.category_name || '').slice(0, 14) || '記事';
   const brandJp = String(media && media.name || 'Blog').slice(0, 24);
-  // 🎨 2026-06-12: タイトル baked-in を 削 除 = 「画 像 + card 下 タイトル」 の 二 重 表 示 解 消
-  //   editorial デザイン = 画 像 は 「装 飾 + ブランド」 のみ、 タイトル は card 下 で 大 表 示
-  // タイトル hash で 装 飾 figure の 配 置 を 個 別 に (= 全 同 じ ぽく 見 え ない)
+  // 🎨 2026-06-12 v2: 「サムネ 消 え てる ぽい 薄 さ」 解 消
+  //   濃 い 配 色 + 中央 巨大 カテゴリ 名 で 「画 像 と し て 認 識 で きる」 サムネ に
   const titleH = _strHash(post && post.title || 'a');
-  const fig1x = 200 + (Math.abs(titleH) % 200);
-  const fig1y = 200 + (Math.abs(titleH >> 4) % 200);
-  const fig2x = 900 + (Math.abs(titleH >> 8) % 200);
-  const fig2y = 100 + (Math.abs(titleH >> 12) % 250);
-  const fig3x = 600 + (Math.abs(titleH >> 16) % 350);
-  const fig3y = 450 + (Math.abs(titleH >> 20) % 200);
+  // 濃 い 配 色 を 強 制 (= palette bg だ と 薄 す ぎ る = brand 色 で 上 書 き)
+  const darkBg = pal.text || '#0a3d39';
+  const lightAccent = pal.accent || '#c0ff5c';
+  const decoColor = pal.deco || '#1a5b55';
+  // タイトル hash で 装 飾 位 置 個 別
+  const fig1x = 200 + (Math.abs(titleH) % 300);
+  const fig1y = 150 + (Math.abs(titleH >> 4) % 250);
+  const fig2x = 850 + (Math.abs(titleH >> 8) % 250);
+  const fig2y = 100 + (Math.abs(titleH >> 12) % 200);
   const rot = (Math.abs(titleH >> 24) % 360);
+  // カテゴリ font-size = 文字数 から 自動 (= 4 字 → 100px / 8 字 → 60px)
+  const catLen = Array.from(category).length;
+  const catFontSize = catLen <= 4 ? 110 : catLen <= 6 ? 90 : catLen <= 8 ? 72 : 56;
   const svg = ''
     + `<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" width="1280" height="720">`
     +   `<defs>`
     +     `<linearGradient id="g${Math.abs(titleH)%9999}" x1="0%" y1="0%" x2="100%" y2="100%">`
-    +       `<stop offset="0%" stop-color="${pal.bg}"/>`
-    +       `<stop offset="100%" stop-color="${pal.deco}" stop-opacity="0.55"/>`
+    +       `<stop offset="0%" stop-color="${darkBg}"/>`
+    +       `<stop offset="100%" stop-color="${decoColor}"/>`
     +     `</linearGradient>`
     +   `</defs>`
     +   `<rect width="1280" height="720" fill="url(#g${Math.abs(titleH)%9999})"/>`
-    // ふんわ り 円 (= 編集 部 厳 選 風 ブラー)
-    +   `<circle cx="${fig1x}" cy="${fig1y}" r="280" fill="${pal.deco}" opacity="0.32"/>`
-    +   `<circle cx="${fig2x}" cy="${fig2y}" r="180" fill="${pal.accent}" opacity="0.25"/>`
-    +   `<circle cx="${fig3x}" cy="${fig3y}" r="120" fill="${pal.deco}" opacity="0.4"/>`
-    // 抽 象 多 角 形 (= editorial 感)
+    // 大 きく 濃 い 装 飾 円 (= editorial blur)
+    +   `<circle cx="${fig1x}" cy="${fig1y}" r="320" fill="${lightAccent}" opacity="0.18"/>`
+    +   `<circle cx="${fig2x}" cy="${fig2y}" r="220" fill="${lightAccent}" opacity="0.12"/>`
+    // 抽 象 多 角 形
     +   `<g transform="rotate(${rot} 640 360)">`
-    +     `<polygon points="640,200 740,360 540,360" fill="${pal.accent}" opacity="0.18"/>`
-    +     `<rect x="500" y="500" width="280" height="40" rx="20" fill="${pal.deco}" opacity="0.35"/>`
+    +     `<polygon points="640,260 790,420 490,420" fill="${lightAccent}" opacity="0.12"/>`
     +   `</g>`
-    // 細 ライン (= editorial accent)
-    +   `<line x1="64" y1="64" x2="1216" y2="64" stroke="${pal.accent}" stroke-width="2" opacity="0.5"/>`
-    +   `<line x1="64" y1="656" x2="1216" y2="656" stroke="${pal.accent}" stroke-width="2" opacity="0.5"/>`
-    // カテゴリ chip (= 左上 小)
-    +   `<g>`
-    +     `<rect x="64" y="84" width="${Math.min(260, 24+category.length*16)}" height="42" rx="21" fill="#ffffff" stroke="${pal.accent}" stroke-width="2"/>`
-    +     `<text x="${64 + Math.min(130, 12+category.length*8)}" y="112" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="18" font-weight="800" fill="${pal.accent}">${_svgEscape(category)}</text>`
-    +   `</g>`
-    // ブランド マーク (= 右下、 小、 縦 書 き)
-    +   `<text x="1216" y="676" text-anchor="end" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="13" font-weight="700" fill="${pal.sub}" opacity="0.65">${_svgEscape(brandJp)}</text>`
+    // 細 ライン 上 下 (= editorial accent)
+    +   `<line x1="80" y1="80" x2="1200" y2="80" stroke="${lightAccent}" stroke-width="2" opacity="0.6"/>`
+    +   `<line x1="80" y1="640" x2="1200" y2="640" stroke="${lightAccent}" stroke-width="2" opacity="0.6"/>`
+    // 中 央 大 カテゴリ 名 (= サムネ の 主 役)
+    +   `<text x="640" y="380" text-anchor="middle" font-family="'Times New Roman',Georgia,'Hiragino Mincho ProN','Yu Mincho',serif" font-size="${catFontSize}" font-weight="900" fill="#fff" opacity="0.9" letter-spacing="-2">${_svgEscape(category)}</text>`
+    // 上 部 ブランド (= 小、 タイポ アクセント)
+    +   `<text x="80" y="130" font-family="'Times New Roman',Georgia,serif" font-size="22" font-weight="700" fill="${lightAccent}" letter-spacing="2">${_svgEscape(brandJp.slice(0, 30))}</text>`
+    // 下 部 「読 む →」 (= editorial cue)
+    +   `<text x="1200" y="690" text-anchor="end" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="13" font-weight="700" fill="${lightAccent}" opacity="0.7" letter-spacing="4">READ MORE →</text>`
     + `</svg>`;
   return 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64');
 }
@@ -19444,12 +19446,7 @@ function _mediaRenderMinimalIndex(media, posts, opts){
   };
   const heroSectionHTML = heroPostBig ? `
     <section style="background:#0a3d39;color:#fff;padding:0;position:relative">
-      <div style="max-width:1100px;margin:0 auto;padding:32px 24px 48px">
-        <div style="display:flex;align-items:center;gap:18px;padding-bottom:24px;margin-bottom:30px;border-bottom:1px solid rgba(255,255,255,.12)">
-          <div style="font-family:'Times New Roman',Georgia,serif;font-size:32px;font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1">${name}</div>
-          <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
-          <div style="font-family:${s.brandFont};font-size:10.5px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.16em;text-transform:uppercase">${posts.length} STORIES · 今 週 ${recent7d > 0 ? recent7d : 0} 本</div>
-        </div>
+      <div style="max-width:1100px;margin:0 auto;padding:48px 24px 48px">
         <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:48px">
           <div>${renderHeroBig(heroPostBig)}</div>
           <div style="display:flex;flex-direction:column;gap:24px;padding-top:8px">

@@ -3208,6 +3208,127 @@ window._mb_api = async function(method, path, body){
       // 初 回 取 得 (= dashboard load 後)
       setTimeout(() => window._mbLoadAnalytics(), 1800);
 
+      // ★ 設 定 タブ 全 接続 (= 名前 / メール / pw / プラン / 解 約 / 通 知 / アカウント 削 除)
+      window._mbHydrateSettings = async function(){
+        const me = window._me;
+        if(!me) return;
+        // bill-card
+        const planMap = { free: 'FREE', pro: 'PRO', business: 'BUSINESS' };
+        const capMap = { free: 20, pro: 50, business: 100 };
+        const priceMap = { free: 0, pro: 1950, business: 4950 };
+        const plan = me.plan || 'free';
+        const billName = document.querySelector('#st-bill .bill-name');
+        if(billName) billName.textContent = planMap[plan] || 'FREE';
+        const billMeta = document.querySelector('#st-bill .bill-meta');
+        if(billMeta) billMeta.textContent = '¥' + priceMap[plan].toLocaleString() + ' / 月 · 月 ' + capMap[plan] + ' 記事 cap';
+        // bill-card button hook
+        document.querySelectorAll('#st-bill .btn-sm').forEach(btn => {
+          const txt = btn.textContent;
+          if(txt.includes('プラン 変更')){
+            btn.onclick = () => { if(typeof openUpsellModal === 'function') openUpsellModal(); };
+          } else if(txt.includes('解約')){
+            btn.onclick = async () => {
+              if(!confirm('plan を 解約 し ます か? · 今月 末 まで は 利用 可能 で す')) return;
+              try {
+                await window._mb_api('POST', '/api/billing/cancel');
+                showToast('✓ 解 約 完 了 · 今月 末 まで 利用 可');
+              } catch(e){ showToast('解 約 失 敗: ' + (e.message||e), 'ng'); }
+            };
+          }
+        });
+        // 領 収 書 DL row → 既 mock の 履 歴 を 隠 す + 実 履 歴 fetch
+        try {
+          const bd = await window._mb_api('GET', '/api/billing/breakdown?days=180').catch(()=>null);
+          if(bd && bd.breakdown){
+            const histBox = document.querySelector('#st-bill > div:last-child');
+            if(histBox){
+              const total30 = bd.total_jpy || 0;
+              const totalCalls = bd.total_calls || 0;
+              histBox.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">▌ 直近 180 日 利用 料</div>'
+                + '<div style="padding:14px 18px;background:var(--cream);border-radius:8px;font-family:var(--mono);font-size:12px;color:var(--text2)">'
+                + '合計: ¥' + total30.toLocaleString() + ' · ' + totalCalls + ' 回 呼 び 出 し<br>'
+                + bd.breakdown.map(x => '· ' + x.via + ': ¥' + (x.cost_jpy||0).toLocaleString() + ' (= ' + (x.share_pct||0) + '%)').join('<br>')
+                + '</div>';
+            }
+          }
+        } catch(e){ console.warn('[bill] fail', e); }
+
+        // account tab
+        const acctName = document.querySelector('#st-acct .set-grid2 input.set-input');
+        if(acctName){ acctName.value = me.name || ''; acctName.onchange = async () => {
+          try { await window._mb_api('POST', '/api/user/profile', { name: acctName.value }); showToast('✓ 名 前 更 新'); }
+          catch(e){ showToast('失 敗: ' + (e.message||e), 'ng'); }
+        };}
+        const acctEmail = document.getElementById('acctEmail');
+        if(acctEmail) acctEmail.value = me.email || '';
+        // pw 変 更 button
+        const pwBtns = document.querySelectorAll('#st-acct button');
+        pwBtns.forEach(btn => {
+          if(btn.textContent.includes('パスワード') && btn.textContent.includes('変 更')){
+            btn.onclick = async () => {
+              const inputs = btn.closest('.set-panel').querySelectorAll('input[type=password]');
+              if(inputs.length < 2) return;
+              const oldPw = inputs[0].value, newPw = inputs[1].value;
+              if(!oldPw || !newPw){ showToast('現/新 パスワード を 入 力', 'ng'); return; }
+              try {
+                await window._mb_api('POST', '/api/user/password', { current: oldPw, new: newPw });
+                showToast('✓ パスワード 変 更 完 了');
+                inputs.forEach(i => i.value = '');
+              } catch(e){ showToast('失 敗: ' + (e.message||e), 'ng'); }
+            };
+          }
+        });
+
+        // danger tab = 退 会 button = 既 churn modal hook
+        const dangerBtns = document.querySelectorAll('#st-danger button');
+        dangerBtns.forEach(btn => {
+          if(btn.textContent.includes('退 会') || btn.textContent.includes('退会')){
+            btn.onclick = async () => {
+              if(!confirm('🚨 本当 に 退会 し ま す か?\n全 サイト / 全 記事 / 全 設 定 が **完 全 削 除** さ れ ま す。\n取 り 消 し 不 可。')) return;
+              if(!confirm('最 終 確 認: もう 一 度 「OK」 で 完 全 削 除 し ま す')) return;
+              try {
+                await window._mb_api('DELETE', '/api/me');
+                showToast('✓ 退 会 完了 · ログ アウト し ま す');
+                setTimeout(() => { localStorage.removeItem('token'); location.href = '/'; }, 1500);
+              } catch(e){ showToast('退 会 失 敗: ' + (e.message||e), 'ng'); }
+            };
+          }
+        });
+      };
+      // 設 定 nav で 自動 hydrate
+      const _prevNav3 = window.navTo;
+      if(typeof window.navTo === 'function' && !window._mb_navSetHooked){
+        window._mb_navSetHooked = true;
+        const _prev = window.navTo;
+        window.navTo = function(view, btn){
+          _prev.apply(this, arguments);
+          if(view === 'settings') setTimeout(window._mbHydrateSettings, 200);
+        };
+      }
+      // 初 回 hydrate
+      setTimeout(window._mbHydrateSettings, 2200);
+
+      // 記 事 生 成 stuck 検 知 = chat に 30 秒 ご と 「経 過 N 秒」 push、 5 分 で stuck エラー
+      window._mb_genStartTs = null;
+      const _origGenStream = window._mbGenAndStream;
+      if(typeof _origGenStream === 'function'){
+        window._mbGenAndStream = async function(){
+          window._mb_genStartTs = Date.now();
+          const ret = await _origGenStream.apply(this, arguments);
+          // tick 監視
+          const tick = setInterval(() => {
+            if(!window._mb_genStartTs){ clearInterval(tick); return; }
+            const elapsed = Math.floor((Date.now() - window._mb_genStartTs)/1000);
+            if(elapsed > 300){
+              if(window._mbAddChatMsg) window._mbAddChatMsg('⚠️ <b>記事 生成 が 5 分 以上 動 い て い ま せ ん</b> · Anthropic credit 切 れ の 可能 性 · <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:var(--teal)">credit を 追 加</a>');
+              window._mb_genStartTs = null;
+              clearInterval(tick);
+            }
+          }, 30000);
+          return ret;
+        };
+      }
+
       // mock の gen handler を 上 書 き
       window.genStartCustom = function(){
         const kw = document.getElementById('genKwInput').value.trim();

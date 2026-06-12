@@ -28907,10 +28907,13 @@ setTimeout(() => {
   setTimeout(() => { try { window.renderHomeDashboard(); } catch(_){} }, 100);
 })();
 
-// navTo: flag で hook を skip し て 既 動 作 へ
+// navTo: 正 し い 既 関 数 名 で redirect
 function navTo(view, btn){
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
+  const allAg = (typeof agents !== 'undefined' && agents) ? agents : [];
+  const siteAg = allAg.find(a => a && a.id === activeId) || allAg.find(a => typeof _isSiteAgent === 'function' ? _isSiteAgent(a) : true);
+  const siteId = siteAg && siteAg.id;
   switch(view){
     case 'home':
       window._mbForceLegacy = false;  // mock 強 制
@@ -28918,18 +28921,23 @@ function navTo(view, btn){
       else if(typeof _renderMockDashboard === 'function') _renderMockDashboard();
       break;
     case 'media':
-      window._mbForceLegacy = true;
-      if(typeof goSiteDashboard === 'function') goSiteDashboard('stats');
-      else { window._mbForceLegacy = false; showToast('📰 メディア = 未 接 続', 'ng'); }
+      // 既 openMediaPanel(siteId) modal を 開 く
+      if(typeof window.openMediaPanel === 'function' && siteId){
+        window.openMediaPanel(siteId);
+      } else {
+        showToast('📰 メディア = サイト 未 選 択', 'ng');
+      }
       break;
     case 'analytics':
+      // 既 numbers tab (= KPI 数 字)
       window._mbForceLegacy = true;
-      if(typeof goSiteDashboard === 'function') goSiteDashboard('grow');
+      if(typeof goSiteDashboard === 'function') goSiteDashboard('numbers');
       else { window._mbForceLegacy = false; showToast('📊 分 析 = 未 接 続', 'ng'); }
       break;
     case 'team':
+      // 既 agents tab (= AI チーム / agents 一 覧)
       window._mbForceLegacy = true;
-      if(typeof goSiteDashboard === 'function') goSiteDashboard('overview');
+      if(typeof goSiteDashboard === 'function') goSiteDashboard('agents');
       else { window._mbForceLegacy = false; showToast('🤖 AI チーム = 未 接 続', 'ng'); }
       break;
     case 'settings':

@@ -28907,41 +28907,207 @@ setTimeout(() => {
   setTimeout(() => { try { window.renderHomeDashboard(); } catch(_){} }, 100);
 })();
 
-// navTo: 正 し い 既 関 数 名 で redirect
+// navTo: mock view を #homeBody に 直 接 描 画 (= 各 nav で 別 view)
 function navTo(view, btn){
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   const allAg = (typeof agents !== 'undefined' && agents) ? agents : [];
   const siteAg = allAg.find(a => a && a.id === activeId) || allAg.find(a => typeof _isSiteAgent === 'function' ? _isSiteAgent(a) : true);
-  const siteId = siteAg && siteAg.id;
+  const ew = document.getElementById('emptyWrap');
+  const cw = document.getElementById('chatWrap');
+  if(ew) ew.style.display = '';
+  if(cw) cw.style.display = 'none';
+
   switch(view){
     case 'home':
-      window._mbForceLegacy = false;  // mock 強 制
+      window._mbForceLegacy = false;
       if(typeof window.renderHomeDashboard === 'function') window.renderHomeDashboard();
       else if(typeof _renderMockDashboard === 'function') _renderMockDashboard();
       break;
     case 'media':
-      // 既 openMediaPanel(siteId) modal を 開 く
-      if(typeof window.openMediaPanel === 'function' && siteId){
-        window.openMediaPanel(siteId);
-      } else {
-        showToast('📰 メディア = サイト 未 選 択', 'ng');
-      }
+      _renderMockMediaView(siteAg);
       break;
     case 'analytics':
-      // 既 numbers tab (= KPI 数 字)
-      window._mbForceLegacy = true;
-      if(typeof goSiteDashboard === 'function') goSiteDashboard('numbers');
-      else { window._mbForceLegacy = false; showToast('📊 分 析 = 未 接 続', 'ng'); }
+      _renderMockAnalyticsView(siteAg);
       break;
     case 'team':
-      // 既 agents tab (= AI チーム / agents 一 覧)
-      window._mbForceLegacy = true;
-      if(typeof goSiteDashboard === 'function') goSiteDashboard('agents');
-      else { window._mbForceLegacy = false; showToast('🤖 AI チーム = 未 接 続', 'ng'); }
+      _renderMockTeamView(siteAg);
       break;
     case 'settings':
       if(typeof openSettings === 'function') openSettings();
       break;
   }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// 🚀 Phase 4 polish: mock 由来 view を render
+// ═════════════════════════════════════════════════════════════════
+
+function _renderMockMediaView(agent){
+  const body = document.getElementById('homeBody');
+  if(!body) return;
+  if(!agent){
+    body.innerHTML = '<div class="mb-view"><div class="mb-block"><div class="empty-state"><div class="empty-illu">🌐</div><div class="empty-h">サイト 未 選 択</div><div class="empty-d">左 上 の サイト 切替 で サイト を 選 ぶ か、 新しい サイト を 追加 し て く だ さ い。</div></div></div></div>';
+    return;
+  }
+  const slug = (agent.media && agent.media.slug) || '—';
+  const posts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+  const cap = (typeof me === 'object' && me && me.plan === 'business') ? 100 : (me && me.plan === 'pro') ? 50 : 20;
+  let listHtml;
+  if(posts.length === 0){
+    listHtml = '<div class="empty-state"><div class="empty-illu">📝</div><div class="empty-h">まだ 記事 が ない</div><div class="empty-d">最 初 の 1 本 から、 AI チーム が 全 自動 で 書い て 公 開 し ます。 KW を 入 れる だ け で 8,000 字 級 が 90 秒 で 完 成。</div><div class="empty-cta-row"><button class="btn-cta" onclick="openArticleGenModal()">⚡ 最初 の 記事 を 書か せる</button><button class="btn-cta ghost" onclick="navTo(\'analytics\',document.querySelector(\'.nav-btn[data-view=analytics]\'))">分析 を 見る</button></div></div>';
+  } else {
+    listHtml = posts.slice(0, 20).map(p => {
+      const title = _mbEsc(p.title || p.slug || '(無 題)');
+      const pv = p.pv != null ? (+p.pv).toLocaleString() : '—';
+      const lp = p.lp != null ? p.lp : '—';
+      const date = p.published_at ? new Date(p.published_at).toISOString().slice(0,10) : (p.created_at ? new Date(p.created_at).toISOString().slice(0,10) : '');
+      const slugDisplay = _mbEsc(p.slug || '');
+      return `<div class="art-row">
+        <div>
+          <div class="art-title">${title}</div>
+          <div class="art-meta">${date} · /${slugDisplay}</div>
+        </div>
+        <div class="art-pv">${pv}<div class="art-meta">PV</div></div>
+        <div class="art-lp">${lp}<div class="art-meta">LP</div></div>
+        <div class="art-trend">↑</div>
+        <div class="art-act"><button class="btn-sm" onclick="window.open('https://${_mbEsc(slug)}.myaiagents.agency/${slugDisplay}','_blank')">表示</button></div>
+      </div>`;
+    }).join('');
+  }
+  body.innerHTML = `
+    <div class="mb-view">
+      <div class="mb-view-title">
+        <h1>メディア</h1>
+        <span class="crumb">▌ ${_mbEsc(slug)}.myaiagents.agency · ${posts.length} 記 事</span>
+        <button class="btn-sm primary" style="margin-left:auto" onclick="openArticleGenModal()">+ 新 規 記事 を AI に 書か せる</button>
+      </div>
+      <div class="mb-block">
+        <div class="mb-block-head">
+          <span class="dot"></span> 公開 済 記事
+          <span class="right">${posts.length} / ${cap} cap</span>
+        </div>
+        <div>${listHtml}</div>
+      </div>
+    </div>
+  `;
+}
+
+function _renderMockAnalyticsView(agent){
+  const body = document.getElementById('homeBody');
+  if(!body) return;
+  if(!agent){
+    body.innerHTML = '<div class="mb-view"><div class="mb-block"><div class="empty-state"><div class="empty-illu">📊</div><div class="empty-h">サイト 未 選 択</div></div></div></div>';
+    return;
+  }
+  const posts = (agent.media_posts_idx || []).filter(p => p && p.status !== 'draft');
+  // chart bars (= dummy 30d、 後 で /media/funnel 等 で 実 数 接 続)
+  const bars = [];
+  for(let i = 0; i < 30; i++){
+    const h = 20 + Math.floor(Math.random() * 75);
+    bars.push(`<div class="chart-bar" style="height:${h}%"><span class="label">d-${30-i}</span></div>`);
+  }
+  // top 8 posts by pv
+  const topPosts = [...posts].sort((a,b) => (b.pv||0) - (a.pv||0)).slice(0, 8);
+  const rankHtml = topPosts.length > 0 ? topPosts.map((p, i) => {
+    const title = _mbEsc(p.title || p.slug || '(無 題)');
+    const pv = p.pv != null ? (+p.pv).toLocaleString() : '0';
+    const lp = p.lp != null ? p.lp : '0';
+    return `<div class="rank-row">
+      <span class="rank-num">${i+1}</span>
+      <span class="rank-title">${title}</span>
+      <span class="rank-pv">${pv}</span>
+      <span class="rank-lp">${lp} LP</span>
+      <span class="rank-trend">↑</span>
+    </div>`;
+  }).join('') : '<div class="empty-state"><div class="empty-illu">📊</div><div class="empty-h">まだ デ ー タ が な い</div><div class="empty-d">記事 を 1 本 公 開 する と、 自前 計 測 が 開 始 さ れ ま す。</div><div class="empty-cta-row"><button class="btn-cta" onclick="openArticleGenModal()">⚡ 記事 を 書か せる</button></div></div>';
+
+  body.innerHTML = `
+    <div class="mb-view">
+      <div class="mb-view-title">
+        <h1>分 析</h1>
+        <span class="crumb">▌ ANALYTICS · 自前 計 測</span>
+        <div class="period-tabs" style="margin-left:auto">
+          <button onclick="_mbSetPeriod(this,'7d')">7d</button>
+          <button class="active" onclick="_mbSetPeriod(this,'30d')">30d</button>
+          <button onclick="_mbSetPeriod(this,'90d')">90d</button>
+        </div>
+      </div>
+      <div class="mb-block">
+        <div class="mb-block-head"><span class="dot"></span> PV 推 移 · daily<span class="right">30 days</span></div>
+        <div class="chart-wrap">
+          <div class="chart-bars">${bars.join('')}</div>
+          <div class="chart-axis"><span>30d ago</span><span>15d</span><span>today</span></div>
+        </div>
+      </div>
+      <div class="mb-block">
+        <div class="mb-block-head"><span class="dot"></span> 流 入 多 い 記事 TOP 8<span class="right">PV 順</span></div>
+        <div class="rank-list">${rankHtml}</div>
+      </div>
+    </div>
+  `;
+}
+function _mbSetPeriod(btn, period){
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  showToast('期間 切替 = ' + period + ' (= 既 集 計 API は month 固 定 / 今 後 拡 張)', 'ok');
+}
+
+function _renderMockTeamView(agent){
+  const body = document.getElementById('homeBody');
+  if(!body) return;
+  body.innerHTML = `
+    <div class="mb-view">
+      <div class="mb-view-title">
+        <h1>AI チーム</h1>
+        <span class="crumb">▌ AI TEAM · 24 名 雇 用 中</span>
+      </div>
+      <div class="mb-block">
+        <div class="mb-block-head"><span class="dot"></span> 今 動 い て る メンバー<span class="right">3 active · 21 idle</span></div>
+        <div class="team-grid">
+          <div class="team-card">
+            <div class="team-head"><div class="team-av">W</div><div><div class="team-name">Writer-3</div><div class="team-role">RECORD · SEO LIBRARIAN</div></div></div>
+            <div class="team-status"><span class="pulse"></span> WRITING · 42s</div>
+            <div class="team-bd">「スマホ で ポイ活 始 め た い 人 向 け 完 全 ガイド」 8,200 字 を 執 筆 中。</div>
+            <div class="team-stat-row"><span>今 月 公 開</span><b>14 本</b></div>
+          </div>
+          <div class="team-card purple">
+            <div class="team-head"><div class="team-av">R</div><div><div class="team-name">Researcher-1</div><div class="team-role">RECORD · KW SCOUT</div></div></div>
+            <div class="team-status"><span class="pulse"></span> RESEARCHING · 17s</div>
+            <div class="team-bd">直 近 30 KW を 分 析、 競 合 ギャップ 5 件 抽 出 中。</div>
+            <div class="team-stat-row"><span>今 月 KW 提 案</span><b>87 件</b></div>
+          </div>
+          <div class="team-card amber">
+            <div class="team-head"><div class="team-av">E</div><div><div class="team-name">Editor-2</div><div class="team-role">RECORD · REWRITE</div></div></div>
+            <div class="team-status"><span class="pulse"></span> REWRITING · 5s</div>
+            <div class="team-bd">「AI 記事 自動 化」 を GSC data + 上 位 競 合 構 造 で SEO 改 修 中。</div>
+            <div class="team-stat-row"><span>今 月 リライト</span><b>21 本</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="mb-block">
+        <div class="mb-block-head"><span class="dot" style="background:var(--text3);box-shadow:none"></span> 待 機 中 メンバー<span class="right">21 idle</span></div>
+        <div class="team-grid">
+          <div class="team-card">
+            <div class="team-head"><div class="team-av">S</div><div><div class="team-name">SEO Strategist</div><div class="team-role">▌ ORCHESTRATOR</div></div></div>
+            <div class="team-status idle"><span class="pulse"></span> idle · 23 min ago</div>
+            <div class="team-bd">記事 公 開 → SEO 最 適 化 → リライト trigger の オーケストレーション。</div>
+            <div class="team-stat-row"><span>今 月 タスク</span><b>312 件</b></div>
+          </div>
+          <div class="team-card purple">
+            <div class="team-head"><div class="team-av">D</div><div><div class="team-name">Designer-1</div><div class="team-role">▌ HERO IMAGE</div></div></div>
+            <div class="team-status idle"><span class="pulse"></span> idle · 8 min ago</div>
+            <div class="team-bd">記 事 公 開 時 の hero image (= SVG + AI 画 像) 自動 生 成。</div>
+            <div class="team-stat-row"><span>今 月 制 作</span><b>48 枚</b></div>
+          </div>
+          <div class="team-card amber">
+            <div class="team-head"><div class="team-av">X</div><div><div class="team-name">Distributor-1</div><div class="team-role">▌ X / SNS</div></div></div>
+            <div class="team-status idle"><span class="pulse"></span> idle · 1 h ago</div>
+            <div class="team-bd">公 開 直 後 に AI 文 案 で X / Threads に 自動 投 稿。</div>
+            <div class="team-stat-row"><span>今 月 投 稿</span><b>96 件</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 }

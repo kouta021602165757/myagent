@@ -2731,8 +2731,25 @@ window._mb_api = async function(method, path, body){
           }
         };
       }
-      // 初 回 実 行
-      setTimeout(() => window._mb_hydrate(0), 600);
+      // 🛑 mock の anim を no-op = 即 値 設 定 (= 0 → 1768 の anim 中 値 を 排 除)
+      window.animNum = function(id, _, target){
+        const el = document.getElementById(id);
+        if(el) el.textContent = (target||0).toLocaleString();
+      };
+      // 既 mock の loadActiveSite が funPvV / funPv 等 を sample で 上 書 き する の を 防 ぐ
+      // = SITES の 値 を 強 制 で 全 0 に reset (= もう 1 回 上書き)
+      if(typeof SITES !== 'undefined'){
+        SITES.forEach(s => { s.pv = 0; s.users = 0; s.lp = 0; });
+      }
+      // 初 期 値 0 化 (= mock HTML hardcoded 1,768 / 48 / 11 等 を 全 部 ク リア)
+      ['statPv','statUsers','statLp','funPvV','funArtV','funLpV'].forEach(id => {
+        const el = document.getElementById(id); if(el) el.textContent = '0';
+      });
+      const funPv = document.getElementById('funPv'); if(funPv) funPv.textContent = '0 views · 0 unique';
+      const funLp = document.getElementById('funLp'); if(funLp) funLp.textContent = '0 sessions';
+      // 初 回 実 行 = 直 ぐ + safety net で 1500ms 後 も
+      setTimeout(() => window._mb_hydrate(0), 200);
+      setTimeout(() => window._mb_hydrate(0), 1500);
     }
   } catch(e){ console.warn('[auth] fail', e); }
 })();
@@ -2925,6 +2942,7 @@ setInterval(()=>{
 }, 3000);
 let barP = { bar1:48, bar2:72, bar3:25 };
 setInterval(()=>{
+  if(window._mb_realDataLoaded) return;  // 実 data 後 は random tick 停止
   Object.keys(barP).forEach(k => {
     barP[k] += Math.random() * 3;
     if(barP[k] >= 100){ barP[k] = 0; addFeed('publish', '記事 公開: 「AI で 月 100 本 自動 化」'); }
@@ -2978,6 +2996,7 @@ function addFeed(kind, msg){
 }
 renderFeed();
 setInterval(()=>{
+  if(window._mb_realDataLoaded) return;  // 実 data 後 は sample 自動 流入 停 止
   const t = FEED_T[Math.floor(Math.random() * FEED_T.length)];
   const s = t[3][Math.floor(Math.random() * t[3].length)];
   addFeed(t[0], `${t[2]}: ${s}`);

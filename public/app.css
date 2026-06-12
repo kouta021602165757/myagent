@@ -10249,3 +10249,37 @@ aside.sb .sb-bot { display: none !important; }
   transition: all .15s;
 }
 .mb-quick-chip:hover { border-color: #0d4f4a; color: #0d4f4a; background: #e8f1f0; }
+
+/* Phase 11: chat 強制 右 配置 (= main 内 child でも fixed で 右 固定) */
+.chat#chatWrap {
+  position: fixed !important;
+  top: 56px !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 380px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: rgba(255,255,255,.7) !important;
+  border-left: 1px solid rgba(13,79,74,.08) !important;
+  z-index: 4;
+  grid-column: unset !important;
+  grid-row: unset !important;
+}
+
+/* main = chat 領 域 (= 380px) を 右 余白 で 確 保 */
+main.main {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  padding: 20px 400px 20px 24px !important;
+}
+
+/* mobile = chat 完 全 隠 し + main 余白 戻 す */
+@media (max-width: 1024px) {
+  .chat#chatWrap { display: none !important; }
+  main.main { padding: 20px 24px !important; }
+}
+@media (max-width: 880px) {
+  .layout { grid-template-columns: 1fr !important; }
+  aside.sb { display: none; position: fixed; top: 56px; bottom: 0; left: 0; width: 280px; background: #fff; z-index: 50; }
+  main.main { padding: 14px 14px 70px !important; }
+}

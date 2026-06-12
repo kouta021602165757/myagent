@@ -10184,3 +10184,68 @@ aside.sb .sb-bot { display: none !important; }
   background: #fff;
   padding: 14px 18px;
 }
+
+/* Phase 10: 差異 全 解消 */
+
+/* topbar に sub-label 「v1.0 · PROD」 (= mock の v0.4 風) */
+.mb-brand::after {
+  content: 'v1.0 · PROD';
+  display: inline-block;
+  color: #71717a;
+  font-size: 10px;
+  letter-spacing: .16em;
+  padding: 3px 7px;
+  border: 1px solid rgba(9,9,11,.08);
+  border-radius: 4px;
+  margin-left: 4px;
+  font-family: 'DM Mono', monospace;
+  background: rgba(255,255,255,.5);
+}
+
+/* chat 内 既 tool strip (= 📎 🔗 🎤 ⌧ 📁 🌐 Chrome 🤝 Huddle 😀) 隠 し */
+.chat#chatWrap .composer-tools,
+.chat#chatWrap .composer-attach-strip,
+.chat#chatWrap .composer-actions {
+  display: none !important;
+}
+
+/* chat 内 既 composer = mock 風 シンプル に */
+.chat#chatWrap .composer {
+  padding: 12px 16px;
+  background: #fafaf7;
+  border-radius: 10px;
+  border: 1px solid rgba(13,79,74,.08);
+}
+.chat#chatWrap .composer textarea,
+.chat#chatWrap .composer input[type="text"] {
+  background: transparent !important;
+  border: 0 !important;
+  width: 100% !important;
+  font-size: 13px !important;
+  font-family: 'Noto Sans JP', sans-serif !important;
+}
+
+/* quick chips (= 数字 まとめ / 競合 分析 / 記事 提案) を chat-foot 上 に */
+.chat#chatWrap .chat-foot::before {
+  content: '';
+}
+.mb-quick-chips {
+  display: flex;
+  gap: 6px;
+  padding: 10px 18px 0;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(13,79,74,.08);
+  background: #fafaf7;
+}
+.mb-quick-chip {
+  font-family: 'DM Mono', monospace;
+  font-size: 10.5px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  background: #fff;
+  border: 1px solid rgba(13,79,74,.08);
+  color: #525252;
+  cursor: pointer;
+  transition: all .15s;
+}
+.mb-quick-chip:hover { border-color: #0d4f4a; color: #0d4f4a; background: #e8f1f0; }

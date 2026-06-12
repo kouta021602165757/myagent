@@ -29150,3 +29150,71 @@ function _mbToggleChat(){
   const cur = window.getComputedStyle(cw).display;
   cw.style.display = (cur === 'none') ? 'flex' : 'none';
 }
+
+// Phase 10: quick chips + WORKING / FEED 接続
+(function _mbChatChips(){
+  function inject(){
+    const foot = document.querySelector('.chat#chatWrap .chat-foot');
+    if(!foot) { setTimeout(inject, 500); return; }
+    if(document.querySelector('.mb-quick-chips')) return;
+    const chips = document.createElement('div');
+    chips.className = 'mb-quick-chips';
+    chips.innerHTML = ['📊 数字 まと め', '🔍 競 合 分 析', '📝 記事 提 案'].map(t =>
+      `<button class="mb-quick-chip" onclick="_mbSendChip('${t.replace(/'/g,'')}')">${t}</button>`
+    ).join('');
+    foot.parentElement.insertBefore(chips, foot);
+  }
+  setTimeout(inject, 1500);
+})();
+function _mbSendChip(text){
+  const ta = document.querySelector('.chat#chatWrap textarea, .chat#chatWrap input[type="text"]');
+  if(ta){ ta.value = text + ' · '; ta.focus(); }
+}
+
+// WORKING / FEED 動的 update
+async function _mbHydrateWorkingFeed(){
+  try {
+    const allAg = (typeof agents !== 'undefined' && agents) ? agents : [];
+    const siteAg = allAg.find(a => a && a.id === activeId) || allAg.find(a => typeof _isSiteAgent === 'function' ? _isSiteAgent(a) : true);
+    if(!siteAg) return;
+    // publish-jobs (= active = 動作 中)
+    const active = await api('GET', '/api/agents/' + siteAg.id + '/publish-jobs?active=1').catch(()=>null);
+    if(active && Array.isArray(active.jobs) && active.jobs.length > 0){
+      const grid = document.getElementById('mbWorkGrid');
+      if(grid){
+        grid.innerHTML = active.jobs.slice(0, 3).map((j, i) => {
+          const cls = ['', 'purple', 'amber'][i] || '';
+          const state = j.status === 'generating' ? 'WRITING' : j.status === 'pending' ? 'WAITING' : 'PUBLISHING';
+          const title = _mbEsc(j.title || j.keyword || '記事 生成 中');
+          return `<div class="mb-work-card ${cls}">
+            <div class="mb-work-state"><span class="mb-pulse"></span> ${state}</div>
+            <div class="mb-work-title">${title}</div>
+            <div class="mb-work-meta">${j.status || ''} · ${j.created_at ? new Date(j.created_at).toLocaleTimeString() : ''}</div>
+            <div class="mb-work-bar"><div class="mb-work-bar-fill" style="width:${j.status === 'generating' ? 60 : 20}%"></div></div>
+          </div>`;
+        }).join('');
+      }
+    }
+    // publish-jobs (= 全 件 = 履歴) を FEED に
+    const all = await api('GET', '/api/agents/' + siteAg.id + '/publish-jobs?limit=10').catch(()=>null);
+    if(all && Array.isArray(all.jobs) && all.jobs.length > 0){
+      const feed = document.getElementById('mbFeed');
+      if(feed){
+        feed.innerHTML = all.jobs.slice(0, 10).map(j => {
+          const t = j.created_at ? new Date(j.created_at).toLocaleTimeString().slice(0,5) : '--:--';
+          const tag = j.status === 'completed' ? 'PUBLISH' : j.status === 'failed' ? 'ERROR' : j.status === 'generating' ? 'WRITING' : 'QUEUE';
+          const tagCls = j.status === 'completed' ? '' : j.status === 'failed' ? 'red' : j.status === 'generating' ? 'amber' : '';
+          const msg = _mbEsc(j.title || j.keyword || '(no title)');
+          return `<div class="mb-feed-row"><span class="mb-feed-time">${t}</span><span class="mb-feed-tag ${tagCls}">${tag}</span><span class="mb-feed-msg">${msg}</span><a class="mb-feed-link">→</a></div>`;
+        }).join('');
+      }
+      const cnt = document.getElementById('mbFeedCount');
+      if(cnt) cnt.textContent = all.jobs.length + ' events';
+    }
+  } catch(e){ console.warn('hydrate working/feed fail', e); }
+}
+// _renderMockDashboard の 後 で 5 秒 ごと に 自動 更 新
+setInterval(() => {
+  if(document.getElementById('mbWorkGrid')) _mbHydrateWorkingFeed();
+}, 5000);
+setTimeout(_mbHydrateWorkingFeed, 2500);

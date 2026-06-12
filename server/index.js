@@ -27664,7 +27664,8 @@ async function handleAPI(req,res,pathname,method,ip){
       } catch(e){ console.warn('[funnel] lp aggregate failed:', e.message); }
     }
 
-    return jres(res, 200, {
+    // debug = 1 で 中 身 を 全 部 露 出
+    const out = {
       has_media: true,
       period: period || ('days_' + days),
       days,
@@ -27675,7 +27676,37 @@ async function handleAPI(req,res,pathname,method,ip){
       conv_pv_per_article: articles > 0 ? Math.round(pv / articles) : 0,
       conv_lp_rate: pv > 0 ? +(lp / pv * 100).toFixed(2) : 0,
       source: 'media_visits',
-    });
+    };
+    if(qs.debug === '1' && USE_SUPA){
+      try {
+        const sinceIso = new Date(Date.now() - days * 86400000).toISOString();
+        // 全 期 間 件 数 (= bot 含 む)
+        const allR = await sbReq('GET', 'media_visits',
+          '?select=count'
+          + '&media_slug=eq.' + encodeURIComponent(ag.media.slug)
+          + '&limit=1');
+        // bot=false 件 数
+        const noBotR = await sbReq('GET', 'media_visits',
+          '?select=count'
+          + '&media_slug=eq.' + encodeURIComponent(ag.media.slug)
+          + '&is_bot=eq.false'
+          + '&limit=1');
+        // 全 期 間 1 行 sample
+        const sampleR = await sbReq('GET', 'media_visits',
+          '?select=media_slug,post_slug,visited_at,is_bot,utm_medium'
+          + '&media_slug=eq.' + encodeURIComponent(ag.media.slug)
+          + '&order=visited_at.desc&limit=3');
+        out._debug = {
+          media_slug: ag.media.slug,
+          since_iso: sinceIso,
+          all_count_header: (allR.h && allR.h['content-range']) || null,
+          no_bot_count_header: (noBotR.h && noBotR.h['content-range']) || null,
+          recent_3: sampleR.d || null,
+          articles_idx_count: (ag.media_posts_idx || []).length,
+        };
+      } catch(e){ out._debug_err = e.message; }
+    }
+    return jres(res, 200, out);
   }
 
   // (DEPRECATED 2026-06-02) /media/research-pick endpoint は削除済。

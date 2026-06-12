@@ -1191,7 +1191,7 @@ input[type="file"]{display:none}
       <!-- demo state: loading -->
       <div class="state-loading" data-state="loading">
         <div class="block">
-          <div class="block-head"><span class="dot"></span> LIVE METRICS · 自前 計測<span class="right"><span class="sk" style="width:80px;height:10px;display:inline-block"></span></span></div>
+          <div class="block-head"><span class="dot"></span> 月 間 METRICS · 自前 計測<span class="right"><span class="sk" style="width:80px;height:10px;display:inline-block"></span></span></div>
           <div class="stats">
             <div class="sk-stat"><span class="sk sk-h"></span><span class="sk sk-num"></span><span class="sk sk-line short"></span></div>
             <div class="sk-stat"><span class="sk sk-h"></span><span class="sk sk-num"></span><span class="sk sk-line short"></span></div>
@@ -1221,7 +1221,7 @@ input[type="file"]{display:none}
 
       <div class="block">
         <div class="block-head">
-          <span class="dot"></span> LIVE METRICS · 自前 計測
+          <span class="dot"></span> 月 間 METRICS · 自前 計測
           <span class="right" id="liveClock">SYNC --:--</span>
         </div>
         <div class="stats">
@@ -2653,30 +2653,25 @@ window._mb_api = async function(method, path, body){
         window.activeSiteIdx = 0;
         loadActiveSite();
       }
-      // ★ 実 data で dashboard 数値 を 上 書 き
+      // ★ 実 data で dashboard 数値 を 上 書 き (= 月 間 統 一)
       window._mb_hydrate = async function(siteIdx){
         const idx = siteIdx != null ? siteIdx : (window.activeSiteIdx || 0);
         const s = SITES[idx];
         if(!s || !s._raw || !s._raw.id) return;
         const agentId = s._raw.id;
         try {
-          // LIVE METRICS (= 24h)
-          const day = await window._mb_api('GET', '/api/agents/' + agentId + '/media/stats?period=day').catch(()=>null);
-          if(day && day.has_media !== false){
-            const pv = day.pv || 0;
-            const users = day.sessions || 0;
-            const lp = day.lp_sessions || 0;
-            // S と DOM 直 接 上 書 き (= animNum 経 由 で no-op)
-            if(typeof S !== 'undefined'){ S.pv = pv; S.pvT = pv; S.users = users; S.usersT = users; S.lp = lp; S.lpT = lp; }
-            const setT = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v||0).toLocaleString(); };
-            setT('statPv', pv);
-            setT('statUsers', users);
-            setT('statLp', lp);
-          }
-          // FUNNEL (= 月 間)
+          // /media/funnel?period=month で 月 間 集 計 を 1 回 で 取 得
           const f = await window._mb_api('GET', '/api/agents/' + agentId + '/media/funnel?period=month').catch(()=>null);
           if(f && f.has_media !== false){
             const setT = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v||0).toLocaleString(); };
+            // LIVE METRICS = 月 間 (= 月 PV / ユニーク / LP)
+            setT('statPv', f.pv);
+            setT('statUsers', f.users);
+            setT('statLp', f.lp);
+            if(typeof S !== 'undefined'){
+              S.pv = f.pv; S.pvT = f.pv; S.users = f.users; S.usersT = f.users; S.lp = f.lp; S.lpT = f.lp;
+            }
+            // FUNNEL = 同 じ 月 data で
             setT('funArtV', f.articles);
             setT('funPvV', f.pv);
             setT('funLpV', f.lp);
@@ -2702,26 +2697,24 @@ window._mb_api = async function(method, path, body){
             setBar('funArtBar', (f.articles||0) / planCap * 100);
             setBar('funPvBar', Math.min(100, (f.pv||0) / Math.max(1, (f.articles||1) * 100) * 100));
             setBar('funLpBar', f.pv > 0 ? Math.min(100, (f.lp||0)/f.pv * 100) : 0);
+            // sparkline = 数値 0 なら 平ら
+            const flattenSpark = (id, isZero) => {
+              const el = document.getElementById(id);
+              if(!el) return;
+              el.querySelectorAll('.b').forEach(b => { if(isZero) b.style.height = '3%'; });
+            };
+            flattenSpark('sparkPv', !f.pv);
+            flattenSpark('sparkUsers', !f.users);
+            flattenSpark('sparkLp', !f.lp);
           }
-          // sparkline = 数 値 が 0 な ら 全 bar 平 ら (= 3%)、 非 0 な ら 既 高 さ 維 持
-          const flattenSpark = (id, isZero) => {
-            const el = document.getElementById(id);
-            if(!el) return;
-            el.querySelectorAll('.b').forEach(b => {
-              if(isZero) b.style.height = '3%';
-            });
-          };
-          flattenSpark('sparkPv', !day || !day.pv);
-          flattenSpark('sparkUsers', !day || !day.sessions);
-          flattenSpark('sparkLp', !day || !day.lp_sessions);
-          // delta 表 示 = data な し な ら 「— vs 先 週」 等 に
-          const setDelta = (id, hasData) => {
-            const el = document.getElementById(id);
-            if(!el) return;
-            if(!hasData) el.style.visibility = 'hidden';
-          };
-          setDelta('funC1A', day && day.pv);
-          // delta (= 「+12.4% vs 先 週」 等 mock sample) を 全部 隠 す
+          // crumb / 「24h LIVE」 ラベル を 月 間 に
+          const crumbHome = document.getElementById('crumb-home');
+          if(crumbHome){
+            const now = new Date();
+            const daysIn = Math.ceil((now - new Date(now.getFullYear(), now.getMonth(), 1)) / 86400000) + 1;
+            crumbHome.textContent = '▌ ' + (s.name || 'site') + ' · 今 月 ' + daysIn + ' 日 集 計';
+          }
+          // delta (= mock sample) 全 hidden
           document.querySelectorAll('.stat-delta').forEach(el => { el.style.display = 'none'; });
           window._mb_realDataLoaded = true;
         } catch(e){ console.warn('[hydrate] fail', e); }

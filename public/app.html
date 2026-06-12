@@ -2653,6 +2653,61 @@ window._mb_api = async function(method, path, body){
         window.activeSiteIdx = 0;
         loadActiveSite();
       }
+      // ★ 実 data で dashboard 数値 を 上 書 き
+      window._mb_hydrate = async function(siteIdx){
+        const idx = siteIdx != null ? siteIdx : (window.activeSiteIdx || 0);
+        const s = SITES[idx];
+        if(!s || !s._raw || !s._raw.id) return;
+        const agentId = s._raw.id;
+        try {
+          // LIVE METRICS (= 24h)
+          const day = await window._mb_api('GET', '/api/agents/' + agentId + '/media/stats?period=day').catch(()=>null);
+          if(day && day.has_media !== false){
+            const pv = day.pv || 0;
+            const users = day.sessions || 0;
+            const lp = day.lp_sessions || 0;
+            // S と DOM 直 接 上 書 き (= animNum 経 由 で no-op)
+            if(typeof S !== 'undefined'){ S.pv = pv; S.pvT = pv; S.users = users; S.usersT = users; S.lp = lp; S.lpT = lp; }
+            const setT = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v||0).toLocaleString(); };
+            setT('statPv', pv);
+            setT('statUsers', users);
+            setT('statLp', lp);
+          }
+          // FUNNEL (= 月 間)
+          const f = await window._mb_api('GET', '/api/agents/' + agentId + '/media/funnel?period=month').catch(()=>null);
+          if(f && f.has_media !== false){
+            const setT = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v||0).toLocaleString(); };
+            setT('funArtV', f.articles);
+            setT('funPvV', f.pv);
+            setT('funLpV', f.lp);
+            const funArt = document.getElementById('funArt');
+            if(funArt) funArt.textContent = (f.articles||0) + ' articles · AI 自動 生 成';
+            const funPv = document.getElementById('funPv');
+            if(funPv) funPv.textContent = (f.pv||0).toLocaleString() + ' views · ' + (f.users||0).toLocaleString() + ' unique';
+            const funLp = document.getElementById('funLp');
+            if(funLp) funLp.textContent = (f.lp||0) + ' sessions · 記事 → LP 流 入';
+            // conv 数 値
+            const funC1A = document.getElementById('funC1A');
+            if(funC1A) funC1A.textContent = (f.conv_pv_per_article||0) + ' PV';
+            const funC1 = document.getElementById('funC1');
+            if(funC1) funC1.textContent = 'conv ' + (f.conv_pv_per_article||0) + 'x';
+            const dropPct = f.pv > 0 ? (100 - (f.conv_lp_rate||0)).toFixed(1) : '0.0';
+            const funC2A = document.getElementById('funC2A');
+            if(funC2A) funC2A.textContent = dropPct + '%';
+            const funC2 = document.getElementById('funC2');
+            if(funC2) funC2.textContent = 'conv ' + (f.conv_lp_rate||0) + '%';
+            // bar fill (= cap 比)
+            const planCap = (window._me && window._me.plan === 'business') ? 100 : (window._me && window._me.plan === 'pro') ? 50 : 20;
+            const setBar = (id, pct) => { const el = document.getElementById(id); if(el) el.style.width = Math.min(100, Math.max(0, pct)) + '%'; };
+            setBar('funArtBar', (f.articles||0) / planCap * 100);
+            setBar('funPvBar', Math.min(100, (f.pv||0) / Math.max(1, (f.articles||1) * 100) * 100));
+            setBar('funLpBar', f.pv > 0 ? Math.min(100, (f.lp||0)/f.pv * 100) : 0);
+          }
+          window._mb_realDataLoaded = true;
+        } catch(e){ console.warn('[hydrate] fail', e); }
+      };
+      // 即 実 行
+      setTimeout(() => window._mb_hydrate(0), 600);
     }
   } catch(e){ console.warn('[auth] fail', e); }
 })();
@@ -2828,8 +2883,9 @@ document.addEventListener('click', (e)=>{
   }
 });
 
-// Ambient bump (only on active site)
+// Ambient bump (only on active site) — 実 data load 後 は 止 め る
 setInterval(()=>{
+  if(window._mb_realDataLoaded) return;  // 実 data 反 映 後 は random 増 加 し ない
   if(Math.random() < 0.3){ S.pvT += Math.floor(Math.random()*3)+1; animNum('statPv', S.pv, S.pvT); S.pv = S.pvT; }
   if(Math.random() < 0.15){ S.usersT += 1; animNum('statUsers', S.users, S.usersT); S.users = S.usersT; }
   if(Math.random() < 0.08){ S.lpT += 1; animNum('statLp', S.lp, S.lpT); S.lp = S.lpT; }

@@ -17403,45 +17403,45 @@ function _svgHeroForArticle(post, media){
   const pal = _svgPaletteFor(tpl, media && media.brand_color);
   const category = String(post && post.category_name || '').slice(0, 14) || '記事';
   const brandJp = String(media && media.name || 'Blog').slice(0, 24);
-  // 🎨 2026-06-09: タイトル baked-in 復活 (= 「サムネ ぽくない」 解消)。
-  //   タイトル を 中央 大 表示、 カテゴリ は 左上 小 chip のみ。
-  //   h3 と 二重 表示 は SSR HTML 側 で hero を 大き め + card h3 sr-only にする 方針。
-  const title = String(post && post.title || '').trim();
-  // 24 char で 改行 (= 2 行 max、 3 行目 以降 は ellipsis)
-  const titleChars = Array.from(title);
-  const lines = [];
-  let buf = '';
-  for(const ch of titleChars){
-    buf += ch;
-    if(buf.length >= 22){ lines.push(buf); buf = ''; if(lines.length >= 2) break; }
-  }
-  if(buf && lines.length < 2) lines.push(buf);
-  if(lines.length === 2 && buf && titleChars.length > 44) lines[1] = lines[1].slice(0, 20) + '…';
-  const fontSize = lines.length >= 2 ? 64 : 76;
-  const lineGap = lines.length >= 2 ? 88 : 0;
-  const startY = 360 - ((lines.length - 1) * lineGap) / 2;
-  const titleTspans = lines.map((ln, i) =>
-    `<tspan x="640" y="${startY + i * lineGap}">${_svgEscape(ln)}</tspan>`
-  ).join('');
+  // 🎨 2026-06-12: タイトル baked-in を 削 除 = 「画 像 + card 下 タイトル」 の 二 重 表 示 解 消
+  //   editorial デザイン = 画 像 は 「装 飾 + ブランド」 のみ、 タイトル は card 下 で 大 表 示
+  // タイトル hash で 装 飾 figure の 配 置 を 個 別 に (= 全 同 じ ぽく 見 え ない)
+  const titleH = _strHash(post && post.title || 'a');
+  const fig1x = 200 + (Math.abs(titleH) % 200);
+  const fig1y = 200 + (Math.abs(titleH >> 4) % 200);
+  const fig2x = 900 + (Math.abs(titleH >> 8) % 200);
+  const fig2y = 100 + (Math.abs(titleH >> 12) % 250);
+  const fig3x = 600 + (Math.abs(titleH >> 16) % 350);
+  const fig3y = 450 + (Math.abs(titleH >> 20) % 200);
+  const rot = (Math.abs(titleH >> 24) % 360);
   const svg = ''
     + `<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" width="1280" height="720">`
-    +   `<rect width="1280" height="720" fill="${pal.bg}"/>`
-    +   `<circle cx="160" cy="200" r="240" fill="${pal.deco}" opacity="0.35"/>`
-    +   `<circle cx="1140" cy="100" r="130" fill="${pal.deco}" opacity="0.45"/>`
-    +   `<circle cx="1010" cy="620" r="80" fill="${pal.deco}" opacity="0.35"/>`
-    +   `<polygon points="800,550 870,620 730,620" fill="${pal.deco}" opacity="0.4"/>`
-    +   `<circle cx="260" cy="540" r="9" fill="${pal.deco}"/>`
-    +   `<circle cx="950" cy="200" r="6" fill="${pal.deco}"/>`
-    +   `<circle cx="180" cy="600" r="5" fill="${pal.deco}" opacity="0.7"/>`
-    // メイン タイトル (= 中央 大、 サムネ の 主役)
-    +   `<text text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="${fontSize}" font-weight="900" fill="${pal.text}" letter-spacing="-1">${titleTspans}</text>`
+    +   `<defs>`
+    +     `<linearGradient id="g${Math.abs(titleH)%9999}" x1="0%" y1="0%" x2="100%" y2="100%">`
+    +       `<stop offset="0%" stop-color="${pal.bg}"/>`
+    +       `<stop offset="100%" stop-color="${pal.deco}" stop-opacity="0.55"/>`
+    +     `</linearGradient>`
+    +   `</defs>`
+    +   `<rect width="1280" height="720" fill="url(#g${Math.abs(titleH)%9999})"/>`
+    // ふんわ り 円 (= 編集 部 厳 選 風 ブラー)
+    +   `<circle cx="${fig1x}" cy="${fig1y}" r="280" fill="${pal.deco}" opacity="0.32"/>`
+    +   `<circle cx="${fig2x}" cy="${fig2y}" r="180" fill="${pal.accent}" opacity="0.25"/>`
+    +   `<circle cx="${fig3x}" cy="${fig3y}" r="120" fill="${pal.deco}" opacity="0.4"/>`
+    // 抽 象 多 角 形 (= editorial 感)
+    +   `<g transform="rotate(${rot} 640 360)">`
+    +     `<polygon points="640,200 740,360 540,360" fill="${pal.accent}" opacity="0.18"/>`
+    +     `<rect x="500" y="500" width="280" height="40" rx="20" fill="${pal.deco}" opacity="0.35"/>`
+    +   `</g>`
+    // 細 ライン (= editorial accent)
+    +   `<line x1="64" y1="64" x2="1216" y2="64" stroke="${pal.accent}" stroke-width="2" opacity="0.5"/>`
+    +   `<line x1="64" y1="656" x2="1216" y2="656" stroke="${pal.accent}" stroke-width="2" opacity="0.5"/>`
     // カテゴリ chip (= 左上 小)
     +   `<g>`
-    +     `<ellipse cx="200" cy="110" rx="130" ry="26" fill="#ffffff" stroke="${pal.deco}" stroke-width="2"/>`
-    +     `<text x="200" y="118" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="18" font-weight="700" fill="${pal.accent}">${_svgEscape(category)}</text>`
+    +     `<rect x="64" y="84" width="${Math.min(260, 24+category.length*16)}" height="42" rx="21" fill="#ffffff" stroke="${pal.accent}" stroke-width="2"/>`
+    +     `<text x="${64 + Math.min(130, 12+category.length*8)}" y="112" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="18" font-weight="800" fill="${pal.accent}">${_svgEscape(category)}</text>`
     +   `</g>`
-    // ブランドマーク (= 右下 小)
-    +   `<text x="1220" y="685" text-anchor="end" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="15" font-weight="700" fill="${pal.sub}">${_svgEscape(brandJp)}</text>`
+    // ブランド マーク (= 右下、 小、 縦 書 き)
+    +   `<text x="1216" y="676" text-anchor="end" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="13" font-weight="700" fill="${pal.sub}" opacity="0.65">${_svgEscape(brandJp)}</text>`
     + `</svg>`;
   return 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64');
 }

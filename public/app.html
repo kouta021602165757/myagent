@@ -55,6 +55,31 @@ setTimeout(function(){
      旧 agent を持つユーザーは新ホームの「サイトに紐づける」UI で移行。 -->
 
 <div class="layout">
+  <!-- ── TOPBAR (= mock 56px) ──────────────────────────────── -->
+  <div class="mb-topbar">
+    <button class="mb-hamburger" onclick="_toggleMobileSidebar(true)" aria-label="メニュー">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <a class="mb-brand" href="/" style="text-decoration:none">
+      <svg class="mb-brand-mark" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#fafaf7"/>
+        <rect x="8" y="7" width="4" height="18" rx="2" fill="#0d4f4a"/>
+        <rect x="14" y="11" width="4" height="14" rx="2" fill="#0d4f4a" opacity=".65"/>
+        <rect x="20" y="15" width="4" height="10" rx="2" fill="#0d4f4a" opacity=".35"/>
+      </svg>
+      <span class="mb-brand-name">MY AI Agent</span>
+    </a>
+    <span class="mb-plan-badge" id="mbTopPlan">⚡ —</span>
+    <div class="mb-top-time">
+      <span><span class="mb-blink"></span> 24 AI ON</span>
+      <span id="mbTopClock">--:--:--</span>
+      <button class="mb-top-btn" onclick="if(typeof openSearch==='function')openSearch()">🔍 <span style="font-family:'DM Mono',monospace;font-size:10px;color:#71717a;margin-left:4px">⌘ K</span></button>
+      <button class="mb-top-icon-btn" onclick="if(typeof openSettings==='function')openSettings()" title="通知 / 設 定">🔔<span class="mb-top-badge">3</span></button>
+      <button class="mb-top-btn" onclick="_mbToggleChat()">⌘ CHAT</button>
+      <button class="mb-avatar-btn" onclick="if(typeof openSettings==='function')openSettings()" title="アカウント" id="mbTopAv">K</button>
+    </div>
+  </div>
+
   <!-- ── SIDEBAR ─────────────────────────────────────────── -->
   <aside class="sb">
     <!-- ━━ Phase 2 改 修: site switcher (= 既 agList を dropdown に 内 包) ━━ -->

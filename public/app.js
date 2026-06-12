@@ -29111,3 +29111,42 @@ function _renderMockTeamView(agent){
     </div>
   `;
 }
+
+// Phase 9: topbar dynamic
+(function _mbTopbarInit(){
+  function tick(){
+    const el = document.getElementById('mbTopClock');
+    if(!el) return;
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    const ss = String(now.getSeconds()).padStart(2,'0');
+    el.textContent = hh + ':' + mm + ':' + ss;
+  }
+  setInterval(tick, 1000);
+  setTimeout(tick, 100);
+  // plan badge + avatar = me から
+  function refresh(){
+    if(typeof me !== 'object' || !me) { setTimeout(refresh, 500); return; }
+    const planEl = document.getElementById('mbTopPlan');
+    if(planEl){
+      const plan = me.plan || 'free';
+      const label = plan === 'business' ? '⚡ BUSINESS' : plan === 'pro' ? '✦ PRO' : '🆓 FREE';
+      planEl.textContent = label;
+    }
+    const avEl = document.getElementById('mbTopAv');
+    if(avEl){
+      const n = (me.name || me.email || 'U').charAt(0).toUpperCase();
+      avEl.textContent = n;
+    }
+  }
+  setTimeout(refresh, 1500);
+})();
+
+// chat toggle (= 既 chatWrap の 表 示 ON/OFF)
+function _mbToggleChat(){
+  const cw = document.getElementById('chatWrap');
+  if(!cw) return;
+  const cur = window.getComputedStyle(cw).display;
+  cw.style.display = (cur === 'none') ? 'flex' : 'none';
+}

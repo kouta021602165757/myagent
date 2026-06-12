@@ -10046,3 +10046,92 @@ aside.sb { width: 240px !important; min-width: 240px !important; background: rgb
 .mb-block { box-shadow: 0 1px 2px rgba(13,79,74,.03); transition: box-shadow .2s; }
 .mb-block:hover { box-shadow: 0 2px 8px rgba(13,79,74,.06); }
 @media (max-width: 700px){ main.main { padding: 14px 14px 70px !important; } }
+
+/* Phase 9: mock topbar + 3 列 grid + chat 復元 (= 見 た 目 一 致) */
+
+/* layout = grid (= 56px topbar + 240px sidebar + 1fr main + 380px chat) */
+.layout {
+  display: grid !important;
+  grid-template-columns: 240px 1fr 380px !important;
+  grid-template-rows: 56px 1fr !important;
+  height: 100vh !important;
+  overflow: hidden;
+}
+
+/* topbar = grid col 1/-1 (= 全 幅) row 1 */
+.mb-topbar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(13,79,74,.08);
+  background: rgba(255,255,255,.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 5;
+}
+.mb-hamburger { display: none; width: 36px; height: 36px; border-radius: 7px; align-items: center; justify-content: center; background: transparent; color: #525252; cursor: pointer; border: 0; }
+.mb-hamburger:hover { background: #fafafa; }
+.mb-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 14px; color: #1a1a1a; }
+.mb-brand-mark { width: 28px; height: 28px; border-radius: 6px; background: #fafaf7; border: 1px solid rgba(9,9,11,.08); padding: 1px; flex-shrink: 0; }
+.mb-brand-name { color: #0d4f4a; letter-spacing: -.01em; }
+.mb-plan-badge { display: inline-flex; align-items: center; gap: 5px; background: linear-gradient(135deg,#f7ffe9,#fff8e1); border: 1px solid #c0ff5c; color: #a3e635; font-size: 10.5px; font-weight: 800; padding: 4px 9px; border-radius: 5px; letter-spacing: .04em; font-family: 'DM Mono', monospace; }
+.mb-top-time { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 11px; color: #525252; display: flex; align-items: center; gap: 14px; }
+.mb-blink { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #15803d; box-shadow: 0 0 7px #15803d; animation: mb-tb-blink 1.5s infinite; }
+@keyframes mb-tb-blink { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.mb-top-btn { padding: 6px 12px; border: 1px solid rgba(9,9,11,.08); border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 11px; color: #525252; transition: all .15s; background: #fff; cursor: pointer; }
+.mb-top-btn:hover { border-color: #0d4f4a; color: #0d4f4a; }
+.mb-top-icon-btn { width: 34px; height: 34px; border-radius: 7px; border: 1px solid rgba(9,9,11,.08); background: #fff; cursor: pointer; position: relative; font-size: 15px; }
+.mb-top-icon-btn:hover { border-color: #0d4f4a; }
+.mb-top-badge { position: absolute; top: -2px; right: -2px; background: #ef4444; color: #fff; font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 8px; font-family: 'DM Mono', monospace; }
+.mb-avatar-btn { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg,#c0ff5c,#a3e635); color: #0a0a0e; font-weight: 900; cursor: pointer; border: 0; font-size: 14px; }
+
+/* sidebar = grid col 1 row 2 */
+aside.sb {
+  grid-column: 1;
+  grid-row: 2;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+/* main = grid col 2 row 2 */
+main.main {
+  grid-column: 2;
+  grid-row: 2;
+  padding: 20px 24px !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #fafaf7 !important;
+}
+
+/* chat = grid col 3 row 2 (= 復元) */
+.chat#chatWrap {
+  grid-column: 3;
+  grid-row: 2;
+  display: flex !important;
+  flex-direction: column;
+  border-left: 1px solid rgba(13,79,74,.08);
+  background: rgba(255,255,255,.7);
+  overflow: hidden;
+}
+
+/* sidebar 内 既 ロゴ (= sb-brand) は topbar に 移動 し た の で 隠 す */
+aside.sb > .sb-brand { display: none !important; }
+
+/* sidebar 下 部 既 user info / 設定 button = topbar avatar に 統 合 さ れ た の で 隠 す */
+aside.sb .sb-bot { display: none !important; }
+
+/* mobile */
+@media (max-width: 880px) {
+  .layout { grid-template-columns: 1fr !important; grid-template-rows: 56px 1fr !important; }
+  aside.sb { display: none; position: fixed; top: 56px; bottom: 0; left: 0; width: 280px; background: #fff; z-index: 50; }
+  aside.sb.open { display: flex; }
+  .chat#chatWrap { display: none !important; }
+  main.main { grid-column: 1; padding: 14px 14px 70px !important; }
+  .mb-hamburger { display: inline-flex !important; }
+  .mb-brand-name, .mb-plan-badge { display: none; }
+  .mb-top-time > span:first-child { display: none; }
+  .mb-top-btn { padding: 5px 9px; font-size: 10.5px; }
+}

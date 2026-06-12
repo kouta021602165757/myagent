@@ -2575,16 +2575,25 @@ input[type="file"]{display:none}
 </div>
 
 <script>
-// ━━━ 🔐 認 証 ガード + 既 サーバ data 取得 ━━━━━━━━━━━━━━━━
+// ━━━ 🔐 認 証 ガード + 実 サーバ data 取得 ━━━━━━━━━━━━━━━━
+window._mb_apiToken = localStorage.getItem('token') || '';
+window._mb_api = async function(method, path, body){
+  const opts = { method, headers: { 'Authorization': 'Bearer ' + window._mb_apiToken } };
+  if(body){ opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const r = await fetch(path, opts);
+  if(r.status === 401){ localStorage.removeItem('token'); location.href = '/auth.html'; return null; }
+  if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+  return r.json();
+};
 (async function _authGuard(){
-  const token = localStorage.getItem('token');
-  if(!token){ location.href = '/auth.html'; return; }
+  if(!window._mb_apiToken){ location.href = '/auth.html'; return; }
   try {
-    const r = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token }});
-    if(r.status === 401){ localStorage.removeItem('token'); location.href = '/auth.html'; return; }
-    const data = await r.json();
+    const data = await window._mb_api('GET', '/api/me');
+    if(!data) return;
     window._me = data.user || data;
     window._agents = (window._me && window._me.agents) || [];
+
+    // topbar 反 映
     setTimeout(()=>{
       const plan = (window._me.plan || 'free').toUpperCase();
       const planBadge = document.querySelector('.plan-badge');
@@ -2594,6 +2603,57 @@ input[type="file"]{display:none}
       const sub = document.querySelector('.brand-sub');
       if(sub) sub.textContent = 'v1.0 · PROD';
     }, 200);
+
+    // ★ SITES 配 列 を 実 agents で 上 書 き
+    const sites = (window._agents || []).filter(a => a && a.id && (a.media || a.kind === 'site' || a.type === 'site' || !a.kind));
+    if(sites.length > 0){
+      const realSITES = sites.map((a, i) => ({
+        id: a.id,
+        name: a.name || a.title || ('サイト ' + (i+1)),
+        domain: (a.media && a.media.slug) ? (a.media.slug + '.myaiagents.agency') : 'site-' + (i+1),
+        logoText: (a.name || a.title || 'S').charAt(0).toUpperCase(),
+        logoCls: ['', 'purple', ''][i % 3] || '',
+        plan: ((window._me.plan || 'free').toUpperCase()) + ' プラン',
+        pv: 0, users: 0, lp: 0,
+        art: ((a.media_posts_idx || []).filter(p => p && p.status !== 'draft')).length,
+        cap: (window._me.plan === 'business') ? 100 : (window._me.plan === 'pro') ? 50 : 20,
+        posts: ((a.media_posts_idx || []).slice(0, 10).map(p => ({
+          ti: p.title || p.slug || '(無 題)',
+          date: p.published_at ? new Date(p.published_at).toISOString().slice(5,10).replace('-','-') : '',
+          pv: p.pv || 0, lp: p.lp || 0, t: '↑',
+        }))),
+        _raw: a,
+      }));
+      // 上 書 き = mock の SITES は const だ が、 window 経 由 で 再代 入 不 可。 = 配 列 内 容 入 れ 替え
+      if(typeof SITES !== 'undefined' && Array.isArray(SITES)){
+        SITES.length = 0;
+        realSITES.forEach(s => SITES.push(s));
+      }
+      // dropdown 再 描 画
+      const dd = document.getElementById('siteDD');
+      if(dd){
+        dd.innerHTML = realSITES.map((s, i) => `
+          <div class="site-opt${i===0?' active':''}" data-site="${i}" onclick="pickSite(${i},this)">
+            <div class="site-logo ${s.logoCls}">${s.logoText}</div>
+            <div class="site-info">
+              <div class="site-name">${s.name}</div>
+              <div class="site-url">${s.domain} · ${s.art} 記事</div>
+            </div>
+            <span class="site-opt-check">✓</span>
+          </div>
+        `).join('') + `
+          <div class="site-dd-sep"></div>
+          <div class="site-dd-add" onclick="window.location.href='/auth.html'">
+            <span>＋</span> 新しい サイト を 追加
+          </div>
+        `;
+      }
+      // active site 反 映
+      if(typeof loadActiveSite === 'function'){
+        window.activeSiteIdx = 0;
+        loadActiveSite();
+      }
+    }
   } catch(e){ console.warn('[auth] fail', e); }
 })();
 

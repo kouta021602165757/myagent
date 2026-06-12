@@ -19339,8 +19339,8 @@ function _mediaRenderMinimalIndex(media, posts, opts){
   const heroPostCard = (p, opts2) => {
     const sz = opts2 && opts2.size || 'small';
     const isBig = sz === 'big';
-    const imgHeight = isBig ? '240px' : '130px';
-    const titleSize = isBig ? '22px' : '14px';
+    const imgHeight = isBig ? '360px' : '150px';
+    const titleSize = isBig ? '34px' : '15px';
     const titleLineClamp = isBig ? '3' : '2';
     const excerptShow = isBig && p.excerpt;
     const idx = opts2 && opts2.idx || 0;
@@ -19503,13 +19503,50 @@ function _mediaRenderMinimalIndex(media, posts, opts){
     // ホーム: 新 マガジン レイアウト
     `${heroSectionHTML}
     ${trendingHTML}
+    ${(() => {
+      // ── MOST POPULAR ranking (= Forbes 風 番 号 付 ranking) ──
+      const popularPosts = posts.slice(0, 5);
+      if(popularPosts.length < 3) return '';
+      return `
+        <section style="padding:80px 24px;background:#0a3d39;color:#fff;border-top:4px solid ${accent}">
+          <div style="max-width:1100px;margin:0 auto">
+            <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:42px">
+              <div style="font-family:${s.brandFont};font-size:14px;font-weight:900;color:${accent};letter-spacing:.22em;text-transform:uppercase">▌ MOST POPULAR</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:.06em">編集部 厳 選 TOP 5</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:36px 48px">
+              ${popularPosts.map((p, i) => `
+                <a href="${_mediaPublicUrl(media, p.slug)}" style="display:flex;gap:22px;text-decoration:none;color:#fff;align-items:start;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,.1);transition:opacity .2s" onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
+                  <div style="font-family:${s.titleFont};font-size:72px;font-weight:900;color:${accent};line-height:.9;flex-shrink:0;min-width:72px;letter-spacing:-.04em">${String(i+1).padStart(2,'0')}</div>
+                  <div style="flex:1;min-width:0">
+                    ${p.category_name ? '<div style="font-size:10px;color:'+accent+';letter-spacing:.14em;font-weight:900;margin-bottom:7px;text-transform:uppercase">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
+                    <h3 style="font-family:${s.titleFont};font-size:19px;font-weight:800;line-height:1.4;letter-spacing:-.012em;margin:0 0 10px;color:#fff;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${_mediaEsc(p.title)}</h3>
+                    <div style="font-size:11px;color:rgba(255,255,255,.55);font-family:${s.brandFont}">${_mediaFmtDate(p.published_at)}</div>
+                  </div>
+                </a>
+              `).join('')}
+            </div>
+          </div>
+        </section>`;
+    })()}
     ${cardsHTML ? `
-      <section style="padding:34px 24px 28px;max-width:1100px;margin:0 auto">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-          <div style="font-family:${s.brandFont};font-size:13px;font-weight:800;color:${s.textColor};letter-spacing:.04em">📚 もっと 読む</div>
-          <div style="font-size:10.5px;color:${s.mutedColor}">${restPosts.length} 本</div>
+      <section style="padding:80px 24px 60px;max-width:1100px;margin:0 auto">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:32px;padding-bottom:18px;border-bottom:2px solid ${s.textColor}">
+          <div style="font-family:${s.titleFont};font-size:28px;font-weight:900;color:${s.textColor};letter-spacing:-.02em">LATEST STORIES</div>
+          <div style="font-size:11px;color:${s.mutedColor};font-family:${s.brandFont};letter-spacing:.05em">${restPosts.length} 本 · ${recent7d > 0 ? '今 週 ' + recent7d + ' 本 公 開' : '更 新 中'}</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px">${cardsHTML}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:36px">${cardsHTML}</div>
+      </section>
+    ` : ''}
+    ${lpUrl ? `
+      <section style="padding:90px 24px;background:linear-gradient(135deg,${accent} 0%,#0a3d39 60%,#000 100%);color:#fff;text-align:center;position:relative;overflow:hidden">
+        <div style="max-width:680px;margin:0 auto;position:relative;z-index:1">
+          <div style="font-family:${s.brandFont};font-size:11px;font-weight:900;letter-spacing:.24em;opacity:.85;margin-bottom:22px">▌ ${name.toUpperCase()} · NEWSLETTER</div>
+          <h2 style="font-family:${s.titleFont};font-size:44px;font-weight:900;line-height:1.18;letter-spacing:-.025em;margin:0 0 20px">最 新 記事 を 一足 早 く。</h2>
+          <p style="font-size:15px;line-height:1.8;opacity:.85;margin:0 0 36px;letter-spacing:-.005em">${_mediaEsc((media.lp_description || '編 集 部 厳 選 の 記事 + 最 新 トレンド を 公 開 前 に お 届 け し ま す。'))}</p>
+          <a href="${lpUrl}?utm_source=media&utm_medium=footer_lp&utm_campaign=${_mediaEsc(media.slug)}_subscribe" target="_blank" rel="noopener sponsored" style="display:inline-block;background:#fff;color:#0a3d39;padding:18px 42px;border-radius:99px;font-weight:900;font-size:15px;text-decoration:none;letter-spacing:.01em;transition:all .2s;box-shadow:0 12px 30px rgba(0,0,0,.25)" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 16px 40px rgba(0,0,0,.35)'" onmouseout="this.style.transform='';this.style.boxShadow='0 12px 30px rgba(0,0,0,.25)'">公 式 サイト で 詳 し く 見 る →</a>
+          <div style="font-size:10.5px;opacity:.55;margin-top:18px;letter-spacing:.04em">無 料 · いつ で も 解 除 可 能</div>
+        </div>
       </section>
     ` : ''}
     ${archiveHTML}`

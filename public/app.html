@@ -1403,23 +1403,35 @@ input[type="file"]{display:none}
       </div>
 
       <div class="block">
-        <div class="block-head"><span class="dot"></span> メディア 設定<span class="right">サイト デザイン</span></div>
+        <div class="block-head"><span class="dot"></span> メディア 設定<span class="right">サイト デザイン / SEO</span></div>
         <div class="set-block">
           <div class="set-row" style="border-top:0">
-            <div class="set-row-info"><div class="set-row-l">サイト 名</div><div class="set-row-d">myaiagents.agency Blog</div></div>
-            <button class="btn-sm" onclick="showToast('変更 (mock)')">変更</button>
+            <div class="set-row-info"><div class="set-row-l">サイト タイトル (= name)</div><div class="set-row-d" id="msName">—</div></div>
+            <button class="btn-sm" onclick="_mbEditMedia('name')">変 更</button>
           </div>
           <div class="set-row">
-            <div class="set-row-info"><div class="set-row-l">サブ ドメイン</div><div class="set-row-d">media-blog.myaiagents.agency</div></div>
-            <button class="btn-sm" onclick="showToast('変更 (mock)')">変更</button>
+            <div class="set-row-info"><div class="set-row-l">サイト ディスクリプション</div><div class="set-row-d" id="msDesc">—</div></div>
+            <button class="btn-sm" onclick="_mbEditMedia('description')">変 更</button>
           </div>
           <div class="set-row">
-            <div class="set-row-info"><div class="set-row-l">カテゴリ (4)</div><div class="set-row-d">AI×メディア / ノウハウ / 比較 / 業界 動向</div></div>
-            <button class="btn-sm" onclick="showToast('編集 (mock)')">編集</button>
+            <div class="set-row-info"><div class="set-row-l">サムネイル (= og:image)</div><div class="set-row-d" id="msOg">—</div></div>
+            <button class="btn-sm" onclick="_mbEditMedia('og_image_url')">変 更</button>
           </div>
           <div class="set-row">
-            <div class="set-row-info"><div class="set-row-l">テーマ / 配色</div><div class="set-row-d">teal + cream</div></div>
-            <button class="btn-sm" onclick="showToast('テーマ 編集 (mock)')">編集</button>
+            <div class="set-row-info"><div class="set-row-l">サブ ドメイン</div><div class="set-row-d" id="msSlug">—</div></div>
+            <button class="btn-sm" onclick="showToast('サブ ドメイン 変 更 は サポート へ お 問 い 合 わ せ く だ さ い', 'ok')">変 更</button>
+          </div>
+          <div class="set-row">
+            <div class="set-row-info"><div class="set-row-l">カテゴリ</div><div class="set-row-d" id="msCat">—</div></div>
+            <button class="btn-sm" onclick="showToast('カテゴリ 編 集 は 記 事 公 開 時 に 自動 で 決 定 さ れ ます', 'ok')">確 認</button>
+          </div>
+          <div class="set-row">
+            <div class="set-row-info"><div class="set-row-l">ブランド 色</div><div class="set-row-d" id="msBrand">—</div></div>
+            <button class="btn-sm" onclick="_mbEditMedia('brand_color')">変 更</button>
+          </div>
+          <div class="set-row">
+            <div class="set-row-info"><div class="set-row-l">LP URL (= 流 入 先)</div><div class="set-row-d" id="msLp">—</div></div>
+            <button class="btn-sm" onclick="_mbEditMedia('lp_url')">変 更</button>
           </div>
         </div>
       </div>
@@ -2903,6 +2915,95 @@ window._mb_api = async function(method, path, body){
           } catch(e){ console.warn('[poll] fail', e); }
         }, 3000);
       };
+      // ★ メディア 設 定 = 値 取得 + edit modal
+      window._mb_mediaSettings = null;
+      window._mbLoadMediaSettings = async function(){
+        const s = SITES[window.activeSiteIdx || 0];
+        if(!s || !s._raw || !s._raw.id) return;
+        const agentId = s._raw.id;
+        try {
+          const r = await window._mb_api('GET', '/api/agents/' + agentId + '/media/settings');
+          window._mb_mediaSettings = r || {};
+          const ms = window._mb_mediaSettings;
+          const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v || '— 未 設 定 —'); };
+          set('msName', ms.name);
+          set('msDesc', ms.description);
+          set('msOg', ms.og_image_url ? ms.og_image_url.slice(0, 60) + (ms.og_image_url.length > 60 ? '...' : '') : '');
+          set('msSlug', ms.slug ? ms.slug + '.myaiagents.agency' : '');
+          set('msCat', (s._raw.media && Array.isArray(s._raw.media.categories)) ? (s._raw.media.categories.length + ' カテゴリ · ' + s._raw.media.categories.slice(0,3).join(' / ')) : '');
+          set('msBrand', ms.brand_color);
+          set('msLp', ms.lp_url);
+        } catch(e){ console.warn('[media settings load] fail', e); }
+      };
+      // メディア tab に nav し た 時 に 自動 load
+      const _origNavTo = window.navTo;
+      if(typeof _origNavTo === 'function' && !window._mb_navHooked){
+        window._mb_navHooked = true;
+        window.navTo = function(view, btn){
+          _origNavTo.apply(this, arguments);
+          if(view === 'media') setTimeout(window._mbLoadMediaSettings, 100);
+        };
+      }
+      // 初 回 (= 初 期 dashboard ロード 後 でも 1 回 取得)
+      setTimeout(window._mbLoadMediaSettings, 1500);
+
+      // edit modal
+      window._mbEditMedia = function(field){
+        const ms = window._mb_mediaSettings || {};
+        const labels = {
+          name: 'サイト タイトル',
+          description: 'サイト ディスクリプション (= meta description)',
+          og_image_url: 'サムネイル URL (= og:image)',
+          brand_color: 'ブランド 色 (= #0d4f4a 等)',
+          lp_url: 'LP URL (= https://... )',
+        };
+        const placeholders = {
+          name: 'myaiagents.agency Blog',
+          description: 'メディア の 説 明 (= 300 文 字 まで)',
+          og_image_url: 'https://example.com/og.png',
+          brand_color: '#0d4f4a',
+          lp_url: 'https://myaiagents.agency',
+        };
+        const current = ms[field] || '';
+        const multiline = field === 'description';
+        // simple prompt-style modal
+        const ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(13,79,74,.35);backdrop-filter:blur(6px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px';
+        ov.innerHTML = `
+          <div style="background:#fff;border-radius:12px;max-width:480px;width:100%;overflow:hidden;box-shadow:0 30px 80px rgba(13,79,74,.2)">
+            <div style="padding:18px 22px;border-bottom:1px solid var(--wire);font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--teal);text-transform:uppercase">📝 ${labels[field] || field} を 変 更</div>
+            <div style="padding:22px">
+              ${multiline
+                ? `<textarea id="_mbEditInput" rows="4" style="width:100%;padding:11px 13px;border:1px solid var(--wire);border-radius:8px;font-size:13.5px;font-family:inherit;outline:none;resize:vertical">${(current||'').replace(/</g,'&lt;')}</textarea>`
+                : `<input id="_mbEditInput" type="text" value="${(current||'').replace(/"/g,'&quot;')}" placeholder="${placeholders[field]||''}" style="width:100%;padding:11px 13px;border:1px solid var(--wire);border-radius:8px;font-size:13.5px;font-family:inherit;outline:none">`
+              }
+              <div style="font-size:11px;color:var(--text3);margin-top:8px;font-family:var(--mono)">現 在: ${(current||'— 未 設 定 —').toString().slice(0,80)}</div>
+            </div>
+            <div style="padding:14px 22px;border-top:1px solid var(--wire);display:flex;gap:10px;justify-content:flex-end;background:var(--cream)">
+              <button class="btn btn-ghost" id="_mbEditCancel">キャンセル</button>
+              <button class="btn btn-go" id="_mbEditSave">保 存</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(ov);
+        const input = ov.querySelector('#_mbEditInput');
+        setTimeout(() => input && input.focus(), 50);
+        ov.querySelector('#_mbEditCancel').onclick = () => ov.remove();
+        ov.onclick = (e) => { if(e.target === ov) ov.remove(); };
+        ov.querySelector('#_mbEditSave').onclick = async () => {
+          const v = input.value.trim();
+          const s = SITES[window.activeSiteIdx || 0];
+          const agentId = s && s._raw && s._raw.id;
+          if(!agentId){ showToast('サイト 未 選 択', 'ng'); return; }
+          try {
+            await window._mb_api('PUT', '/api/agents/' + agentId + '/media/settings', { [field]: v });
+            showToast('✓ 保 存 し ま し た');
+            ov.remove();
+            window._mbLoadMediaSettings();
+          } catch(e){ showToast('保 存 失 敗: ' + (e.message||e), 'ng'); }
+        };
+      };
+
       // mock の gen handler を 上 書 き
       window.genStartCustom = function(){
         const kw = document.getElementById('genKwInput').value.trim();

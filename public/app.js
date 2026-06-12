@@ -28881,7 +28881,13 @@ setTimeout(() => {
   if(window._mbHomeHooked) return;
   window._mbHomeHooked = true;
   const _origRenderHome = window.renderHomeDashboard;
+  window._mbOrigRenderHome = _origRenderHome;
   window.renderHomeDashboard = function(){
+    // flag = true = 既 動 作 を 強 制 (= nav('media'/'analytics'/'team') で goSiteDashboard 経由)
+    if(window._mbForceLegacy){
+      window._mbForceLegacy = false;
+      return _origRenderHome.apply(this, arguments);
+    }
     try {
       const allAg = (typeof agents !== 'undefined' && agents) ? agents : [];
       const siteAgents = allAg.filter(a => typeof _isSiteAgent === 'function' ? _isSiteAgent(a) : true);
@@ -28901,30 +28907,30 @@ setTimeout(() => {
   setTimeout(() => { try { window.renderHomeDashboard(); } catch(_){} }, 100);
 })();
 
-// navTo を 既 機能 と redirect 接続 (= 28525 行 を 上書き)
+// navTo: flag で hook を skip し て 既 動 作 へ
 function navTo(view, btn){
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   switch(view){
     case 'home':
-      // mock dashboard を 表示 (= renderHomeDashboard hook 経由)
+      window._mbForceLegacy = false;  // mock 強 制
       if(typeof window.renderHomeDashboard === 'function') window.renderHomeDashboard();
       else if(typeof _renderMockDashboard === 'function') _renderMockDashboard();
       break;
     case 'media':
-      // 既 site dashboard の 'stats' tab (= メディア / GA4 関連)
+      window._mbForceLegacy = true;
       if(typeof goSiteDashboard === 'function') goSiteDashboard('stats');
-      else if(typeof _renderMockDashboard === 'function') _renderMockDashboard();
+      else { window._mbForceLegacy = false; showToast('📰 メディア = 未 接 続', 'ng'); }
       break;
     case 'analytics':
-      // 既 site dashboard の 'grow' tab (= growth report)
+      window._mbForceLegacy = true;
       if(typeof goSiteDashboard === 'function') goSiteDashboard('grow');
-      else if(typeof _renderMockDashboard === 'function') _renderMockDashboard();
+      else { window._mbForceLegacy = false; showToast('📊 分 析 = 未 接 続', 'ng'); }
       break;
     case 'team':
-      // 既 site dashboard の 'overview' (= agent / team 表示)
+      window._mbForceLegacy = true;
       if(typeof goSiteDashboard === 'function') goSiteDashboard('overview');
-      else if(typeof _renderMockDashboard === 'function') _renderMockDashboard();
+      else { window._mbForceLegacy = false; showToast('🤖 AI チーム = 未 接 続', 'ng'); }
       break;
     case 'settings':
       if(typeof openSettings === 'function') openSettings();

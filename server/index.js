@@ -17397,23 +17397,8 @@ function _categoryToEnSubtitle(cat){
 }
 
 function _svgHeroForArticle(post, media){
-  // 🆕 ④ SEO 改善: SVG プレース ホルダ を AI 画 像 (Pollinations) に 切替
-  // 記事 タイトル + カテゴリ で プロンプト 生成、 seed 固定 で 同 記事 = 同 画 像
-  try {
-    const title = String(post && post.title || '').slice(0, 100);
-    const category = String(post && post.category_name || '').slice(0, 30);
-    const lpBrand = (media && media.lp_brand_name) || (media && media.name) || '';
-    // 「写 真 風 editorial cover」 を 強 制 = ブログ サムネ 風 で 高 品 質
-    const prompt = 'editorial blog cover photo, professional, ' +
-                   (category ? category + ' category, ' : '') +
-                   title + ', clean composition, hyperrealistic, no text';
-    const seedSrc = (post && post.slug) || title;
-    const seed = (typeof _mediaHashStr === 'function') ? _mediaHashStr(seedSrc) : 12345;
-    // Pollinations = 無 料 + 高 速 + seed で 安 定
-    return 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt).slice(0, 500) +
-           '?width=1200&height=630&seed=' + seed + '&nologo=true&enhance=true';
-  } catch(_){ /* fallthrough to SVG */ }
-
+  // 🛑 Pollinations は 仕 上 がり 不 安 定 (= 「サムネ 消 え る」 報 告)
+  // 既 SVG hero 生 成 ロジック に 戻 す + fallback 保 持
   const tpl = (media && media.template) || 'minimal';
   const pal = _svgPaletteFor(tpl, media && media.brand_color);
   const category = String(post && post.category_name || '').slice(0, 14) || '記事';

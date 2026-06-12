@@ -19325,13 +19325,13 @@ function _mediaRenderMinimalIndex(media, posts, opts){
   const trendingPosts = posts.slice(5, 9);
   const restPosts = posts.slice(9);
 
-  // ── カテゴリ chip (= 件数 付き) ──
-  const catTabsHTML = (media.categories || []).map(c => {
+  // ── カテゴリ chip (= 件数 付き、 0 件 は 非 表 示) ──
+  const catTabsHTML = (media.categories || []).filter(c => (catCounts[c.name] || 0) > 0).map(c => {
     const cnt = catCounts[c.name] || 0;
     const isActive = categoryFilter === c.name;
-    return '<a href="' + _mediaPublicUrl(media, 'cat/' + c.slug) + '" style="display:inline-flex;align-items:center;gap:6px;color:' + (isActive ? '#fff' : s.subColor) + ';text-decoration:none;padding:8px 14px;border:1px solid ' + (isActive ? accent : s.cardBorder) + ';border-radius:99px;font-size:12.5px;font-weight:700;background:' + (isActive ? accent : s.cardBg) + ';white-space:nowrap;transition:.15s">'
+    return '<a href="' + _mediaPublicUrl(media, 'cat/' + c.slug) + '" style="display:inline-flex;align-items:center;gap:7px;color:' + (isActive ? '#fff' : s.textColor) + ';text-decoration:none;padding:9px 18px;border:1.5px solid ' + (isActive ? accent : s.cardBorder) + ';border-radius:999px;font-size:12.5px;font-weight:700;background:' + (isActive ? accent : s.cardBg) + ';white-space:nowrap;transition:all .18s;letter-spacing:-.005em" onmouseover="if(!this.style.background.includes(\'' + accent + '\')){this.style.borderColor=\'' + accent + '\';this.style.transform=\'translateY(-1px)\'}" onmouseout="if(!this.style.background.includes(\'' + accent + '\')){this.style.borderColor=\'' + s.cardBorder + '\';this.style.transform=\'\'}">'
       + '<span>' + _mediaEsc(c.name) + '</span>'
-      + '<span style="background:' + (isActive ? 'rgba(255,255,255,.25)' : (isDark ? '#1e293b' : s.headerBg)) + ';color:' + (isActive ? '#fff' : s.mutedColor) + ';font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:99px;letter-spacing:.02em">' + cnt + '</span>'
+      + '<span style="background:' + (isActive ? 'rgba(255,255,255,.22)' : (isDark ? '#1e293b' : 'rgba(13,79,74,.08)')) + ';color:' + (isActive ? '#fff' : s.mutedColor) + ';font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:99px;letter-spacing:0">' + cnt + '</span>'
       + '</a>';
   }).join('');
 
@@ -19350,18 +19350,37 @@ function _mediaRenderMinimalIndex(media, posts, opts){
     if(!cardHero || (typeof cardHero === 'string' && cardHero.startsWith('data:image/svg'))){
       try { cardHero = _svgHeroForArticle(p, media); } catch(_){}
     }
+    // 読 了 時 間 = excerpt + title から 文字 数 推 計 (= 400 字 / 分)
+    const estChars = ((p.title||'').length + (p.excerpt||'').length) * 8;  // 概 算
+    const readMin = Math.max(2, Math.round(estChars / 400));
+    // 相 対 時 間 (= 「2 日 前」)
+    const relTime = (() => {
+      const t = Date.parse(p.published_at || 0);
+      if(!t) return _mediaFmtDate(p.published_at);
+      const days = Math.floor((Date.now() - t) / 86400000);
+      if(days === 0) return '今日';
+      if(days === 1) return '昨日';
+      if(days < 7) return days + ' 日 前';
+      if(days < 30) return Math.floor(days/7) + ' 週 間 前';
+      if(days < 365) return Math.floor(days/30) + ' ヶ月 前';
+      return Math.floor(days/365) + ' 年 前';
+    })();
     return `
-      <article style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;display:flex;flex-direction:column;transition:all .2s;cursor:pointer" onmouseover="this.style.borderColor='${accent}';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)'" onmouseout="this.style.borderColor='${s.cardBorder}';this.style.transform='';this.style.boxShadow=''">
+      <article style="background:${s.cardBg};border:1px solid ${s.cardBorder};border-radius:${s.cardRadius};overflow:hidden;display:flex;flex-direction:column;transition:all .25s cubic-bezier(.4,0,.2,1);cursor:pointer" onmouseover="this.style.borderColor='${accent}';this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 32px rgba(13,79,74,.12)'" onmouseout="this.style.borderColor='${s.cardBorder}';this.style.transform='';this.style.boxShadow=''">
         ${cardHero
-          ? '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;text-decoration:none"><img loading="lazy" decoding="async" src="'+_mediaEsc(cardHero)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:'+imgHeight+';object-fit:cover;display:block"></a>'
+          ? '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;text-decoration:none;overflow:hidden;position:relative"><img loading="lazy" decoding="async" src="'+_mediaEsc(cardHero)+'" alt="'+_mediaEsc(p.title)+'" style="width:100%;height:'+imgHeight+';object-fit:cover;display:block;transition:transform .4s ease;filter:saturate(.92) contrast(1.04)" onmouseover="this.style.transform=\'scale(1.04)\'" onmouseout="this.style.transform=\'\'"></a>'
           : '<a href="'+_mediaPublicUrl(media, p.slug)+'" style="display:block;height:'+imgHeight+';background:'+heroGrad[idx%heroGrad.length]+';text-decoration:none"></a>'}
-        <div style="padding:${isBig ? '20px 22px' : '12px 14px'};flex:1;display:flex;flex-direction:column">
-          ${p.category_name ? '<div style="font-size:9.5px;font-weight:800;color:'+accent+';letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;font-family:'+s.brandFont+'">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
-          <h3 style="font-family:${s.titleFont};font-size:${titleSize};font-weight:${isBig?'900':'800'};color:${s.textColor};margin:0 0 ${isBig ? '10px' : '6px'};line-height:1.35;letter-spacing:-.005em;display:-webkit-box;-webkit-line-clamp:${titleLineClamp};-webkit-box-orient:vertical;overflow:hidden">
+        <div style="padding:${isBig ? '22px 24px' : '14px 16px'};flex:1;display:flex;flex-direction:column">
+          ${p.category_name ? '<div style="font-size:9.5px;font-weight:900;color:'+accent+';letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;font-family:'+s.brandFont+'">▌ '+_mediaEsc(p.category_name)+'</div>' : ''}
+          <h3 style="font-family:${s.titleFont};font-size:${titleSize};font-weight:${isBig?'900':'800'};color:${s.textColor};margin:0 0 ${isBig ? '12px' : '8px'};line-height:1.32;letter-spacing:-.012em;display:-webkit-box;-webkit-line-clamp:${titleLineClamp};-webkit-box-orient:vertical;overflow:hidden">
             <a href="${_mediaPublicUrl(media, p.slug)}" style="color:${s.textColor};text-decoration:none">${_mediaEsc(p.title)}</a>
           </h3>
-          ${excerptShow ? '<p style="font-size:13px;color:'+s.subColor+';line-height:1.65;margin:0 0 12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+_mediaEsc((p.excerpt||'').slice(0,140))+'</p>' : ''}
-          <div style="font-size:${isBig ? '11.5px' : '10px'};color:${s.mutedColor};margin-top:auto;font-family:${s.brandFont}">${_mediaEsc(_mediaFmtDate(p.published_at))}</div>
+          ${excerptShow ? '<p style="font-size:13.5px;color:'+s.subColor+';line-height:1.7;margin:0 0 14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;letter-spacing:-.003em">'+_mediaEsc((p.excerpt||'').slice(0,140))+'</p>' : ''}
+          <div style="font-size:${isBig ? '11.5px' : '10.5px'};color:${s.mutedColor};margin-top:auto;font-family:${s.brandFont};display:flex;align-items:center;gap:10px">
+            <span>${relTime}</span>
+            <span style="opacity:.4">·</span>
+            <span>📖 ${readMin} 分</span>
+          </div>
         </div>
       </article>`;
   };

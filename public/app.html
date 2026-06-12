@@ -2719,7 +2719,19 @@ window._mb_api = async function(method, path, body){
           window._mb_realDataLoaded = true;
         } catch(e){ console.warn('[hydrate] fail', e); }
       };
-      // 即 実 行
+      // loadActiveSite を hook = 呼 ばれ る たび に 直 後 に 実 data で 上 書 き
+      if(typeof window.loadActiveSite === 'function' && !window._mb_loadHooked){
+        window._mb_loadHooked = true;
+        const _orig = window.loadActiveSite;
+        window.loadActiveSite = function(){
+          _orig.apply(this, arguments);
+          window._mb_realDataLoaded = false;
+          if(window._mb_hydrate){
+            setTimeout(() => window._mb_hydrate(window.activeSiteIdx || 0), 150);
+          }
+        };
+      }
+      // 初 回 実 行
       setTimeout(() => window._mb_hydrate(0), 600);
     }
   } catch(e){ console.warn('[auth] fail', e); }

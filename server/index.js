@@ -17403,47 +17403,72 @@ function _svgHeroForArticle(post, media){
   const pal = _svgPaletteFor(tpl, media && media.brand_color);
   const category = String(post && post.category_name || '').slice(0, 14) || '記事';
   const brandJp = String(media && media.name || 'Blog').slice(0, 24);
-  // 🎨 2026-06-12 v2: 「サムネ 消 え てる ぽい 薄 さ」 解 消
-  //   濃 い 配 色 + 中央 巨大 カテゴリ 名 で 「画 像 と し て 認 識 で きる」 サムネ に
-  const titleH = _strHash(post && post.title || 'a');
-  // 濃 い 配 色 を 強 制 (= palette bg だ と 薄 す ぎ る = brand 色 で 上 書 き)
-  const darkBg = pal.text || '#0a3d39';
-  const lightAccent = pal.accent || '#c0ff5c';
-  const decoColor = pal.deco || '#1a5b55';
-  // タイトル hash で 装 飾 位 置 個 別
-  const fig1x = 200 + (Math.abs(titleH) % 300);
-  const fig1y = 150 + (Math.abs(titleH >> 4) % 250);
-  const fig2x = 850 + (Math.abs(titleH >> 8) % 250);
-  const fig2y = 100 + (Math.abs(titleH >> 12) % 200);
+  // 🎨 2026-06-12 v3: 同 一 カテゴリ で も 識 別 可能 = タイトル baked-in + 個 別 配 色
+  const title = String(post && post.title || '').trim();
+  const titleH = _strHash(title || 'a');
+  // 10 種 の 配色 set で 記事 ご と に 切替 (= 「全 部 同 じ」 解 消)
+  const palSets = [
+    { bg: '#0a3d39', deco: '#1a5b55', accent: '#c0ff5c' },  // teal+lime
+    { bg: '#1e3a8a', deco: '#3b5db8', accent: '#fbbf24' },  // navy+amber
+    { bg: '#7c2d12', deco: '#a83a1f', accent: '#fde047' },  // burnt+yellow
+    { bg: '#581c87', deco: '#7e22ce', accent: '#f0abfc' },  // purple+pink
+    { bg: '#831843', deco: '#be185d', accent: '#fbcfe8' },  // wine+rose
+    { bg: '#14532d', deco: '#16a34a', accent: '#bbf7d0' },  // forest+mint
+    { bg: '#0c4a6e', deco: '#0e7490', accent: '#67e8f9' },  // ocean+cyan
+    { bg: '#3f3f46', deco: '#71717a', accent: '#fafafa' },  // slate+white
+    { bg: '#1c1917', deco: '#44403c', accent: '#fb923c' },  // black+orange
+    { bg: '#312e81', deco: '#4f46e5', accent: '#a5b4fc' },  // indigo+lavender
+  ];
+  const ps = palSets[Math.abs(titleH) % palSets.length];
+  // タイトル 折 り 返 し (= 16 字 で 改 行、 3 行 max)
+  const titleChars = Array.from(title);
+  const lines = [];
+  let buf = '';
+  for(const ch of titleChars){
+    buf += ch;
+    if(buf.length >= 14){ lines.push(buf); buf = ''; if(lines.length >= 3) break; }
+  }
+  if(buf && lines.length < 3) lines.push(buf);
+  if(lines.length === 3 && buf && titleChars.length > 42) lines[2] = lines[2].slice(0, 12) + '…';
+  const fontSize = lines.length >= 3 ? 44 : lines.length === 2 ? 52 : 62;
+  const lineGap = lines.length >= 3 ? 58 : lines.length === 2 ? 68 : 0;
+  const startY = 380 - ((lines.length - 1) * lineGap) / 2;
+  const titleTspans = lines.map((ln, i) =>
+    `<tspan x="640" y="${startY + i * lineGap}">${_svgEscape(ln)}</tspan>`
+  ).join('');
+  // 装飾 位 置 = titleH で 個別
+  const fig1x = 150 + (Math.abs(titleH) % 350);
+  const fig1y = 120 + (Math.abs(titleH >> 4) % 280);
+  const fig2x = 850 + (Math.abs(titleH >> 8) % 280);
+  const fig2y = 80 + (Math.abs(titleH >> 12) % 240);
   const rot = (Math.abs(titleH >> 24) % 360);
-  // カテゴリ font-size = 文字数 から 自動 (= 4 字 → 100px / 8 字 → 60px)
-  const catLen = Array.from(category).length;
-  const catFontSize = catLen <= 4 ? 110 : catLen <= 6 ? 90 : catLen <= 8 ? 72 : 56;
   const svg = ''
     + `<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" width="1280" height="720">`
     +   `<defs>`
     +     `<linearGradient id="g${Math.abs(titleH)%9999}" x1="0%" y1="0%" x2="100%" y2="100%">`
-    +       `<stop offset="0%" stop-color="${darkBg}"/>`
-    +       `<stop offset="100%" stop-color="${decoColor}"/>`
+    +       `<stop offset="0%" stop-color="${ps.bg}"/>`
+    +       `<stop offset="100%" stop-color="${ps.deco}"/>`
     +     `</linearGradient>`
     +   `</defs>`
     +   `<rect width="1280" height="720" fill="url(#g${Math.abs(titleH)%9999})"/>`
-    // 大 きく 濃 い 装 飾 円 (= editorial blur)
-    +   `<circle cx="${fig1x}" cy="${fig1y}" r="320" fill="${lightAccent}" opacity="0.18"/>`
-    +   `<circle cx="${fig2x}" cy="${fig2y}" r="220" fill="${lightAccent}" opacity="0.12"/>`
-    // 抽 象 多 角 形
+    // 装飾 円
+    +   `<circle cx="${fig1x}" cy="${fig1y}" r="280" fill="${ps.accent}" opacity="0.14"/>`
+    +   `<circle cx="${fig2x}" cy="${fig2y}" r="200" fill="${ps.accent}" opacity="0.1"/>`
     +   `<g transform="rotate(${rot} 640 360)">`
-    +     `<polygon points="640,260 790,420 490,420" fill="${lightAccent}" opacity="0.12"/>`
+    +     `<polygon points="640,260 770,420 510,420" fill="${ps.accent}" opacity="0.08"/>`
     +   `</g>`
-    // 細 ライン 上 下 (= editorial accent)
-    +   `<line x1="80" y1="80" x2="1200" y2="80" stroke="${lightAccent}" stroke-width="2" opacity="0.6"/>`
-    +   `<line x1="80" y1="640" x2="1200" y2="640" stroke="${lightAccent}" stroke-width="2" opacity="0.6"/>`
-    // 中 央 大 カテゴリ 名 (= サムネ の 主 役)
-    +   `<text x="640" y="380" text-anchor="middle" font-family="'Times New Roman',Georgia,'Hiragino Mincho ProN','Yu Mincho',serif" font-size="${catFontSize}" font-weight="900" fill="#fff" opacity="0.9" letter-spacing="-2">${_svgEscape(category)}</text>`
-    // 上 部 ブランド (= 小、 タイポ アクセント)
-    +   `<text x="80" y="130" font-family="'Times New Roman',Georgia,serif" font-size="22" font-weight="700" fill="${lightAccent}" letter-spacing="2">${_svgEscape(brandJp.slice(0, 30))}</text>`
-    // 下 部 「読 む →」 (= editorial cue)
-    +   `<text x="1200" y="690" text-anchor="end" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="13" font-weight="700" fill="${lightAccent}" opacity="0.7" letter-spacing="4">READ MORE →</text>`
+    // 細 ライン 上 下
+    +   `<line x1="80" y1="80" x2="1200" y2="80" stroke="${ps.accent}" stroke-width="2" opacity="0.5"/>`
+    +   `<line x1="80" y1="640" x2="1200" y2="640" stroke="${ps.accent}" stroke-width="2" opacity="0.5"/>`
+    // カテゴリ chip (= 上 部 中央 小)
+    +   `<g>`
+    +     `<rect x="${640 - Math.min(200, 30 + Array.from(category).length * 18) / 2}" y="120" width="${Math.min(200, 30 + Array.from(category).length * 18)}" height="36" rx="18" fill="rgba(255,255,255,0.18)" stroke="${ps.accent}" stroke-width="1.5"/>`
+    +     `<text x="640" y="144" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="13" font-weight="800" fill="${ps.accent}" letter-spacing="4">${_svgEscape(category)}</text>`
+    +   `</g>`
+    // 中央 タイトル (= サムネ 主 役、 magazine cover 風)
+    +   `<text text-anchor="middle" font-family="'Times New Roman',Georgia,'Hiragino Mincho ProN','Yu Mincho',serif" font-size="${fontSize}" font-weight="900" fill="#fff" letter-spacing="-1.5">${titleTspans}</text>`
+    // 下部 ブランド
+    +   `<text x="640" y="640" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic',sans-serif" font-size="12" font-weight="700" fill="${ps.accent}" opacity="0.75" letter-spacing="6">${_svgEscape(brandJp.slice(0, 24))}</text>`
     + `</svg>`;
   return 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64');
 }

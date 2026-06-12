@@ -10135,3 +10135,52 @@ aside.sb .sb-bot { display: none !important; }
   .mb-top-time > span:first-child { display: none; }
   .mb-top-btn { padding: 5px 9px; font-size: 10.5px; }
 }
+
+/* Phase 9.1: chat 内 既 装 飾 を 全 部 強 制 非 表 示 (= msg list + input だ け 残 す) */
+.chat#chatWrap #heroCard,
+.chat#chatWrap #weeklyStatsBar,
+.chat#chatWrap #chatTop,
+.chat#chatWrap #pinnedWrap,
+.chat#chatWrap #shareCard,
+.chat#chatWrap #taskStrip,
+.chat#chatWrap .sd-kpi-row,
+.chat#chatWrap .sd-card,
+.chat#chatWrap .ass-stats,
+.chat#chatWrap .hud-bar,
+.chat#chatWrap .agentBookmark,
+.chat#chatWrap .site-bookmark,
+.chat#chatWrap .stats-bar,
+.chat#chatWrap .pv-tip,
+.chat#chatWrap .kpi-strip {
+  display: none !important;
+}
+
+/* chat = AI ASSISTANT 風 = header (= AI ASSISTANT label) + msg list + input */
+.chat#chatWrap {
+  background: rgba(255,255,255,.7) !important;
+}
+.chat#chatWrap::before {
+  content: 'AI ASSISTANT';
+  display: block;
+  padding: 14px 18px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .12em;
+  color: #525252;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(13,79,74,.08);
+  background: #fafaf7;
+  flex-shrink: 0;
+}
+.chat#chatWrap .msgs-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+}
+.chat#chatWrap .chat-foot,
+.chat#chatWrap .chat-composer,
+.chat#chatWrap .composer {
+  border-top: 1px solid rgba(13,79,74,.08);
+  background: #fff;
+  padding: 14px 18px;
+}

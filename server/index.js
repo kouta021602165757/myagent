@@ -27709,6 +27709,91 @@ async function handleAPI(req,res,pathname,method,ip){
     return jres(res, 200, out);
   }
 
+  // GET /api/agents/:id/media/daily?period=7d|30d|90d — 分 析 view 用 日 別 集 計
+  // 返却: { days: [{date, pv, users, lp}], total_pv, total_users, total_lp, top_posts }
+  const mediaDailyMatch = pathname.match(/^\/api\/agents\/([^/]+)\/media\/daily$/);
+  if(mediaDailyMatch && method === 'GET'){
+    const ag = (user.agents || []).find(a => a && a.id === mediaDailyMatch[1]);
+    if(!ag) return jres(res, 404, { error: 'agent not found' });
+    if(!ag.media || !ag.media.slug) return jres(res, 200, { has_media: false });
+
+    const qs = url.parse(req.url, true).query || {};
+    const period = String(qs.period || '30d');
+    let days = 30;
+    if(period === '7d') days = 7;
+    else if(period === '90d') days = 90;
+    days = Math.max(1, Math.min(90, days));
+
+    if(!USE_SUPA){
+      return jres(res, 200, { has_media: true, period, days, daily: [], total_pv: 0, total_users: 0, total_lp: 0, top_posts: [] });
+    }
+
+    const sinceIso = new Date(Date.now() - days * 86400000).toISOString();
+    let visits = [];
+    try {
+      const r = await sbReq('GET', 'media_visits',
+        '?select=session_hash,post_slug,visited_at,utm_medium'
+        + '&media_slug=eq.' + encodeURIComponent(ag.media.slug)
+        + '&is_bot=eq.false'
+        + '&visited_at=gte.' + encodeURIComponent(sinceIso)
+        + '&limit=20000');
+      if(r.s < 400 && Array.isArray(r.d)) visits = r.d;
+    } catch(e){ console.warn('[daily] fetch fail', e.message); }
+
+    // 日 別 集 計
+    const LP_MEDIUMS = new Set(['footer','inline','inline_mid','inline_top','sidebar','product_card','article_lp','footer_lp','inline_lp','header','hero']);
+    const byDay = {};
+    const byPost = {};
+    visits.forEach(v => {
+      const d = (v.visited_at || '').slice(0, 10);
+      if(!d) return;
+      if(!byDay[d]) byDay[d] = { pv: 0, sessions: new Set(), lp: new Set() };
+      byDay[d].pv++;
+      if(v.session_hash) byDay[d].sessions.add(v.session_hash);
+      if(LP_MEDIUMS.has(v.utm_medium) && v.session_hash) byDay[d].lp.add(v.session_hash);
+      // post 別
+      if(v.post_slug){
+        if(!byPost[v.post_slug]) byPost[v.post_slug] = { pv: 0, sessions: new Set(), lp: new Set() };
+        byPost[v.post_slug].pv++;
+        if(v.session_hash) byPost[v.post_slug].sessions.add(v.session_hash);
+        if(LP_MEDIUMS.has(v.utm_medium) && v.session_hash) byPost[v.post_slug].lp.add(v.session_hash);
+      }
+    });
+
+    // 日 別 array 生 成 (= since から today まで 全 日 = 0 含 む)
+    const daily = [];
+    const sinceMs = Date.now() - days * 86400000;
+    for(let i = 0; i <= days; i++){
+      const d = new Date(sinceMs + i * 86400000).toISOString().slice(0, 10);
+      const v = byDay[d] || { pv: 0, sessions: new Set(), lp: new Set() };
+      daily.push({ date: d, pv: v.pv, users: v.sessions.size, lp: v.lp.size });
+    }
+
+    // post 別 top (= idx と join)
+    const idxMap = {};
+    (ag.media_posts_idx || []).forEach(p => { if(p && p.slug) idxMap[p.slug] = p; });
+    const topPosts = Object.entries(byPost)
+      .map(([slug, v]) => ({
+        slug,
+        title: (idxMap[slug] && idxMap[slug].title) || slug,
+        pv: v.pv,
+        users: v.sessions.size,
+        lp: v.lp.size,
+      }))
+      .sort((a, b) => b.pv - a.pv)
+      .slice(0, 10);
+
+    return jres(res, 200, {
+      has_media: true,
+      period, days,
+      daily,
+      total_pv: visits.length,
+      total_users: new Set(visits.map(v => v.session_hash).filter(Boolean)).size,
+      total_lp: new Set(visits.filter(v => LP_MEDIUMS.has(v.utm_medium)).map(v => v.session_hash).filter(Boolean)).size,
+      top_posts: topPosts,
+    });
+  }
+
   // (DEPRECATED 2026-06-02) /media/research-pick endpoint は削除済。
   // 「First win」 動線は KW 調査 panel に集約済 (= research_keyword tool で
   //  10 件 候補を出してユーザが選ぶ形)。 1 件 自動選定 は使われなくなった。

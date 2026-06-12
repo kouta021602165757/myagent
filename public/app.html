@@ -3004,6 +3004,78 @@ window._mb_api = async function(method, path, body){
         };
       };
 
+      // ★ 分 析 view = 実 data 接 続
+      window._mb_analyticsPeriod = '30d';
+      window._mbLoadAnalytics = async function(period){
+        period = period || window._mb_analyticsPeriod || '30d';
+        window._mb_analyticsPeriod = period;
+        const s = SITES[window.activeSiteIdx || 0];
+        if(!s || !s._raw || !s._raw.id) return;
+        const agentId = s._raw.id;
+        try {
+          const d = await window._mb_api('GET', '/api/agents/' + agentId + '/media/daily?period=' + period);
+          if(!d || d.has_media === false) return;
+          // ─ chart bars ─
+          const chartEl = document.getElementById('chartBars');
+          if(chartEl){
+            const arr = d.daily || [];
+            const maxPv = Math.max(1, ...arr.map(x => x.pv || 0));
+            if(maxPv === 1 && arr.every(x => !x.pv)){
+              // 全 0 = 「データ なし」 表 示
+              chartEl.innerHTML = `<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;text-align:center;padding:20px">📊 まだ 訪 問 data が ない · 記 事 公 開 + 訪 問 で 数 日 後 に 表 示</div>`;
+            } else {
+              chartEl.innerHTML = arr.map(x => {
+                const h = Math.max(2, (x.pv || 0) / maxPv * 100);
+                return `<div class="chart-bar" style="height:${h}%" title="${x.date}: ${x.pv} PV"><span class="label">${x.date.slice(5)}: ${x.pv}</span></div>`;
+              }).join('');
+            }
+          }
+          // ─ rank list (= top posts) ─
+          const rankEl = document.getElementById('rankList');
+          if(rankEl){
+            const tops = d.top_posts || [];
+            if(tops.length === 0){
+              rankEl.innerHTML = `<div style="padding:30px 20px;text-align:center;color:var(--text3);font-size:13px">📋 PV が 集 計 さ れ た 記 事 が ま だ あ り ま せ ん</div>`;
+            } else {
+              const _esc = (x) => String(x||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+              rankEl.innerHTML = tops.map((p, i) => `
+                <div class="rank-row">
+                  <span class="rank-num">${i+1}</span>
+                  <span class="rank-title">${_esc(p.title)}</span>
+                  <span class="rank-pv">${p.pv} PV</span>
+                  <span class="rank-lp">LP ${p.lp}</span>
+                  <span class="rank-trend">↑</span>
+                </div>
+              `).join('');
+            }
+          }
+          // 期 間 ラベル
+          const periodLbl = document.getElementById('periodLbl');
+          if(periodLbl) periodLbl.textContent = period === '7d' ? '7 days' : period === '90d' ? '90 days' : '30 days';
+        } catch(e){ console.warn('[analytics] fail', e); }
+      };
+      // mock の setPeriod を 上 書 き
+      window.setPeriod = function(btn, period){
+        btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        window._mbLoadAnalytics(period);
+      };
+      // mock の buildChart / renderRank を no-op (= 私 が render する)
+      window.buildChart = function(){};
+      window.renderRank = function(){};
+      // 分 析 nav で 自動 load
+      const _origNav = window.navTo;
+      // 既 _mb_navHooked あり = 別 hook (= analytics)
+      if(typeof window.navTo === 'function'){
+        const _prevNav = window.navTo;
+        window.navTo = function(view, btn){
+          _prevNav.apply(this, arguments);
+          if(view === 'analytics') setTimeout(() => window._mbLoadAnalytics(), 100);
+        };
+      }
+      // 初 回 取 得 (= dashboard load 後)
+      setTimeout(() => window._mbLoadAnalytics(), 1800);
+
       // mock の gen handler を 上 書 き
       window.genStartCustom = function(){
         const kw = document.getElementById('genKwInput').value.trim();

@@ -1350,7 +1350,7 @@ input[type="file"]{display:none}
       <div class="view-title">
         <h1>メディア</h1>
         <span class="crumb" id="crumb-media">▌ media-blog.myaiagents.agency · 48 記事</span>
-        <button class="btn-sm primary" style="margin-left:auto" onclick="openGenModal()">+ 新規 記事 を AI に 書か せる</button>
+        <button class="btn-sm primary" style="margin-left:auto" onclick="_mbOpenMediaSite()">🔗 作 っ た メディア を 開 く</button>
       </div>
 
       <!-- demo state: empty -->
@@ -2732,7 +2732,16 @@ window._mb_api = async function(method, path, body){
         };
       }
 
-      // renderArtList を 実 機 能 で 上 書 き (= 開 く + ♻️ リライト 実 動 作)
+      // メディア サブドメイン を 新 タブ で 開く
+      window._mbOpenMediaSite = function(){
+        const s = SITES[window.activeSiteIdx || 0];
+        const slug = s && s._raw && s._raw.media && s._raw.media.slug;
+        if(!slug){ showToast('メディア が ま だ ない', 'ng'); return; }
+        window.open('https://' + slug + '.myaiagents.agency', '_blank');
+      };
+
+      // renderArtList を 実 機 能 で 上 書 き (= 5 件 + もっと 見 る + 開 く + ♻️)
+      window._mb_artListExpanded = false;
       if(typeof window.renderArtList === 'function' && !window._mb_artListHooked){
         window._mb_artListHooked = true;
         window.renderArtList = function(posts){
@@ -2742,7 +2751,11 @@ window._mb_api = async function(method, path, body){
           const agentId = s && s._raw && s._raw.id;
           const slug = s && s._raw && s._raw.media && s._raw.media.slug;
           const _esc = (x) => String(x||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
-          el.innerHTML = (posts||[]).map(p => {
+          const all = posts || [];
+          const limit = window._mb_artListExpanded ? all.length : 5;
+          const shown = all.slice(0, limit);
+          const remaining = Math.max(0, all.length - limit);
+          el.innerHTML = shown.map(p => {
             const ti = _esc(p.ti || p.title || '(無 題)');
             const slugP = _esc(p.slug || p._slug || '');
             const url = (slug && slugP) ? ('https://' + slug + '.myaiagents.agency/' + slugP) : '#';
@@ -2761,7 +2774,20 @@ window._mb_api = async function(method, path, body){
                 </div>
               </div>
             `;
-          }).join('');
+          }).join('') + (remaining > 0 ? `
+            <div style="padding:14px 20px;text-align:center;border-top:1px solid rgba(13,79,74,.06)">
+              <button class="btn-sm" onclick="window._mb_artListExpanded=true;renderArtList(window._mb_lastPosts||[])" style="min-width:200px">
+                ↓ もっと 見 る (= 残 り ${remaining} 件)
+              </button>
+            </div>
+          ` : (window._mb_artListExpanded && all.length > 5 ? `
+            <div style="padding:14px 20px;text-align:center;border-top:1px solid rgba(13,79,74,.06)">
+              <button class="btn-sm" onclick="window._mb_artListExpanded=false;renderArtList(window._mb_lastPosts||[])" style="min-width:200px">
+                ↑ 折 り 畳 む
+              </button>
+            </div>
+          ` : ''));
+          window._mb_lastPosts = all;
         };
       }
       // リライト 実 行 関数

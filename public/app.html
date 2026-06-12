@@ -2793,6 +2793,112 @@ window._mb_api = async function(method, path, body){
       }
       // 再 描 画
       if(typeof renderArtList === 'function' && SITES[0] && SITES[0].posts) renderArtList(SITES[0].posts);
+
+      // ★ 記事 生 成 → chat stream 接 続
+      window._mbAddChatMsg = function(html, opts){
+        const body = document.getElementById('chatBody');
+        if(!body) return null;
+        const w = document.createElement('div');
+        w.className = 'msg ai' + ((opts && opts.cls) ? (' ' + opts.cls) : '');
+        w.innerHTML = '<div class="msg-av">🤖</div><div class="msg-bd"><div class="msg-meta"><span class="msg-from">AI チーム</span><span class="msg-time">' + (new Date()).toLocaleTimeString().slice(0,5) + '</span></div><div class="msg-text">' + html + '</div></div>';
+        body.appendChild(w);
+        body.scrollTop = body.scrollHeight;
+        return w;
+      };
+      // chat を 開 く (= 既 chatWrap visible)
+      window._mbOpenChat = function(){
+        const cw = document.getElementById('chatWrap');
+        if(cw) cw.style.display = 'flex';
+      };
+      // 実 生 成 + stream
+      window._mbGenAndStream = async function(kwOrItems, opts){
+        const s = SITES[window.activeSiteIdx || 0];
+        if(!s || !s._raw || !s._raw.id){ showToast('サイト 未 選 択', 'ng'); return; }
+        const agentId = s._raw.id;
+        const items = Array.isArray(kwOrItems) ? kwOrItems : [{ title: kwOrItems, keyword: kwOrItems, mode: (opts && opts.aeo) ? 'aeo' : 'standard' }];
+        _mbOpenChat();
+        _mbAddChatMsg('⚡ <b>記事 生 成 を 開 始</b> し まし た。<br>' + items.map((it,i) => '• ' + (it.title || it.keyword)).join('<br>'));
+        const step1 = _mbAddChatMsg('🔍 <b>KW Strategist</b> · 月 間 検索 量 を 算 出 中... <span style="color:var(--text3)">~ 数 秒</span>');
+        try {
+          const r = await window._mb_api('POST', '/api/agents/' + agentId + '/keyword-batch-publish', { items });
+          if(r && r.jobs){
+            _mbAddChatMsg('📝 <b>SEO Writer</b> · 本 文 を 執 筆 中... <span style="color:var(--text3)">' + r.jobs.length + ' 件 並 列</span>');
+            _mbPollPublishJobs(agentId, r.jobs.map(j => j.id || j.job_id));
+          } else {
+            _mbAddChatMsg('✓ <b>生 成 ジョブ を 起 動</b> し まし た');
+          }
+        } catch(e){
+          if(/plan_cap_reached/i.test(String(e.message||''))){
+            _mbAddChatMsg('⚠️ <b>plan cap 到 達</b> · 月 間 上 限 に 到 達 し まし た。 <a onclick="openUpsellModal && openUpsellModal()" style="color:var(--teal);cursor:pointer;text-decoration:underline">プラン を アップ</a>');
+          } else {
+            _mbAddChatMsg('❌ <b>生 成 失 敗</b>: ' + (e.message||e));
+          }
+        }
+      };
+      window._mbPollPublishJobs = async function(agentId, jobIds){
+        let attempts = 0;
+        const seen = new Set();
+        const t = setInterval(async () => {
+          attempts++;
+          if(attempts > 120){ clearInterval(t); return; }  // 6 分 で 諦め
+          try {
+            const r = await window._mb_api('GET', '/api/agents/' + agentId + '/publish-jobs?limit=20').catch(()=>null);
+            if(!r || !Array.isArray(r.jobs)) return;
+            const slug = (SITES[window.activeSiteIdx||0]._raw.media || {}).slug || '';
+            r.jobs.forEach(j => {
+              const jid = j.id || j.job_id;
+              if(!jid || seen.has(jid+':'+j.status)) return;
+              if(jobIds && !jobIds.includes(jid)) return;  // 自分 が 起動 し た job だけ
+              seen.add(jid+':'+j.status);
+              if(j.status === 'completed' && j.post_slug){
+                const url = 'https://' + slug + '.myaiagents.agency/' + j.post_slug;
+                _mbAddChatMsg(
+                  '✅ <b>公 開 完 了!</b><br>'
+                  + '<div style="margin-top:8px;padding:10px 12px;background:var(--cream);border:1px solid var(--wire);border-radius:8px">'
+                  +   '<div style="font-weight:700;font-size:13px;margin-bottom:4px">📰 ' + (j.title||j.post_slug) + '</div>'
+                  +   '<div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:8px">' + url.replace('https://','') + '</div>'
+                  +   '<div style="display:flex;gap:6px">'
+                  +     '<button class="btn-sm" onclick="window.open(\'' + url + '\',\'_blank\')">🔗 開 く</button>'
+                  +     '<button class="btn-sm" onclick="_mbRewriteArticle(\'' + agentId + '\',\'' + j.post_slug + '\', this)">✏ 修 正</button>'
+                  +   '</div>'
+                  + '</div>'
+                );
+              } else if(j.status === 'failed'){
+                _mbAddChatMsg('❌ <b>失 敗</b>: ' + (j.title||j.keyword||'') + ' · ' + (j.error||'unknown'));
+              } else if(j.status === 'generating'){
+                _mbAddChatMsg('⚡ <b>Publisher</b> · 「' + (j.title||j.keyword) + '」 を CMS へ 公 開 中...');
+              }
+            });
+            // 全 job 完 了 / 失敗 = 終 了
+            const myJobs = r.jobs.filter(j => jobIds && jobIds.includes(j.id || j.job_id));
+            if(myJobs.length > 0 && myJobs.every(j => j.status === 'completed' || j.status === 'failed')){
+              clearInterval(t);
+            }
+          } catch(e){ console.warn('[poll] fail', e); }
+        }, 3000);
+      };
+      // mock の gen handler を 上 書 き
+      window.genStartCustom = function(){
+        const kw = document.getElementById('genKwInput').value.trim();
+        if(!kw){ showToast('KW を 入力 し て く だ さ い', 'ng'); return; }
+        const aeo = document.getElementById('genOptAeo').checked;
+        document.getElementById('genKwInput').value = '';
+        if(typeof closeGenModal === 'function') closeGenModal();
+        _mbGenAndStream(kw, { aeo });
+      };
+      window.genStartBatch = function(){
+        if(typeof GEN_CHECK === 'undefined' || GEN_CHECK.size === 0) return;
+        const items = Array.from(GEN_CHECK).map(i => KW_SUGGESTIONS[i]).map(k => ({ title: k.title, keyword: k.title, mode: 'standard' }));
+        GEN_CHECK.clear();
+        if(typeof closeGenModal === 'function') closeGenModal();
+        _mbGenAndStream(items);
+      };
+      window.genStartInstant = function(idx){
+        const k = KW_SUGGESTIONS[idx];
+        if(!k){ return; }
+        if(typeof closeGenModal === 'function') closeGenModal();
+        _mbGenAndStream([{ title: k.title, keyword: k.title, mode: 'standard' }]);
+      };
       // 🛑 mock の anim を no-op = 即 値 設 定 (= 0 → 1768 の anim 中 値 を 排 除)
       window.animNum = function(id, _, target){
         const el = document.getElementById(id);

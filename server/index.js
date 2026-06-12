@@ -18868,71 +18868,50 @@ function _mediaTemplateVars(template){
 // ──────────────────────────────────────────────────────────────────
 // 📝 編集部 byline / bio 推測 (= AI 痕跡消去、 E-E-A-T シグナル)
 // ──────────────────────────────────────────────────────────────────
-// 🆕 SEO 強 化: 著者 5 人 ペル ソナ ローテ (= E-E-A-T 担 保)
-const _MEDIA_AUTHORS = [
-  {
-    name: '田 中 ゆう き', title: 'SEO 戦略 リサーチャー',
-    bio: '大手 メディア 編集 長 を 経て 独 立。 SaaS / D2C / 金融 領域 で SEO 戦略 を 10 年 以 上 担 当。 月間 100 万 PV クラス メディア の 立ち上げ 5 件。',
-    role: 'SEO リード', tw: 'tanakayuki_seo', linkedin: 'in/tanakayuki',
-    avatar_seed: 'tanaka-yuki-jp-female-30s',
-  },
-  {
-    name: '佐 藤 みお', title: 'コンテンツ ディレクター',
-    bio: '出版 社 で 書 籍 編集 を 5 年、 そ の 後 Web メディア に 転 身。 SEO + UX の バランス を 重視 し た 編 成 が 得 意。 累 計 編集 記事 2,000 本 超。',
-    role: '編集 統 括', tw: 'sato_mio_editor', linkedin: 'in/satomio',
-    avatar_seed: 'sato-mio-jp-female-40s',
-  },
-  {
-    name: '鈴 木 たくみ', title: 'グロース マーケター',
-    bio: 'BtoB SaaS 企業 で マーケ 責 任 者 を 7 年 経 験。 オーガニック 流 入 + CVR 最 適 化 が 専 門。 元 Google アナリティクス 認定 個人 資格 保 有。',
-    role: 'グロース', tw: 'suzuki_takumi_g', linkedin: 'in/suzukitakumi',
-    avatar_seed: 'suzuki-takumi-jp-male-30s',
-  },
-  {
-    name: '高 橋 れい', title: 'AI コンテンツ プロデューサー',
-    bio: '生成 AI を 活用 し た 大 量 記 事 制 作 の パイオニア。 月 300 本 公開 経験。 「AI で 書 い た と 思 わ せ ない」 リライト 技 術 が 強 み。',
-    role: 'AI 監 修', tw: 'takahashi_rei_ai', linkedin: 'in/takahashirei',
-    avatar_seed: 'takahashi-rei-jp-female-20s',
-  },
-  {
-    name: '渡 辺 さ ら', title: 'プロダクト リサーチャー',
-    bio: '広告 代理 店 で 競合 リサーチ を 6 年。 一次 ソース 確 認 と 実 機 / 実 サービス 検 証 を 徹 底。 比較 系 記事 で 業界 内 で 高 評価。',
-    role: 'リサーチ', tw: 'watanabe_sara_r', linkedin: 'in/watanabesara',
-    avatar_seed: 'watanabe-sara-jp-female-30s',
-  },
-];
+// ハッシュ関数 (= avatar seed 等 で 利 用)
 function _mediaHashStr(s){
   let h = 0;
   for(let i = 0; i < (s||'').length; i++) h = ((h<<5) - h + s.charCodeAt(i)) | 0;
   return Math.abs(h);
 }
-function _mediaPickAuthor(media, agent, post){
-  if(media && media.author_name){
-    // 既 設 定 ある なら そ の ま ま
-    return { name: media.author_name, title: media.author_title || '編 集 長', bio: media.author_bio || '', avatar_seed: 'custom' };
-  }
-  const seed = (post && post.slug) || (post && post.title) || (agent && agent.id) || (media && media.slug) || 'default';
-  const idx = _mediaHashStr(String(seed)) % _MEDIA_AUTHORS.length;
-  return _MEDIA_AUTHORS[idx];
-}
+// 著者 = user が 設 定 し た media.author_name のみ 採用 (= 架 空 名 NG)
+// 未設 定 = 「{name} 編 集 部」 fallback (= 旧 動 作 維 持)
 function _mediaInferAuthorName(media, agent, post){
-  return _mediaPickAuthor(media, agent, post).name;
+  if(media && media.author_name) return String(media.author_name);
+  const base = (media && media.name) || (agent && agent.name) || 'メディア';
+  return base + ' 編集部';
 }
 function _mediaInferAuthorBio(media, agent, post){
-  const a = _mediaPickAuthor(media, agent, post);
-  return a.bio || '';
+  if(media && media.author_bio) return String(media.author_bio);
+  const name = (media && media.name) || (agent && agent.name) || 'このメディア';
+  const vert = (agent && agent.site_vertical) || '';
+  if(vert === 'finance' || /金融|資金|FX|投資|融資|税理士|社労士|会計/.test(name)){
+    return name + 'の編集チーム。 金融業界経験者・税理士・FP を含む専門家集団。 一次データ (政府公表 / 金融機関データ等) を元に最新情報を更新しています。';
+  }
+  if(vert === 'saas' || /SaaS|エンジニア|テック|開発/.test(name)){
+    return name + 'の編集チーム。 SaaS 業界経験者・開発者を含むメンバー構成。 実プロダクト運用の体験ベースで最新ノウハウを共有しています。';
+  }
+  if(vert === 'ec' || /EC|D2C|通販|ショップ/.test(name)){
+    return name + 'の編集チーム。 EC / D2C ブランドの運営経験者で構成。 実店舗・通販オペレーションの実体験から書いています。';
+  }
+  if(/採用|人事|労務|助成金|補助金/.test(name)){
+    return name + 'の編集チーム。 人事 / 社労士 / 経営コンサル経験者で構成。 厚労省 / 経産省 / 自治体の公表情報を一次ソースに、 申請者目線で最新情報を更新しています。';
+  }
+  return name + 'の編集チーム。 当該分野の専門家・実務経験者で構成。 一次情報を元に最新ノウハウを更新しています。';
 }
 function _mediaInferAuthorAvatar(media, agent, post){
-  const a = _mediaPickAuthor(media, agent, post);
-  // Pollinations で AI 顔 写 真 生 成 (= seed 固 定 で 同 一 人 物 が 安 定)
-  return 'https://image.pollinations.ai/prompt/professional-headshot-' + encodeURIComponent(a.avatar_seed || 'editor') + '?width=200&height=200&seed=' + _mediaHashStr(a.name);
+  // user 設 定 ある なら 採 用、 な ければ null (= 顔 写 真 偽 装 NG)
+  return (media && media.author_avatar_url) || null;
 }
 function _mediaInferAuthorTitle(media, agent, post){
-  return _mediaPickAuthor(media, agent, post).title || '編 集 長';
+  return (media && media.author_title) || '編 集 長';
 }
 function _mediaInferAuthorSocial(media, agent, post){
-  const a = _mediaPickAuthor(media, agent, post);
-  return { twitter: a.tw, linkedin: a.linkedin };
+  // user 設 定 ある なら 採 用、 な ければ 空 (= 偽 SNS URL 禁 止)
+  return {
+    twitter: (media && media.author_twitter) || null,
+    linkedin: (media && media.author_linkedin) || null,
+  };
 }
 
 // ──────────────────────────────────────────────────────────────────

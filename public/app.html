@@ -3151,7 +3151,7 @@ const SITES = [
     ]
   },
 ];
-let activeSiteIdx = 0;
+var activeSiteIdx = 0; window.activeSiteIdx = 0;
 
 // ━━━ State ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const S = { pv:0, users:0, lp:0, pvT:0, usersT:0, lpT:0, feedRows:0, modalAction:null, chatCollapsed:false };
@@ -3277,7 +3277,7 @@ function toggleSiteDD(){
   document.getElementById('siteDD').classList.toggle('show');
 }
 function pickSite(idx, el){
-  activeSiteIdx = idx;
+  activeSiteIdx = idx; window.activeSiteIdx = idx;
   document.querySelectorAll('.site-opt').forEach(o => o.classList.remove('active'));
   el.classList.add('active');
   toggleSiteDD();

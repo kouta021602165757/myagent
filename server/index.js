@@ -16726,6 +16726,18 @@ async function _mediaGenerateArticle(agent, params){
     + '【H2 章数】 ' + tpl.h2Count + ' 個 — 1 H2 当たり 300-500 字で 短く区切る\n'
     + '【必須セクション】 ' + tpl.requiredSections.join(' / ') + '\n'
     + '【トーン】 ' + tpl.tone + '\n'
+    // 🆕 ⑤ E-E-A-T 強化: 外部権威リンク 必須
+    + '\n【🔗 外部権威リンク (= E-E-A-T 担保 / 必須)】\n'
+    + '   ・ 記事内に 3-5 本 の 外部権威リンクを 自然に埋め込む\n'
+    + '   ・ 対象: 公式ドキュメント / 政府公表 / 業界統計 / 学術 / 上場企業 IR / 業界団体\n'
+    + '   ・ 形式: <a href="URL" target="_blank" rel="nofollow noopener">アンカーテキスト</a>\n'
+    + '   ・ 例: <a href="https://www.soumu.go.jp/..." target="_blank" rel="nofollow noopener">総務省 (令和 6 年版 情報通信白書)</a>\n'
+    + '   ・ 知らない URL は 書かない (= 捏造禁止)。 知っている公式ドメインだけ。\n'
+    + '   ・ 主要対象例: meti.go.jp, soumu.go.jp, mhlw.go.jp, stat.go.jp, kantei.go.jp,\n'
+    + '       developers.google.com, web.dev, schema.org, w3.org, hubspot.com/blog,\n'
+    + '       semrush.com/blog, ahrefs.com/blog, backlinko.com, openai.com/blog,\n'
+    + '       anthropic.com/news, github.com (公式 README/docs)\n'
+    + '   ・ アンカーテキストは具体的に (= 「こちら」 「公式」 だけは NG)\n'
     + '\n【🎯 Featured Snippet 構造化 — 0 位 (= 強調表示) を狙う】\n'
     + '- 記事冒頭の <p> 1 文目: ' + intent.label + ' に対する 完璧な回答 (= 40 字以内、 結論先出し)\n'
     + '- 例: 「ぬまくま夏祭り 阿伏兎花火大会は、 8 月 9 日に開催される広島県福山市の海上花火大会です。」\n'
@@ -17065,20 +17077,23 @@ async function _mediaGenerateArticle(agent, params){
     while((mh = re.exec(withImages)) !== null){
       h2Matches.push({ idx: mh.index, end: mh.index + mh[0].length });
     }
-    if(h2Matches.length >= 5){
+    // 🆕 ③ CTA 削減: inline_mid (= 記事 中央 CTA) を 削 除 し て end_card 1 つ に 集 約
+    // (= advertorial 判 定 リスク 低 減 + Helpful Content Update 対 策)
+    // 旧 コード は コメント アウト で 保 持 (= 必要 なら opts.enableInlineCta で 復 活)
+    if(opts && opts.enableInlineCta && h2Matches.length >= 5){
       const mid = Math.floor(h2Matches.length / 2);
       const insertAt = h2Matches[mid].end;
       const lpBrandFinal = _mediaExtractLpBrand(agent.media || {});
       const mediaSlug = (agent.media && agent.media.slug) || 'media';
-      // click 計測 redirect 経由
       const inlineCtaTarget = lpUrl + '?utm_source=media&utm_medium=inline_mid&utm_campaign=' + _mediaEsc(mediaSlug) + '_inline';
       const inlineCtaHref = '/r/' + _mediaEsc(mediaSlug) + '/inline/inline_mid?to=' + encodeURIComponent(inlineCtaTarget);
       const ctaHtml = '\n<div class="inline-cta" style="margin:32px 0;padding:22px 26px;background:linear-gradient(135deg,#f7ffe9 0%,#fff 100%);border:2px solid #c0ff5c;border-radius:14px;text-align:center">'
+        + '<div style="font-size:9.5px;font-weight:800;color:#71717a;letter-spacing:.12em;margin-bottom:4px">PR</div>'
         + '<div style="font-size:11px;font-weight:800;color:#0a3d39;letter-spacing:.08em;margin-bottom:7px">▌ ' + _mediaEsc(lpBrandFinal).toUpperCase() + '</div>'
         + '<div style="font-size:14px;color:#1a1a1a;line-height:1.65;margin-bottom:14px;font-weight:600">'
         +   _mediaEsc((agent.media && agent.media.lp_description) || '公式サイトで 詳細を チェックしてください。')
         + '</div>'
-        + '<a href="' + inlineCtaHref + '" target="_blank" rel="noopener" '
+        + '<a href="' + inlineCtaHref + '" target="_blank" rel="noopener sponsored" '
         +   'style="display:inline-flex;align-items:center;gap:8px;background:#0d4f4a;color:#fff;padding:11px 22px;border-radius:9px;text-decoration:none;font-size:13px;font-weight:800">'
         +   '👉 ' + _mediaEsc(lpBrandFinal) + ' を 試してみる <span style="font-size:15px">→</span>'
         + '</a>'
@@ -17382,6 +17397,23 @@ function _categoryToEnSubtitle(cat){
 }
 
 function _svgHeroForArticle(post, media){
+  // 🆕 ④ SEO 改善: SVG プレース ホルダ を AI 画 像 (Pollinations) に 切替
+  // 記事 タイトル + カテゴリ で プロンプト 生成、 seed 固定 で 同 記事 = 同 画 像
+  try {
+    const title = String(post && post.title || '').slice(0, 100);
+    const category = String(post && post.category_name || '').slice(0, 30);
+    const lpBrand = (media && media.lp_brand_name) || (media && media.name) || '';
+    // 「写 真 風 editorial cover」 を 強 制 = ブログ サムネ 風 で 高 品 質
+    const prompt = 'editorial blog cover photo, professional, ' +
+                   (category ? category + ' category, ' : '') +
+                   title + ', clean composition, hyperrealistic, no text';
+    const seedSrc = (post && post.slug) || title;
+    const seed = (typeof _mediaHashStr === 'function') ? _mediaHashStr(seedSrc) : 12345;
+    // Pollinations = 無 料 + 高 速 + seed で 安 定
+    return 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt).slice(0, 500) +
+           '?width=1200&height=630&seed=' + seed + '&nologo=true&enhance=true';
+  } catch(_){ /* fallthrough to SVG */ }
+
   const tpl = (media && media.template) || 'minimal';
   const pal = _svgPaletteFor(tpl, media && media.brand_color);
   const category = String(post && post.category_name || '').slice(0, 14) || '記事';
@@ -17606,11 +17638,12 @@ function _mediaRenderMinimalPost(media, post, body_html, opts){
   const endCard = lpUrl ? `
     <div class="end-card-cta">
       <div class="ec-bg-deco"></div>
+      <div style="font-size:9.5px;font-weight:800;color:#71717a;letter-spacing:.12em;margin-bottom:6px">PR</div>
       <div class="ec-eyebrow">▌ ABOUT ${_mediaEsc(lpBrand).toUpperCase()}</div>
       <div class="ec-eyebrow-jp">この記事を書いた ${_mediaEsc(media.name||'')} が おすすめ するサービス</div>
       <h3 class="ec-h3">${_mediaEsc(lpBrand)}</h3>
       <p class="ec-desc">${lpDescText}</p>
-      <a href="${endCardCtaUrl}" target="_blank" rel="noopener" class="ec-btn">公式サイトを見る <span class="ec-arrow">→</span></a>
+      <a href="${endCardCtaUrl}" target="_blank" rel="noopener sponsored" class="ec-btn">公式サイトを見る <span class="ec-arrow">→</span></a>
       <div class="ec-foot">${_mediaEsc(lpUrl).replace(/^https?:\/\//, '')}</div>
     </div>` : '';
   const footerBanner = lpUrl ? `

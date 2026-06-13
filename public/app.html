@@ -1632,7 +1632,7 @@ input[type="file"]{display:none}
             <div class="set-grid2">
               <div class="set-fld">
                 <div class="set-fld-l">表示 名 <span class="req">*</span></div>
-                <input class="set-input" value="Kota Takeuchi" onchange="showToast('🚧 この機能は準備中です')">
+                <input class="set-input" id="acctName" placeholder="表示 名" onchange="saveProfileName(this.value)">
               </div>
               <div class="set-fld">
                 <div class="set-fld-l">タイム ゾーン</div>
@@ -1641,7 +1641,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-fld">
               <div class="set-fld-l">メール アドレス <span class="req">*</span></div>
-              <input class="set-input" id="acctEmail" value="kota.takeuchi@protocol.ooo" onchange="openEmailVerify(this.value)">
+              <input class="set-input" id="acctEmail" placeholder="メール アドレス" onchange="openEmailVerify(this.value)">
               <div class="set-hint">変更 する と 確認 メール が 送信 され、 認証 後 に 反映 さ れ ます。</div>
             </div>
 
@@ -1651,7 +1651,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-fld">
               <div class="set-fld-l">現 パスワード</div>
-              <input type="password" class="set-input" placeholder="••••••••">
+              <input type="password" class="set-input" id="curPw" placeholder="••••••••">
             </div>
             <div class="set-grid2">
               <div class="set-fld">
@@ -1662,11 +1662,11 @@ input[type="file"]{display:none}
               </div>
               <div class="set-fld">
                 <div class="set-fld-l">確認 (= 再 入力)</div>
-                <input type="password" class="set-input" placeholder="同 じ もの を 再入力">
+                <input type="password" class="set-input" id="confirmPw" placeholder="同 じ もの を 再入力">
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;margin-top:6px">
-              <button class="btn-sm primary" onclick="showToast('🚧 この機能は準備中です')">パスワード を 変更</button>
+              <button class="btn-sm primary" onclick="changePassword()">パスワード を 変更</button>
               <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">·</span>
               <a href="javascript:void(0)" onclick="openPwReset()" style="font-family:var(--mono);font-size:11.5px;color:var(--teal);text-decoration:underline">パスワード を 忘れた 場合 は こちら</a>
             </div>
@@ -1757,9 +1757,9 @@ input[type="file"]{display:none}
             <div class="set-row" style="border-top:0">
               <div class="set-row-info"><div class="set-row-l">📥 全 記事 を エクスポート</div><div class="set-row-d">CSV / Markdown / JSON で 一括 ダウンロード · GDPR 対応</div></div>
               <div style="display:flex;gap:6px">
-                <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">CSV</button>
-                <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">MD</button>
-                <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">JSON</button>
+                <button class="btn-sm" onclick="exportArticles('csv')">CSV</button>
+                <button class="btn-sm" onclick="exportArticles('md')">MD</button>
+                <button class="btn-sm" onclick="exportArticles('json')">JSON</button>
               </div>
             </div>
             <div class="set-row">
@@ -2578,6 +2578,7 @@ window._mb_api = async function(method, path, body){
       if(planBadge) planBadge.textContent = '⚡ ' + plan;
       const av = document.querySelector('.avatar-btn');
       if(av) av.textContent = ((window._me.name || window._me.email || 'U')+'').charAt(0).toUpperCase();
+      populateAccountFields();
       const sub = document.querySelector('.brand-sub');
       if(sub) sub.textContent = 'v1.0 · PROD';
     }, 200);
@@ -3387,6 +3388,75 @@ function buildSpark(id, count){
     b.style.height = '8%'; // flat = データ無し (= 捏造しない)。実 timeseries が来たら hydrate が上書き
     el.appendChild(b);
   }
+}
+
+// ━━━ 記事エクスポート (CSV / MD / JSON) — クライアント側で実データから生成 ━━━
+function exportArticles(fmt){
+  const posts = (window._mb_lastPosts && window._mb_lastPosts.length)
+    ? window._mb_lastPosts
+    : ((SITES[activeSiteIdx] && SITES[activeSiteIdx].posts) || []);
+  if(!posts.length){ showToast('エクスポート する 記事 が ありません'); return; }
+  const domain = (SITES[activeSiteIdx] && SITES[activeSiteIdx].domain) || '';
+  const rows = posts.map(p => ({
+    title: p.ti || p.title || '',
+    slug: p.slug || '',
+    date: p.date || '',
+    pv: p.pv || 0,
+    lp: p.lp || 0,
+    url: p.slug ? ('https://' + domain + '/' + p.slug) : ''
+  }));
+  let content, name, mime;
+  if(fmt === 'json'){
+    content = JSON.stringify(rows, null, 2); name = 'articles.json'; mime = 'application/json';
+  } else if(fmt === 'md'){
+    content = '# 記事 一覧 (' + rows.length + '件)\n\n| タイトル | 公開日 | PV | LP | URL |\n|---|---|---|---|---|\n'
+      + rows.map(r => '| ' + String(r.title).replace(/\|/g,'\\|') + ' | ' + r.date + ' | ' + r.pv + ' | ' + r.lp + ' | ' + r.url + ' |').join('\n') + '\n';
+    name = 'articles.md'; mime = 'text/markdown';
+  } else {
+    const esc = v => { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; };
+    content = 'title,slug,date,pv,lp,url\n'
+      + rows.map(r => [r.title, r.slug, r.date, r.pv, r.lp, r.url].map(esc).join(',')).join('\n') + '\n';
+    name = 'articles.csv'; mime = 'text/csv';
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime + ';charset=utf-8' }));
+  a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+  showToast('📥 ' + rows.length + ' 件 を ' + fmt.toUpperCase() + ' で DL しました');
+}
+
+// ━━━ アカウント: プロフィール名 / パスワード変更 (実エンドポイント) ━━━
+async function _apiPatch(path, body){
+  const tok = window._mb_apiToken || localStorage.getItem('token') || '';
+  const r = await fetch(path, { method:'PATCH', headers:{ 'Authorization':'Bearer '+tok, 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+  let d = {}; try { d = await r.json(); } catch(_){}
+  if(!r.ok) throw new Error(d.error || (r.status + ' ' + r.statusText));
+  return d;
+}
+async function saveProfileName(name){
+  name = (name||'').trim();
+  if(!name){ showToast('名前 を 入力 して ください'); return; }
+  try { await _apiPatch('/api/user/profile', { name }); showToast('✓ 表示名 を 更新 しました'); }
+  catch(e){ showToast('更新 失敗: ' + (e.message||e), 'ng'); }
+}
+async function changePassword(){
+  const cur = (document.getElementById('curPw')||{}).value || '';
+  const nw  = (document.getElementById('newPw')||{}).value || '';
+  const cf  = (document.getElementById('confirmPw')||{}).value || '';
+  if(!cur || !nw){ showToast('現・新 パスワード を 入力 して ください'); return; }
+  if(nw.length < 8){ showToast('新 パスワード は 8 文字 以上 に して ください'); return; }
+  if(nw !== cf){ showToast('確認 パスワード が 一致 しません'); return; }
+  try {
+    await _apiPatch('/api/user/password', { current_password: cur, new_password: nw });
+    showToast('✓ パスワード を 変更 しました');
+    ['curPw','newPw','confirmPw'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  } catch(e){ showToast('変更 失敗: ' + (e.message||e), 'ng'); }
+}
+// 実ユーザー情報でアカウント欄を埋める (= Kota のベタ書きを排除)
+function populateAccountFields(){
+  const me = window._me || {};
+  const n = document.getElementById('acctName'); if(n) n.value = me.name || '';
+  const e = document.getElementById('acctEmail'); if(e) e.value = me.email || '';
 }
 
 // ━━━ Load site ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -1070,7 +1070,7 @@ input[type="file"]{display:none}
   <div class="pop" id="userPop" style="top:60px;right:14px;width:240px">
     <div class="user-menu-h">
       <div class="av">K</div>
-      <div><div class="nm">Kota Takeuchi</div><div class="em">kota@protocol.ooo</div></div>
+      <div><div class="nm" id="menuName">—</div><div class="em" id="menuEmail">—</div></div>
     </div>
     <div style="padding:5px 0">
       <div class="user-menu-row" onclick="closeUserMenu();navTo('settings',document.querySelector('.nav-btn[data-view=settings]'));setTimeout(()=>setTab('acct',document.querySelector('.set-tab[data-st=acct]')),100)"><span class="ic">👤</span> プロフィール 編集</div>
@@ -2189,7 +2189,7 @@ input[type="file"]{display:none}
       <div class="modal-p">登録 済 メール アドレス に <b>リセット 用 リンク</b> を 送り ます。 メール 内 の リンク を click し て 24 時間 以内 に 新 パスワード を 設定 し て ください。</div>
       <div class="set-fld" style="margin-bottom:0">
         <div class="set-fld-l">登録 メール アドレス</div>
-        <input class="set-input" id="pwResetEmail" placeholder="you@example.com" value="kota.takeuchi@protocol.ooo">
+        <input class="set-input" id="pwResetEmail" placeholder="you@example.com">
       </div>
       <div style="margin-top:14px;padding:11px 14px;background:var(--cream2);border-radius:7px;font-size:11.5px;color:var(--text2);line-height:1.55">
         💡 メール が 届か ない 場合 は <b>迷惑 メール</b> も 確認 し て ください。 5 分 経過 し ても 届か ない 場合 は ヘルプ から 問い合わせ。
@@ -3457,6 +3457,9 @@ function populateAccountFields(){
   const me = window._me || {};
   const n = document.getElementById('acctName'); if(n) n.value = me.name || '';
   const e = document.getElementById('acctEmail'); if(e) e.value = me.email || '';
+  const mn = document.getElementById('menuName'); if(mn) mn.textContent = me.name || me.email || 'ユーザー';
+  const me2 = document.getElementById('menuEmail'); if(me2) me2.textContent = me.email || '';
+  const pr = document.getElementById('pwResetEmail'); if(pr && me.email) pr.value = me.email;
 }
 
 // ━━━ Load site ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

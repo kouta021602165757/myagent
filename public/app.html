@@ -1107,7 +1107,7 @@ input[type="file"]{display:none}
           <span class="site-opt-check">✓</span>
         </div>
         <div class="site-dd-sep"></div>
-        <div class="site-dd-add" onclick="showToast('🚧 この機能は準備中です');toggleSiteDD()">
+        <div class="site-dd-add" onclick="window.location.href='/auth.html'">
           <span>＋</span> 新しい サイト を 追加
         </div>
       </div>
@@ -1840,10 +1840,10 @@ input[type="file"]{display:none}
 
     <!-- law footer (inside main, after all views) -->
     <div class="law-footer">
-      <a href="javascript:void(0)" onclick="showToast('🚧 この機能は準備中です')">利用 規約</a>
-      <a href="javascript:void(0)" onclick="showToast('🚧 この機能は準備中です')">プライバシー</a>
-      <a href="javascript:void(0)" onclick="showToast('🚧 この機能は準備中です')">特定 商取引法</a>
-      <a href="javascript:void(0)" onclick="showToast('🚧 この機能は準備中です')">会社 情報</a>
+      <a href="/terms.html" target="_blank" rel="noopener">利用 規約</a>
+      <a href="/privacy.html" target="_blank" rel="noopener">プライバシー</a>
+      <a href="/legal.html" target="_blank" rel="noopener">特定 商取引法</a>
+      <a href="/legal.html" target="_blank" rel="noopener">会社 情報</a>
       <a href="javascript:void(0)" onclick="openChangelog()">変更 履歴</a>
       <span class="copy">© 2026 MY AI Agent · Protocol Co., Ltd.</span>
     </div>
@@ -1941,9 +1941,8 @@ input[type="file"]{display:none}
     </div>
     <div class="help-sect">
       <div class="help-sect-h">▌ 問い合わせ</div>
-      <div class="help-q" onclick="showToast('🚧 この機能は準備中です')">📧 メール で 問い合わせ</div>
-      <div class="help-q" onclick="showToast('🚧 この機能は準備中です')">💬 ユーザ コミュニティ</div>
-      <div class="help-q" onclick="showToast('🚧 この機能は準備中です')">🐛 バグ を 報告</div>
+      <div class="help-q" onclick="window.open('/contact.html','_blank')">📧 メール で 問い合わせ</div>
+      <div class="help-q" onclick="window.open('/contact.html','_blank')">🐛 バグ を 報告</div>
     </div>
     <div class="help-sect">
       <div class="help-sect-h">▌ 初期 設定</div>
@@ -2490,7 +2489,7 @@ input[type="file"]{display:none}
 <!-- ━━ Cookie banner ━━ -->
 <div class="cookie-bn" id="cookieBn">
   <div class="cookie-bn-bd">
-    🍪 <b>Cookie 利用 の お知らせ</b> — サイト の 動作 改善 に <b>必須 cookie</b> を 使用 し ます。 任意 で 分析 cookie も ON に できます (= 機能 向上 に 利用)。 詳細 は <a href="javascript:void(0)" onclick="showToast('🚧 この機能は準備中です')">プライバシー ポリシー</a>。
+    🍪 <b>Cookie 利用 の お知らせ</b> — サイト の 動作 改善 に <b>必須 cookie</b> を 使用 し ます。 任意 で 分析 cookie も ON に できます (= 機能 向上 に 利用)。 詳細 は <a href="/privacy.html" target="_blank" rel="noopener">プライバシー ポリシー</a>。
   </div>
   <div class="cookie-bn-acts">
     <button class="btn btn-ghost" onclick="ackCookie('essential')">必須 のみ</button>

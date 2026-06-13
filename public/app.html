@@ -1078,7 +1078,7 @@ input[type="file"]{display:none}
       <div class="user-menu-row" onclick="closeUserMenu();openHelp()"><span class="ic">❓</span> ヘルプ</div>
       <div class="user-menu-row" onclick="closeUserMenu();openChangelog()"><span class="ic">📰</span> 最新 アップデート</div>
       <div class="user-menu-sep"></div>
-      <div class="user-menu-row danger" onclick="closeUserMenu();showToast('サイン アウト (mock)')"><span class="ic">↪</span> サイン アウト</div>
+      <div class="user-menu-row danger" onclick="closeUserMenu();try{localStorage.removeItem('token')}catch(_){};location.href='/auth.html'"><span class="ic">↪</span> サイン アウト</div>
     </div>
   </div>
 
@@ -1115,7 +1115,7 @@ input[type="file"]{display:none}
           <span class="site-opt-check">✓</span>
         </div>
         <div class="site-dd-sep"></div>
-        <div class="site-dd-add" onclick="showToast('+ 新規 サイト 追加 (mock)');toggleSiteDD()">
+        <div class="site-dd-add" onclick="showToast('🚧 この機能は準備中です');toggleSiteDD()">
           <span>＋</span> 新しい サイト を 追加
         </div>
       </div>
@@ -1317,24 +1317,7 @@ input[type="file"]{display:none}
       <div class="block">
         <div class="block-head"><span class="dot"></span> RECOMMENDED ACTIONS · 今 やる べき 3 つ<span class="right">AI 提案 · 自動 更新</span></div>
         <div class="sug-grid">
-          <div class="sug hot" onclick="openSug('hot')">
-            <div class="sug-prio">HOT · 24H 以内</div>
-            <div class="sug-title">競合 が 「AI 記事 ツール 比較」 で 1 位 → 12h 以内 に 抜く 案</div>
-            <div class="sug-why">同 KW で あなた #4。 競合 5,400 字、 比較 表 弱い。 8,500 字 + AI 制作 比較 で 抜け る 見込み。</div>
-            <div class="sug-cta">⚡ AI チーム を 起動</div>
-          </div>
-          <div class="sug" onclick="openSug('medium')">
-            <div class="sug-prio">▌ HIGH · 今週</div>
-            <div class="sug-title">「LP 流入」 を 11 → 100 sessions に 伸ばす 3 手</div>
-            <div class="sug-why">記事 末尾 CTA は OK、 でも inline CTA が 0 件。 inline 3 箇所 追加 で +60-80 sess 見込み。</div>
-            <div class="sug-cta">📊 詳細 を 見る</div>
-          </div>
-          <div class="sug" onclick="openSug('low')">
-            <div class="sug-prio">▌ MEDIUM · 余裕 あれば</div>
-            <div class="sug-title">古い 記事 「ポイ活 アプリ 比較」 が 順位 #18 まで 落下</div>
-            <div class="sug-why">過去 7 日 で #11 → #18。 内容 古い 可能性。 AI で リライト し て 30 日 様子 見。</div>
-            <div class="sug-cta">♻️ リライト を 起動</div>
-          </div>
+          <div style="grid-column:1/-1;padding:30px 20px;text-align:center;color:var(--text3);font-size:13px">🚧 AI 提 案 機 能 は 準 備 中 です · 近 日 公 開 予 定</div>
         </div>
       </div>
 
@@ -1604,11 +1587,11 @@ input[type="file"]{display:none}
             <div class="set-p">この サイト の 公開 情報 と デザイン。</div>
             <div class="set-row" style="border-top:0">
               <div class="set-row-info"><div class="set-row-l">サイト 名</div><div class="set-row-d">myaiagents.agency Blog</div></div>
-              <button class="btn-sm" onclick="showToast('編集 (mock)')">変更</button>
+              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">変更</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">サブ ドメイン</div><div class="set-row-d">media-blog.myaiagents.agency</div></div>
-              <button class="btn-sm" onclick="showToast('変更 (mock)')">変更</button>
+              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">変更</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">カテゴリ (4)</div><div class="set-row-d">AI×メディア / ノウハウ / 比較 / 業界 動向</div></div>
@@ -1616,7 +1599,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">テーマ / 配色</div><div class="set-row-d">teal + cream</div></div>
-              <button class="btn-sm" onclick="showToast('テーマ (mock)')">編集</button>
+              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">編集</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">favicon / OG 画像</div><div class="set-row-d">設定 済 · auto-generated</div></div>
@@ -1635,8 +1618,8 @@ input[type="file"]{display:none}
                 <div class="bill-meta">¥4,950 / 月 · 月 100 記事 cap · AI チーム 24 名 · 次回 請求 2026-07-11</div>
               </div>
               <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-                <button class="btn-sm primary" onclick="showToast('プラン 変更 (mock)')">プラン 変更</button>
-                <button class="btn-sm" onclick="showToast('解約 (mock)')">解約</button>
+                <button class="btn-sm primary" onclick="showToast('🚧 この機能は準備中です')">プラン 変更</button>
+                <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">解約</button>
               </div>
             </div>
             <div class="set-row" style="border-top:0">
@@ -1649,10 +1632,10 @@ input[type="file"]{display:none}
             </div>
             <div style="margin-top:18px">
               <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;letter-spacing:.02em">▌ 請求 履歴 (= 直近 6 ヶ月)</div>
-              <div class="bill-row"><span class="bill-row-date">2026-06-11</span><span class="bill-row-d">Business plan · 1 ヶ月</span><span class="bill-row-amt">¥4,950</span><span class="bill-row-dl" onclick="showToast('領収書 DL (mock)')">📄 DL</span></div>
-              <div class="bill-row"><span class="bill-row-date">2026-05-11</span><span class="bill-row-d">Business plan · 1 ヶ月</span><span class="bill-row-amt">¥4,950</span><span class="bill-row-dl" onclick="showToast('領収書 DL (mock)')">📄 DL</span></div>
-              <div class="bill-row"><span class="bill-row-date">2026-04-11</span><span class="bill-row-d">Pro plan · 1 ヶ月</span><span class="bill-row-amt">¥1,950</span><span class="bill-row-dl" onclick="showToast('領収書 DL (mock)')">📄 DL</span></div>
-              <div class="bill-row"><span class="bill-row-date">2026-03-11</span><span class="bill-row-d">Pro plan · 1 ヶ月</span><span class="bill-row-amt">¥1,950</span><span class="bill-row-dl" onclick="showToast('領収書 DL (mock)')">📄 DL</span></div>
+              <div class="bill-row"><span class="bill-row-date">2026-06-11</span><span class="bill-row-d">Business plan · 1 ヶ月</span><span class="bill-row-amt">¥4,950</span><span class="bill-row-dl" onclick="showToast('🚧 この機能は準備中です')">📄 DL</span></div>
+              <div class="bill-row"><span class="bill-row-date">2026-05-11</span><span class="bill-row-d">Business plan · 1 ヶ月</span><span class="bill-row-amt">¥4,950</span><span class="bill-row-dl" onclick="showToast('🚧 この機能は準備中です')">📄 DL</span></div>
+              <div class="bill-row"><span class="bill-row-date">2026-04-11</span><span class="bill-row-d">Pro plan · 1 ヶ月</span><span class="bill-row-amt">¥1,950</span><span class="bill-row-dl" onclick="showToast('🚧 この機能は準備中です')">📄 DL</span></div>
+              <div class="bill-row"><span class="bill-row-date">2026-03-11</span><span class="bill-row-d">Pro plan · 1 ヶ月</span><span class="bill-row-amt">¥1,950</span><span class="bill-row-dl" onclick="showToast('🚧 この機能は準備中です')">📄 DL</span></div>
             </div>
           </div>
 
@@ -1662,7 +1645,7 @@ input[type="file"]{display:none}
             <div class="set-grid2">
               <div class="set-fld">
                 <div class="set-fld-l">表示 名 <span class="req">*</span></div>
-                <input class="set-input" value="Kota Takeuchi" onchange="showToast('名前 更新 (mock)')">
+                <input class="set-input" value="Kota Takeuchi" onchange="showToast('🚧 この機能は準備中です')">
               </div>
               <div class="set-fld">
                 <div class="set-fld-l">タイム ゾーン</div>
@@ -1696,7 +1679,7 @@ input[type="file"]{display:none}
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;margin-top:6px">
-              <button class="btn-sm primary" onclick="showToast('✓ パスワード 変更 完了 (mock)')">パスワード を 変更</button>
+              <button class="btn-sm primary" onclick="showToast('🚧 この機能は準備中です')">パスワード を 変更</button>
               <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">·</span>
               <a href="javascript:void(0)" onclick="openPwReset()" style="font-family:var(--mono);font-size:11.5px;color:var(--teal);text-decoration:underline">パスワード を 忘れた 場合 は こちら</a>
             </div>
@@ -1715,9 +1698,9 @@ input[type="file"]{display:none}
               <div class="set-p" style="margin-bottom:10px">ソーシャル ログイン を 連携 する と、 メール アドレス + パスワード 不要 で ログイン でき ます。</div>
             </div>
             <div class="social-row">
-              <button class="social-btn linked" onclick="showToast('Google 連携 解除 (mock)')"><span class="ic">🌐</span> Google ✓ 連携 中</button>
-              <button class="social-btn" onclick="showToast('GitHub 連携 (mock)')"><span class="ic">🐙</span> GitHub</button>
-              <button class="social-btn" onclick="showToast('Apple ID 連携 (mock)')"><span class="ic">🍎</span> Apple ID</button>
+              <button class="social-btn linked" onclick="showToast('🚧 この機能は準備中です')"><span class="ic">🌐</span> Google ✓ 連携 中</button>
+              <button class="social-btn" onclick="showToast('🚧 この機能は準備中です')"><span class="ic">🐙</span> GitHub</button>
+              <button class="social-btn" onclick="showToast('🚧 この機能は準備中です')"><span class="ic">🍎</span> Apple ID</button>
             </div>
 
             <div style="margin:24px 0 12px;padding-top:18px;border-top:1px solid var(--wire)">
@@ -1764,7 +1747,7 @@ input[type="file"]{display:none}
               <div class="set-fld-l">Discord webhook URL</div>
               <input class="set-input" placeholder="https://discord.com/api/webhooks/...">
             </div>
-            <button class="btn-sm primary" onclick="showToast('✓ webhook 保存 + テスト 送信 (mock)')">保存 + テスト 送信</button>
+            <button class="btn-sm primary" onclick="showToast('🚧 この機能は準備中です')">保存 + テスト 送信</button>
           </div>
 
           <div class="set-panel" id="st-integ">
@@ -1775,11 +1758,11 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row" style="border-top:0">
               <div class="set-row-info"><div class="set-row-l">Google Analytics 4</div><div class="set-row-d">「LP 自体 の PV」 も 統合 表示</div></div>
-              <button class="btn-sm" onclick="showToast('GA4 連携 開始 (mock)')">連携 する</button>
+              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">連携 する</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">Google Search Console</div><div class="set-row-d">検索 順位 / impressions / CTR が 取得 可能 に</div></div>
-              <button class="btn-sm" onclick="showToast('GSC 連携 (mock)')">連携 する</button>
+              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">連携 する</button>
             </div>
           </div>
 
@@ -1789,9 +1772,9 @@ input[type="file"]{display:none}
             <div class="set-row" style="border-top:0">
               <div class="set-row-info"><div class="set-row-l">📥 全 記事 を エクスポート</div><div class="set-row-d">CSV / Markdown / JSON で 一括 ダウンロード · GDPR 対応</div></div>
               <div style="display:flex;gap:6px">
-                <button class="btn-sm" onclick="showToast('CSV DL (mock)')">CSV</button>
-                <button class="btn-sm" onclick="showToast('Markdown DL (mock)')">MD</button>
-                <button class="btn-sm" onclick="showToast('JSON DL (mock)')">JSON</button>
+                <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">CSV</button>
+                <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">MD</button>
+                <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">JSON</button>
               </div>
             </div>
             <div class="set-row">
@@ -1800,11 +1783,11 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">🗂 アクティビティ ログ DL</div><div class="set-row-d">過去 90 日 の 公開 / リライト / シェア ログ を CSV で</div></div>
-              <button class="btn-sm" onclick="showToast('ログ DL (mock)')">DL</button>
+              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">DL</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">🗑 全 記事 を 一括 削除</div><div class="set-row-d">この サイト の 全 記事 を 削除 (= サイト 設定 は 保持)</div></div>
-              <button class="btn-danger" onclick="showToast('⚠ 確認 modal (mock)')">削除</button>
+              <button class="btn-danger" onclick="showToast('🚧 この機能は準備中です')">削除</button>
             </div>
           </div>
 
@@ -1859,7 +1842,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">プラン を 解約</div><div class="set-row-d">月末 で 解約 · データ は 30 日 間 保持</div></div>
-              <button class="btn-danger" onclick="showToast('解約 confirm (mock)')">解約 する</button>
+              <button class="btn-danger" onclick="showToast('🚧 この機能は準備中です')">解約 する</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">アカウント を 削除 (= 退会)</div><div class="set-row-d">全 サイト / 全 記事 / 全 data を 完全 削除 · 復元 不可</div></div>
@@ -1872,10 +1855,10 @@ input[type="file"]{display:none}
 
     <!-- law footer (inside main, after all views) -->
     <div class="law-footer">
-      <a href="javascript:void(0)" onclick="showToast('利用 規約 (mock)')">利用 規約</a>
-      <a href="javascript:void(0)" onclick="showToast('プライバシー ポリシー (mock)')">プライバシー</a>
-      <a href="javascript:void(0)" onclick="showToast('特定 商取引法 表示 (mock)')">特定 商取引法</a>
-      <a href="javascript:void(0)" onclick="showToast('会社 情報 (mock)')">会社 情報</a>
+      <a href="javascript:void(0)" onclick="showToast('🚧 この機能は準備中です')">利用 規約</a>
+      <a href="javascript:void(0)" onclick="showToast('🚧 この機能は準備中です')">プライバシー</a>
+      <a href="javascript:void(0)" onclick="showToast('🚧 この機能は準備中です')">特定 商取引法</a>
+      <a href="javascript:void(0)" onclick="showToast('🚧 この機能は準備中です')">会社 情報</a>
       <a href="javascript:void(0)" onclick="openChangelog()">変更 履歴</a>
       <span class="copy">© 2026 MY AI Agent · Protocol Co., Ltd.</span>
     </div>
@@ -1893,9 +1876,8 @@ input[type="file"]{display:none}
       <div class="msg">
         <div class="msg-av">M</div>
         <div class="msg-bd">
-          <div class="nm">MY · 04:31</div>
-          <div class="tx">おはよう。 寝てる 間 に <b>3 記事 公開</b>、 <b>87 人 読 ん だ</b>。 1 件 SNS 反応 良好 だった。</div>
-          <div class="msg-card"><div class="ti">🔥 「スマホ で 記事 生成」</div><div class="mt">PV 276 · LP 流入 9 sess · X likes 14</div></div>
+          <div class="nm">MY AI Agent</div>
+          <div class="tx">ようこそ。 左上 で サイト を 選ん で、 AI に 記事 を 書かせ ましょう。 公開 後 の PV・ユニーク・LP 流入 は、 すべて <b>ダッシュ ボード に 実測 で</b> 表示 さ れ ます。</div>
         </div>
       </div>
       <div class="msg">
@@ -1956,11 +1938,11 @@ input[type="file"]{display:none}
   <div class="help-body">
     <div class="help-sect">
       <div class="help-sect-h">▌ よく ある 質問</div>
-      <div class="help-q" onclick="showToast('FAQ 開く (mock)')">🔥 記事 が 全然 公開 され ない</div>
-      <div class="help-q" onclick="showToast('FAQ 開く (mock)')">📊 PV 数 が 反映 され ない のは なぜ?</div>
-      <div class="help-q" onclick="showToast('FAQ 開く (mock)')">⚡ AI チーム は 1 日 何 件 まで 動ける?</div>
-      <div class="help-q" onclick="showToast('FAQ 開く (mock)')">🌐 サブドメイン を 独自 ドメイン に 変える</div>
-      <div class="help-q" onclick="showToast('FAQ 開く (mock)')">💳 プラン の ダウングレード は どう やる?</div>
+      <div class="help-q" onclick="showToast('🚧 この機能は準備中です')">🔥 記事 が 全然 公開 され ない</div>
+      <div class="help-q" onclick="showToast('🚧 この機能は準備中です')">📊 PV 数 が 反映 され ない のは なぜ?</div>
+      <div class="help-q" onclick="showToast('🚧 この機能は準備中です')">⚡ AI チーム は 1 日 何 件 まで 動ける?</div>
+      <div class="help-q" onclick="showToast('🚧 この機能は準備中です')">🌐 サブドメイン を 独自 ドメイン に 変える</div>
+      <div class="help-q" onclick="showToast('🚧 この機能は準備中です')">💳 プラン の ダウングレード は どう やる?</div>
     </div>
     <div class="help-sect">
       <div class="help-sect-h">▌ キーボード ショート カット</div>
@@ -1974,9 +1956,9 @@ input[type="file"]{display:none}
     </div>
     <div class="help-sect">
       <div class="help-sect-h">▌ 問い合わせ</div>
-      <div class="help-q" onclick="showToast('メール を 起動 (mock)')">📧 メール で 問い合わせ</div>
-      <div class="help-q" onclick="showToast('Slack コミュニティ (mock)')">💬 ユーザ コミュニティ</div>
-      <div class="help-q" onclick="showToast('バグ 報告 (mock)')">🐛 バグ を 報告</div>
+      <div class="help-q" onclick="showToast('🚧 この機能は準備中です')">📧 メール で 問い合わせ</div>
+      <div class="help-q" onclick="showToast('🚧 この機能は準備中です')">💬 ユーザ コミュニティ</div>
+      <div class="help-q" onclick="showToast('🚧 この機能は準備中です')">🐛 バグ を 報告</div>
     </div>
     <div class="help-sect">
       <div class="help-sect-h">▌ 初期 設定</div>
@@ -2050,11 +2032,11 @@ input[type="file"]{display:none}
               <div class="og-theme t-rose" data-th="rose" onclick="setOgTheme('rose',this)"></div>
             </div>
           </div>
-          <button class="btn-sm" style="margin-top:6px" onclick="showToast('🪄 AI 自動 生成 (mock)')">🪄 AI に 任せて 自動 生成</button>
+          <button class="btn-sm" style="margin-top:6px" onclick="showToast('🚧 この機能は準備中です')">🪄 AI に 任せて 自動 生成</button>
         </div>
       </div>
     </div>
-    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeOgModal()">キャンセル</button><button class="btn btn-go" onclick="showToast('✓ OG 画像 を 保存 (mock)');closeOgModal()">保存</button></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeOgModal()">キャンセル</button><button class="btn btn-go" onclick="showToast('🚧 この機能は準備中です');closeOgModal()">保存</button></div>
   </div>
 </div>
 
@@ -2094,7 +2076,7 @@ input[type="file"]{display:none}
         <div class="card-brands"><span class="card-brand">VISA</span><span class="card-brand">Mastercard</span><span class="card-brand">AMEX</span><span class="card-brand">JCB</span></div>
       </div>
     </div>
-    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeCardModal()">キャンセル</button><button class="btn btn-go" onclick="showToast('✓ カード 更新 (mock)');closeCardModal()">保存</button></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeCardModal()">キャンセル</button><button class="btn btn-go" onclick="showToast('🚧 この機能は準備中です');closeCardModal()">保存</button></div>
   </div>
 </div>
 
@@ -2450,7 +2432,7 @@ input[type="file"]{display:none}
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeUpsellModal()">後 で</button>
-      <button class="btn btn-go" onclick="closeUpsellModal();showToast('✅ PRO へ アップ グレード (mock) · ¥1,950 / 月')">▶ PRO に アップ する</button>
+      <button class="btn btn-go" onclick="closeUpsellModal();showToast('🚧 この機能は準備中です')">▶ PRO に アップ する</button>
     </div>
   </div>
 </div>
@@ -2468,7 +2450,7 @@ input[type="file"]{display:none}
         <div class="churn-pause">
           <div class="churn-pause-title">💤 まずは「一時 停止」して みません か？</div>
           <div class="churn-pause-desc">1 ヶ月 〜 6 ヶ月 の 課金 停止 が 可能。 サイト と 記事 は <b>そのまま 保持</b>、 いつ でも 再 開 できる ので 「ちょっと 使う 頻度 が 落ちた」 程度 なら こちら が おすすめ。</div>
-          <button class="btn btn-go" style="width:100%" onclick="closeChurnModal();showToast('💤 1 ヶ月 一時 停止 を 受付 (mock)')">▶ 1 ヶ月 一時 停止 する</button>
+          <button class="btn btn-go" style="width:100%" onclick="closeChurnModal();showToast('🚧 この機能は準備中です')">▶ 1 ヶ月 一時 停止 する</button>
         </div>
         <div style="text-align:center"><a onclick="churnNext(2)" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);text-decoration:underline;cursor:pointer">それ でも 退会 し たい</a></div>
       </div>
@@ -2523,7 +2505,7 @@ input[type="file"]{display:none}
 <!-- ━━ Cookie banner ━━ -->
 <div class="cookie-bn" id="cookieBn">
   <div class="cookie-bn-bd">
-    🍪 <b>Cookie 利用 の お知らせ</b> — サイト の 動作 改善 に <b>必須 cookie</b> を 使用 し ます。 任意 で 分析 cookie も ON に できます (= 機能 向上 に 利用)。 詳細 は <a href="javascript:void(0)" onclick="showToast('プライバシー ポリシー (mock)')">プライバシー ポリシー</a>。
+    🍪 <b>Cookie 利用 の お知らせ</b> — サイト の 動作 改善 に <b>必須 cookie</b> を 使用 し ます。 任意 で 分析 cookie も ON に できます (= 機能 向上 に 利用)。 詳細 は <a href="javascript:void(0)" onclick="showToast('🚧 この機能は準備中です')">プライバシー ポリシー</a>。
   </div>
   <div class="cookie-bn-acts">
     <button class="btn btn-ghost" onclick="ackCookie('essential')">必須 のみ</button>
@@ -3437,7 +3419,7 @@ function buildSpark(id, count){
   for(let i = 0; i < count; i++){
     const b = document.createElement('div');
     b.className = 'b';
-    b.style.height = (20 + Math.random()*80) + '%';
+    b.style.height = '8%'; // flat = データ無し (= 捏造しない)。実 timeseries が来たら hydrate が上書き
     el.appendChild(b);
   }
 }
@@ -3505,7 +3487,7 @@ function renderArtList(posts){
       <div class="art-trend" style="color:${p.t==='↓'?'var(--rose)':p.t==='→'?'var(--text3)':'var(--green)'}">${p.t}</div>
       <div class="art-act">
         <button class="btn-sm" onclick="showToast('開く: ${p.ti.slice(0,20)}…')">開く</button>
-        <button class="btn-sm" onclick="showToast('♻️ リライト 起動 (mock)')">♻️</button>
+        <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">♻️</button>
       </div>
     </div>
   `).join('');
@@ -3547,7 +3529,7 @@ document.addEventListener('click', (e)=>{
 
 // Ambient bump (only on active site) — 実 data load 後 は 止 め る
 setInterval(()=>{
-  if(window._mb_realDataLoaded) return;  // 実 data 反 映 後 は random 増 加 し ない
+  return;  // 数字の自動増加(=捏造)を無効化。実測のみ表示する
   if(Math.random() < 0.3){ S.pvT += Math.floor(Math.random()*3)+1; animNum('statPv', S.pv, S.pvT); S.pv = S.pvT; }
   if(Math.random() < 0.15){ S.usersT += 1; animNum('statUsers', S.users, S.usersT); S.users = S.usersT; }
   if(Math.random() < 0.08){ S.lpT += 1; animNum('statLp', S.lp, S.lpT); S.lp = S.lpT; }
@@ -3557,7 +3539,7 @@ setInterval(()=>{
   ['sparkPv','sparkUsers','sparkLp'].forEach(id => {
     const el = document.getElementById(id);
     if(!el) return;
-    el.querySelectorAll('.b').forEach(b => b.style.height = (20 + Math.random()*80) + '%');
+    el.querySelectorAll('.b').forEach(b => b.style.height = '8%'); // 捏造しない (= flat)
   });
 }, 3000);
 let barP = { bar1:48, bar2:72, bar3:25 };
@@ -3687,7 +3669,7 @@ function showModal(tag, h, p, goLabel){
 function closeModal(){ document.getElementById('modal').classList.remove('show'); }
 function modalConfirm(){
   closeModal();
-  showToast('⚡ ' + (S.modalAction || 'action') + ' を 起動 (mock)');
+  showToast('⚡ ' + (S.modalAction || 'action') + ' を 起動（準備中）');
   setTimeout(()=>addFeed('publish', '起動: ' + S.modalAction), 400);
 }
 
@@ -3700,7 +3682,7 @@ function toggleChat(){
 function onChatKey(e){ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); } }
 function quickChat(text){ document.getElementById('chatInput').value = text; sendChat(); }
 
-// === Chat composer tools (mock) ===
+// === Chat composer tools（準備中） ===
 const ATT = []; // attachments
 function renderAtt(){
   const strip = document.getElementById('chatAttachStrip');
@@ -3722,7 +3704,7 @@ function onChatFile(e){
   });
   renderAtt();
   e.target.value = '';
-  if(files.length) showToast('📎 ' + files.length + ' 件 添付 (mock)');
+  if(files.length) showToast('📎 ' + files.length + ' 件 添付（準備中）');
 }
 function openUrlAttach(){
   const url = prompt('URL を 入力 (= ページ 内 容 を AI に 読 ま せる):');
@@ -3731,7 +3713,7 @@ function openUrlAttach(){
     const host = new URL(url).hostname.replace(/^www\./, '');
     ATT.push({ name: host, icon: '🔗' });
     renderAtt();
-    showToast('🔗 URL 添付 (mock): ' + host);
+    showToast('🔗 URL 添付（準備中）: ' + host);
   } catch(_){
     showToast('URL 形式 不正');
   }
@@ -3740,7 +3722,7 @@ function toggleMic(){
   const btn = document.getElementById('micBtn');
   btn.classList.toggle('on');
   const on = btn.classList.contains('on');
-  showToast(on ? '🎤 録音 開始 (mock)' : '🎤 録音 停止 (mock)');
+  showToast(on ? '🎤 録音 開始（準備中）' : '🎤 録音 停止（準備中）');
   if(on){
     setTimeout(()=>{
       btn.classList.remove('on');
@@ -3999,14 +3981,7 @@ document.addEventListener('click', (e)=>{
   if(up && !up.contains(e.target) && !e.target.closest('[onclick*="openUserMenu"]')) up.classList.remove('show');
 });
 
-const NOTIS = [
-  { unread:true, t:'記事 公開 完了', d:'「スマホ で 記事 生成 を 完全 マスター」 が 公開 されました', time:'4 分 前' },
-  { unread:true, t:'🔥 競合 抜き 機会 検知', d:'「AI 記事 ツール 比較」 で 競合 が 上位 を 取得、 12h で 抜ける 見込み', time:'18 分 前' },
-  { unread:true, t:'LP 流入 +5 sess', d:'過去 1 時間 で LP 流入 が 5 sess (= utm_medium=footer から)', time:'1 時間 前' },
-  { unread:false, t:'朝 の レポート', d:'昨日 = 94 PV / 31 users / 2 LP 流入', time:'2 時間 前' },
-  { unread:false, t:'順位 下落 アラート', d:'「ポイ活 アプリ 比較」 が #11 → #18 に 下落', time:'昨日' },
-  { unread:false, t:'新 機能: Cmd+K 検索', d:'⌘ K で どこ にでも 飛べる ように', time:'2 日 前' },
-];
+const NOTIS = []; // 捏造通知を撤去。実通知システムが来るまで空 (= 嘘を出さない)
 function renderNoti(){
   const el = document.getElementById('notiBody');
   el.innerHTML = NOTIS.map((n, i) => `

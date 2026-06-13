@@ -1102,15 +1102,7 @@ input[type="file"]{display:none}
           <div class="site-logo">M</div>
           <div class="site-info">
             <div class="site-name">myaiagents.agency</div>
-            <div class="site-url">media-blog · 48 記事</div>
-          </div>
-          <span class="site-opt-check">✓</span>
-        </div>
-        <div class="site-opt" data-site="1" onclick="pickSite(1,this)">
-          <div class="site-logo purple">P</div>
-          <div class="site-info">
-            <div class="site-name">lp.pico-app.com</div>
-            <div class="site-url">pico · 3 記事</div>
+            <div class="site-url">media-blog</div>
           </div>
           <span class="site-opt-check">✓</span>
         </div>
@@ -1269,9 +1261,9 @@ input[type="file"]{display:none}
               <div class="fstep-lbl">▶ STEP 2 · 拡散</div>
               <div class="fstep-h">記事 PV</div>
               <div class="fstep-bar"><div class="fstep-bar-fill" id="funPvBar" style="width:80%"></div></div>
-              <div class="fstep-meta" id="funPv">1,768 views · 473 unique users</div>
+              <div class="fstep-meta" id="funPv">0 views · 0 unique</div>
             </div>
-            <div class="fstep-val"><span id="funPvV">1,768</span><span class="fstep-val-sub">page views</span></div>
+            <div class="fstep-val"><span id="funPvV">0</span><span class="fstep-val-sub">page views</span></div>
           </div>
           <div class="fstep-drop">
             <span>↓ <span class="lose" id="funC2A">99.4%</span> は 記事 内 で 離脱</span>
@@ -1496,9 +1488,7 @@ input[type="file"]{display:none}
       <div class="block">
         <div class="block-head"><span class="dot"></span> LP 流入 内訳<span class="right">utm_medium 別</span></div>
         <div class="rank-list">
-          <div class="rank-row"><span class="rank-num">1</span><span class="rank-title">footer (= 記事 末尾 CTA)</span><span class="rank-pv">7</span><span class="rank-lp">63.6%</span><span class="rank-trend">↑</span></div>
-          <div class="rank-row"><span class="rank-num">2</span><span class="rank-title">inline_mid (= 記事 中 CTA)</span><span class="rank-pv">3</span><span class="rank-lp">27.3%</span><span class="rank-trend">↑</span></div>
-          <div class="rank-row"><span class="rank-num">3</span><span class="rank-title">end_card (= 末尾 大型 CTA)</span><span class="rank-pv">1</span><span class="rank-lp">9.1%</span><span class="rank-trend">—</span></div>
+          <div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">🚧 流入分析は準備中です（実データ連携を待っています）</div>
         </div>
       </div>
       </div><!-- /state-normal -->
@@ -1615,7 +1605,7 @@ input[type="file"]{display:none}
               <div class="bill-info">
                 <div class="bill-plan">CURRENT PLAN</div>
                 <div class="bill-name">BUSINESS</div>
-                <div class="bill-meta">¥4,950 / 月 · 月 100 記事 cap · AI チーム 24 名 · 次回 請求 2026-07-11</div>
+                <div class="bill-meta">Business プラン · 月 100 記事 cap</div>
               </div>
               <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
                 <button class="btn-sm primary" onclick="showToast('🚧 この機能は準備中です')">プラン 変更</button>
@@ -1632,10 +1622,7 @@ input[type="file"]{display:none}
             </div>
             <div style="margin-top:18px">
               <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;letter-spacing:.02em">▌ 請求 履歴 (= 直近 6 ヶ月)</div>
-              <div class="bill-row"><span class="bill-row-date">2026-06-11</span><span class="bill-row-d">Business plan · 1 ヶ月</span><span class="bill-row-amt">¥4,950</span><span class="bill-row-dl" onclick="showToast('🚧 この機能は準備中です')">📄 DL</span></div>
-              <div class="bill-row"><span class="bill-row-date">2026-05-11</span><span class="bill-row-d">Business plan · 1 ヶ月</span><span class="bill-row-amt">¥4,950</span><span class="bill-row-dl" onclick="showToast('🚧 この機能は準備中です')">📄 DL</span></div>
-              <div class="bill-row"><span class="bill-row-date">2026-04-11</span><span class="bill-row-d">Pro plan · 1 ヶ月</span><span class="bill-row-amt">¥1,950</span><span class="bill-row-dl" onclick="showToast('🚧 この機能は準備中です')">📄 DL</span></div>
-              <div class="bill-row"><span class="bill-row-date">2026-03-11</span><span class="bill-row-d">Pro plan · 1 ヶ月</span><span class="bill-row-amt">¥1,950</span><span class="bill-row-dl" onclick="showToast('🚧 この機能は準備中です')">📄 DL</span></div>
+              <div class="bill-row"><span class="bill-row-d" style="color:var(--text3)">請求履歴はまだありません</span></div>
             </div>
           </div>
 
@@ -1698,7 +1685,7 @@ input[type="file"]{display:none}
               <div class="set-p" style="margin-bottom:10px">ソーシャル ログイン を 連携 する と、 メール アドレス + パスワード 不要 で ログイン でき ます。</div>
             </div>
             <div class="social-row">
-              <button class="social-btn linked" onclick="showToast('🚧 この機能は準備中です')"><span class="ic">🌐</span> Google ✓ 連携 中</button>
+              <button class="social-btn" onclick="showToast('🚧 この機能は準備中です')"><span class="ic">🌐</span> Google で 連携</button>
               <button class="social-btn" onclick="showToast('🚧 この機能は準備中です')"><span class="ic">🐙</span> GitHub</button>
               <button class="social-btn" onclick="showToast('🚧 この機能は準備中です')"><span class="ic">🍎</span> Apple ID</button>
             </div>
@@ -1706,9 +1693,7 @@ input[type="file"]{display:none}
             <div style="margin:24px 0 12px;padding-top:18px;border-top:1px solid var(--wire)">
               <div class="set-h" style="font-size:13.5px">▌ ログイン 履歴</div>
             </div>
-            <div class="bill-row"><span class="bill-row-date">06-11 04:31</span><span class="bill-row-d">Chrome on macOS · 東京</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--green)">✓ 今</span></div>
-            <div class="bill-row"><span class="bill-row-date">06-10 22:14</span><span class="bill-row-d">Safari iOS · 東京</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--text3)">—</span></div>
-            <div class="bill-row"><span class="bill-row-date">06-09 09:02</span><span class="bill-row-d">Chrome on macOS · 東京</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--text3)">—</span></div>
+            <div class="bill-row"><span class="bill-row-d" style="color:var(--text3)">ログイン履歴は近日表示予定です</span></div>
           </div>
 
           <div class="set-panel" id="st-noti">
@@ -2446,7 +2431,7 @@ input[type="file"]{display:none}
       <!-- step 1: pause 提案 -->
       <div class="churn-step active" id="churnStep1">
         <div class="modal-h" style="font-size:16px">本当 に お別れ し ます か？</div>
-        <div class="modal-p">これ まで <b>48 記事 を 公開</b>、 累計 <b>¥144,000 相当 の 外注 費 を 節約</b>。 これ ら の data は 退会 で <b>全て 削除</b> され ます (= 30 日 後 完全 削除)。</div>
+        <div class="modal-p">公開 済み の 記事 と data は、 退会 で <b>全て 削除</b> され ます (= 30 日 後 完全 削除)。</div>
         <div class="churn-pause">
           <div class="churn-pause-title">💤 まずは「一時 停止」して みません か？</div>
           <div class="churn-pause-desc">1 ヶ月 〜 6 ヶ月 の 課金 停止 が 可能。 サイト と 記事 は <b>そのまま 保持</b>、 いつ でも 再 開 できる ので 「ちょっと 使う 頻度 が 落ちた」 程度 なら こちら が おすすめ。</div>
@@ -3357,33 +3342,14 @@ window._mb_api = async function(method, path, body){
 })();
 
 // ━━━ Site data (= mock sample / 後 で _agents で 上 書 き) ━━━
+// 実データは _mb_hydrate が API から流し込む。これは hydrate 前/失敗時の中立な初期値 (= 捏造しない)。
 const SITES = [
   {
     id:'myaiagents', name:'myaiagents.agency', domain:'media-blog.myaiagents.agency',
     logoText:'M', logoCls:'',
-    plan:'BUSINESS · ¥4,950',
-    pv:1768, users:473, lp:11, art:48, cap:100,
-    posts:[
-      { ti:'スマホ で 記事 生成 を 完全 マスター | AI 活用 完全 ガイド', date:'06-09', pv:276, lp:9, t:'↑' },
-      { ti:'AI ライター × 自動 ブログ 生成 の 完全 ガイド | 仕組み・導入', date:'06-09', pv:189, lp:5, t:'↑' },
-      { ti:'AI が メディア 作成 から 記事 生成 まで 全 自動 | MY AI Agent 仕組み', date:'06-08', pv:142, lp:3, t:'→' },
-      { ti:'SEO 記事 執筆 自動 化 ツール で 手 作業 を 激減 | 2026 完全 ガイド', date:'06-08', pv:118, lp:2, t:'↑' },
-      { ti:'MY AI Agent とは? スマホ で 記事 を 自動 生成 する AI ブログ 運営', date:'06-07', pv:97, lp:1, t:'↑' },
-      { ti:'ポイ活 アプリ 比較 2026 年版', date:'06-05', pv:84, lp:0, t:'↓' },
-      { ti:'AI 記事 自動 化 ツール 5 選 | コスト と 性能 で 比較', date:'06-04', pv:72, lp:1, t:'↓' },
-      { ti:'メディア 構築 完全 ガイド · ゼロ から 月 100 記事 公開 まで', date:'06-03', pv:58, lp:0, t:'—' },
-    ]
-  },
-  {
-    id:'pico', name:'lp.pico-app.com', domain:'pico.myaiagents.agency',
-    logoText:'P', logoCls:'purple',
-    plan:'BUSINESS · ¥4,950',
-    pv:815, users:87, lp:3, art:3, cap:100,
-    posts:[
-      { ti:'カメラ で 稼ぐ ポイント 活動 アプリ の 始め 方', date:'06-09', pv:412, lp:2, t:'↑' },
-      { ti:'写真 で 副収入 · 初心者 でも できる 5 ステップ', date:'06-08', pv:251, lp:1, t:'↑' },
-      { ti:'スマホ 1 台 で 始める 写真 販売 ベスト 方法', date:'06-07', pv:152, lp:0, t:'→' },
-    ]
+    plan:'BUSINESS',
+    pv:0, users:0, lp:0, art:0, cap:100,
+    posts:[]
   },
 ];
 var activeSiteIdx = 0; window.activeSiteIdx = 0;
@@ -3562,16 +3528,7 @@ const FEED_T = [
   ['research', 'purple', 'KW 調査', ['「AI 記事 自動 化」 → 5 候補 抽出', '競合 rewards-app.jp の 直近 30 KW を 取得']],
   ['warn', 'red', '順位 下落 検知', ['「メディア 構築 ツール」 #4 → #9', '「AI 記事」 #2 → #4 → リライト 推奨']],
 ];
-const SEED = [
-  { t:'04:31:42', tag:'PUBLISH', cls:'', msg:'記事 公開: <span class="v">「スマホ で 記事 生成 を 完全 マスター」</span>' },
-  { t:'04:31:38', tag:'INFLOW', cls:'', msg:'LP 送客: utm=<span class="v">media/inline_mid</span> · ai-60' },
-  { t:'04:31:21', tag:'SHARE', cls:'purple', msg:'X 自動 投稿 (likes 12): <span class="v">「スマホ 1 台 で SEO 記事 が…」</span>' },
-  { t:'04:30:54', tag:'METRICS', cls:'', msg:'過去 24h = <span class="v">94 PV</span> · <span class="v">31 users</span> · <span class="v">2 LP 流入</span>' },
-  { t:'04:30:42', tag:'KW', cls:'purple', msg:'競合 抽出: rewards-app.jp の <span class="v">30 KW</span> を 取得' },
-  { t:'04:30:31', tag:'RWRITE', cls:'amber', msg:'AI リライト: <span class="v">「ポイ活 アプリ 比較」</span> 字数 +1,420' },
-  { t:'04:30:19', tag:'WARN', cls:'red', msg:'順位 下落: 「メディア 構築 ツール」 #4 → #9' },
-  { t:'04:30:02', tag:'PUBLISH', cls:'', msg:'記事 公開: <span class="v">「AI ライター 完全 比較 2026」</span>' },
-];
+const SEED = []; // 捏造アクティビティを撤去。実 publish-jobs 履歴は hydrate が流し込む
 function feedRow(t, tag, cls, msg){
   return `<span class="feed-time">${t}</span><span class="feed-tag ${cls}">▌ ${tag}</span><span class="feed-msg">${msg}</span><a class="feed-link" href="javascript:void(0)" onclick="event.stopPropagation();showToast('開く: ${tag}')">open ↗</a>`;
 }
@@ -3741,7 +3698,7 @@ function insertCodeBlock(){
   inp.selectionStart = inp.selectionEnd = pos + 5;
 }
 function openLibrary(){
-  showModal('LIBRARY', '成果物 ライブラリ', 'AI チーム が 作った 過去 成果物 (= 記事 / hero 画像 / SNS 投稿 文案 / SEO レポート 等) の 一覧。 過去 30 日 で 48 記事 + 48 画像 + 96 SNS 投稿。', '開く');
+  showModal('LIBRARY', '成果物 ライブラリ', 'AI チーム が 作った 過去 成果物 (= 記事 / hero 画像 / SNS 投稿 文案 / SEO レポート 等) の 一覧。', '開く');
 }
 
 // === Gen modal (= 記事 生成) ===
@@ -3948,7 +3905,7 @@ function updatePwMeter(){
 
 function openDangerModal(kind){
   const m = {
-    site: ['サイト 削除 の 最終 確認', 'media-blog 内 の 48 記事 と 全 設定 を 完全 削除 し ます。 取り消し でき ません。 続行 する に は 「DELETE」 と 入力 して ください。'],
+    site: ['サイト 削除 の 最終 確認', 'media-blog 内 の 全 記事 と 全 設定 を 完全 削除 し ます。 取り消し でき ません。 続行 する に は 「DELETE」 と 入力 して ください。'],
     account: ['退会 の 最終 確認', '全 サイト (2 件) / 全 記事 (51 件) / 全 アカウント data を 完全 削除 し ます。 取り消し 不可。 続行 する に は 「退会 します」 と 入力 して ください。'],
   };
   const v = m[kind];
@@ -4377,14 +4334,14 @@ function openDangerModalNew(kind){
       h: 'media-blog を 削除 します か？',
       d: '続行 する には、 下 の 入力 欄 に <b>DELETE</b> と 入力 して ください。 30 日 grace 期間 内 は 復元 でき ます。',
       kw: 'DELETE',
-      list: ['この サイト の 48 記事 と body_html 全文', 'メディア 設定 (= サブドメイン / カテゴリ / OG / テーマ)', '過去 30 日 の PV / LP 流入 統計', '計測 用 media_visits row (= 167 件)'],
+      list: ['この サイト の 全 記事 と body_html 全文', 'メディア 設定 (= サブドメイン / カテゴリ / OG / テーマ)', 'PV / LP 流入 統計', '計測 用 media_visits row'],
     },
     account: {
       tag: '退会 の 最終 確認',
       h: '本当 に 退会 します か？',
       d: '続行 する には、 下 の 入力 欄 に <b>退会 します</b> と <b>正確 に</b> 入力。 30 日 以内 で あれば 復元 可能 ですが、 30 日 経過 で 完全 削除 さ れ 復元 不可。',
       kw: '退会 します',
-      list: ['全 サイト (= 2 件) と 全 記事 (= 51 件)', 'プラン (= BUSINESS / ¥4,950 月)', '請求 履歴 と 領収書 PDF', 'AI チーム 24 名 の 学習 履歴', '全 アカウント データ (= プロフィール / メール / 連携)'],
+      list: ['全 サイト と 全 記事', 'プラン と 請求 情報', 'AI チーム の 学習 履歴', '全 アカウント データ (= プロフィール / メール / 連携)'],
     },
   };
   const v = map[kind];

@@ -1576,20 +1576,20 @@ input[type="file"]{display:none}
             <div class="set-h">サイト 設定</div>
             <div class="set-p">この サイト の 公開 情報 と デザイン。</div>
             <div class="set-row" style="border-top:0">
-              <div class="set-row-info"><div class="set-row-l">サイト 名</div><div class="set-row-d">myaiagents.agency Blog</div></div>
-              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">変更</button>
+              <div class="set-row-info"><div class="set-row-l">サイト 名</div><div class="set-row-d" id="stName">—</div></div>
+              <button class="btn-sm" onclick="_mbEditMedia('name')">変更</button>
             </div>
             <div class="set-row">
-              <div class="set-row-info"><div class="set-row-l">サブ ドメイン</div><div class="set-row-d">media-blog.myaiagents.agency</div></div>
-              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">変更</button>
+              <div class="set-row-info"><div class="set-row-l">サブ ドメイン</div><div class="set-row-d" id="stSlug">—</div></div>
+              <button class="btn-sm" onclick="showToast('🚧 サブドメイン変更は準備中です')">変更</button>
             </div>
             <div class="set-row">
-              <div class="set-row-info"><div class="set-row-l">カテゴリ (4)</div><div class="set-row-d">AI×メディア / ノウハウ / 比較 / 業界 動向</div></div>
+              <div class="set-row-info"><div class="set-row-l">カテゴリ</div><div class="set-row-d" id="stCat">—</div></div>
               <button class="btn-sm" onclick="openCatModal()">編集</button>
             </div>
             <div class="set-row">
-              <div class="set-row-info"><div class="set-row-l">テーマ / 配色</div><div class="set-row-d">teal + cream</div></div>
-              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">編集</button>
+              <div class="set-row-info"><div class="set-row-l">テーマ / 配色</div><div class="set-row-d" id="stBrand">—</div></div>
+              <button class="btn-sm" onclick="_mbEditMedia('brand_color')">編集</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">favicon / OG 画像</div><div class="set-row-d">設定 済 · auto-generated</div></div>
@@ -3031,6 +3031,11 @@ window._mb_api = async function(method, path, body){
           set('msCat', (s._raw.media && Array.isArray(s._raw.media.categories)) ? (s._raw.media.categories.length + ' カテゴリ · ' + s._raw.media.categories.slice(0,3).join(' / ')) : '');
           set('msBrand', ms.brand_color);
           set('msLp', ms.lp_url);
+          // 設定ビュー(st-site)の表示も同じ実データで埋める
+          set('stName', ms.name);
+          set('stSlug', ms.slug ? ms.slug + '.myaiagents.agency' : '');
+          set('stCat', (s._raw.media && Array.isArray(s._raw.media.categories)) ? (s._raw.media.categories.length + ' カテゴリ · ' + s._raw.media.categories.slice(0,3).join(' / ')) : '');
+          set('stBrand', ms.brand_color);
         } catch(e){ console.warn('[media settings load] fail', e); }
       };
       // メディア tab に nav し た 時 に 自動 load

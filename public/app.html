@@ -1685,9 +1685,8 @@ input[type="file"]{display:none}
               <div class="set-p" style="margin-bottom:10px">ソーシャル ログイン を 連携 する と、 メール アドレス + パスワード 不要 で ログイン でき ます。</div>
             </div>
             <div class="social-row">
-              <button class="social-btn" onclick="showToast('🚧 この機能は準備中です')"><span class="ic">🌐</span> Google で 連携</button>
-              <button class="social-btn" onclick="showToast('🚧 この機能は準備中です')"><span class="ic">🐙</span> GitHub</button>
-              <button class="social-btn" onclick="showToast('🚧 この機能は準備中です')"><span class="ic">🍎</span> Apple ID</button>
+              <button class="social-btn" onclick="connectGoogle()"><span class="ic">🌐</span> Google で 連携</button>
+              <button class="social-btn" onclick="connectGitHub()"><span class="ic">🐙</span> GitHub</button>
             </div>
 
             <div style="margin:24px 0 12px;padding-top:18px;border-top:1px solid var(--wire)">
@@ -1743,11 +1742,11 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row" style="border-top:0">
               <div class="set-row-info"><div class="set-row-l">Google Analytics 4</div><div class="set-row-d">「LP 自体 の PV」 も 統合 表示</div></div>
-              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">連携 する</button>
+              <button class="btn-sm" onclick="connectGoogle()">連携 する</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">Google Search Console</div><div class="set-row-d">検索 順位 / impressions / CTR が 取得 可能 に</div></div>
-              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">連携 する</button>
+              <button class="btn-sm" onclick="connectGoogle()">連携 する</button>
             </div>
           </div>
 
@@ -1768,7 +1767,7 @@ input[type="file"]{display:none}
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">🗂 アクティビティ ログ DL</div><div class="set-row-d">過去 90 日 の 公開 / リライト / シェア ログ を CSV で</div></div>
-              <button class="btn-sm" onclick="showToast('🚧 この機能は準備中です')">DL</button>
+              <button class="btn-sm" onclick="exportData()">DL</button>
             </div>
             <div class="set-row">
               <div class="set-row-info"><div class="set-row-l">🗑 全 記事 を 一括 削除</div><div class="set-row-d">この サイト の 全 記事 を 削除 (= サイト 設定 は 保持)</div></div>
@@ -3460,6 +3459,24 @@ function populateAccountFields(){
   const mn = document.getElementById('menuName'); if(mn) mn.textContent = me.name || me.email || 'ユーザー';
   const me2 = document.getElementById('menuEmail'); if(me2) me2.textContent = me.email || '';
   const pr = document.getElementById('pwResetEmail'); if(pr && me.email) pr.value = me.email;
+}
+
+// ━━━ 外部連携 (Google / GitHub OAuth) + アカウントデータDL (実エンドポイント) ━━━
+function _withToken(url){ return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(localStorage.getItem('token') || ''); }
+function connectGoogle(){ location.href = _withToken('/api/auth/google-intg/start'); }   // GA4/GSC/Google を一括連携
+function connectGitHub(){ location.href = _withToken('/api/auth/github/start'); }
+async function exportData(){
+  try {
+    const tok = window._mb_apiToken || localStorage.getItem('token') || '';
+    const r = await fetch('/api/me/data-export', { headers: { 'Authorization': 'Bearer ' + tok } });
+    if(!r.ok) throw new Error(r.status + '');
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'myaiagent-data.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+    showToast('📥 アカウント データ を DL しました');
+  } catch(e){ showToast('DL 失敗: ' + (e.message||e), 'ng'); }
 }
 
 // ━━━ Load site ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -2510,24 +2510,26 @@ input[type="file"]{display:none}
     <div class="modal-head"><span>⚡</span> <span>記事 を AI に 書か せる</span><button class="modal-x" onclick="closeGenModal()">×</button></div>
     <div class="modal-body">
 
+      <div style="padding:12px 15px;background:var(--cream);border-radius:10px;margin-bottom:14px;font-size:13px;color:var(--text2);line-height:1.65">👇 下の <b style="color:var(--teal)">勝てる キーワード</b> から 書きたい もの を <b>タップ</b> して、 下 の <b style="color:var(--teal)">「生成」</b> を 押す だけ。</div>
+
       <div class="gen-sect">
         <div class="gen-sect-h">
-          <span class="gen-sect-dot"></span> AI が 提案 する 今 旬 の 記事 タイトル
-          <span style="margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--text3);letter-spacing:.04em;text-transform:none">☐ チェック で 複数 · ⚡ で 1 件 即 起動</span>
+          <span class="gen-sect-dot"></span> AI が 提案 する 勝てる キーワード
         </div>
         <div class="gen-kw-list" id="genKwList"></div>
       </div>
 
       <div class="gen-sect">
-        <div class="gen-sect-h"><span class="gen-sect-dot" style="background:var(--text3)"></span> または、 自分 で 指定</div>
-        <div class="gen-or">OR</div>
-        <div class="gen-input-wrap">
-          <input class="gen-input" id="genKwInput" placeholder="KW を 入力 (例: スマホ で 記事 生成)" onkeydown="if(event.key==='Enter')genStartCustom()">
-          <button class="gen-go" onclick="genStartCustom()">⚡ 起動</button>
-        </div>
-        <div class="gen-opts">
-          <label class="gen-opt"><input type="checkbox" id="genOptAeo"> AEO モード <span class="gen-opt-tag">AI 検索 最適化</span></label>
-          <label class="gen-opt"><input type="checkbox" id="genOptEnd" checked> end_card 強化 <span class="gen-opt-tag">LP 流入 +30%</span></label>
+        <div style="font-size:12px;color:var(--text3);cursor:pointer;user-select:none;padding:4px 0" onclick="var w=document.getElementById('genCustomWrap');w.style.display=w.style.display==='none'?'block':'none';this.querySelector('span').textContent=w.style.display==='none'?'▸':'▾'">自分 で キーワード を 指定 する <span style="font-family:var(--mono)">▸</span></div>
+        <div id="genCustomWrap" style="display:none;margin-top:10px">
+          <div class="gen-input-wrap">
+            <input class="gen-input" id="genKwInput" placeholder="例: 確定申告 freee 使い方" onkeydown="if(event.key==='Enter')genStartCustom()">
+            <button class="gen-go" onclick="genStartCustom()">⚡ 生成</button>
+          </div>
+          <div class="gen-opts">
+            <label class="gen-opt"><input type="checkbox" id="genOptAeo"> AEO モード <span class="gen-opt-tag">AI 検索 最適化</span></label>
+            <label class="gen-opt"><input type="checkbox" id="genOptEnd" checked> end_card 強化 <span class="gen-opt-tag">LP 流入 +30%</span></label>
+          </div>
         </div>
       </div>
 

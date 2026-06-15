@@ -3871,9 +3871,12 @@ async function loadRealKwSuggestions(force){
   }
   if(list) list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--text3);font-size:13px">🔍 <b>勝てるキーワードを調査中…</b><br><span style="font-size:11px">Google サジェスト＋勝率スコアで算出</span></div>';
   try {
-    const r = await window._mb_api('GET', '/api/agents/' + agentId + '/keyword-suggestions' + (force ? '?refresh=1' : ''));
+    const tok = window._mb_apiToken || localStorage.getItem('token') || '';
+    const resp = await fetch('/api/agents/' + agentId + '/keyword-suggestions' + (force ? '?refresh=1' : ''), { headers: { 'Authorization': 'Bearer ' + tok } });
+    let r = {}; try { r = await resp.json(); } catch(_){}
+    if(!resp.ok) throw new Error((r && (r.detail || r.error)) || ('HTTP ' + resp.status));
     const cands = (r && Array.isArray(r.candidates)) ? r.candidates : [];
-    if(!cands.length) throw new Error('候補なし');
+    if(!cands.length) throw new Error('AIが候補を生成できませんでした(候補0)');
     KW_SUGGESTIONS.length = 0; // 農場ハードコードを破棄
     cands.slice(0, 6).forEach(c => {
       const comp = (c.signals && c.signals.competition) || '?';
@@ -3891,7 +3894,7 @@ async function loadRealKwSuggestions(force){
     GEN_CHECK.clear();
     renderGenKw();
   } catch(e){
-    if(list) list.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:12.5px">キーワード調査に失敗しました。<br>上の入力欄に直接キーワードを入れて生成できます。<br><button class="btn-sm" style="margin-top:10px" onclick="loadRealKwSuggestions(true)">↻ 再調査</button></div>';
+    if(list) list.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:12.5px">キーワード調査に失敗しました。<br><span style="color:var(--rose);font-size:11.5px">原因: ' + esc(String(e.message||e)) + '</span><br><br>上の入力欄に直接キーワードを入れて生成できます。<br><button class="btn-sm" style="margin-top:10px" onclick="loadRealKwSuggestions(true)">↻ 再調査</button></div>';
   }
 }
 

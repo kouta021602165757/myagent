@@ -3796,38 +3796,9 @@ function openLibrary(){
 }
 
 // === Gen modal (= 記事 生成) ===
-const KW_SUGGESTIONS = [
-  {
-    hot:true,
-    title:'AI 記事 ツール を 完全 比較 ！ 2026 年 おすすめ ベスト 10',
-    kw:'AI 記事 ツール 比較',
-    sv:8100, comp:'競合 #1 を 12h で 抜ける 見込み', lp:'+ 2-3 LP / mo', expectLp:2.5,
-  },
-  {
-    hot:false,
-    title:'スマホ 1 台 で SEO 記事 を 完全 自動 化 する 方法 | 2026 完全 ガイド',
-    kw:'スマホ SEO 自動 化',
-    sv:5400, comp:'関連 KW 8 個 一括 も OK', lp:'+ 1-2 LP / mo', expectLp:1.5,
-  },
-  {
-    hot:false,
-    title:'AI ライター × メディア 自動 運営 入門 | 月 100 記事 公開 まで',
-    kw:'AI ライター メディア',
-    sv:3200, comp:'内部 リンク 5 件 推奨', lp:'+ 1 LP / mo', expectLp:1,
-  },
-  {
-    hot:false,
-    title:'ブログ で 月 100 記事 量産 する 7 つ の AI ハック',
-    kw:'ブログ 量産 AI',
-    sv:2800, comp:'競合 弱い · 抜き やすい', lp:'+ 1 LP / mo', expectLp:1,
-  },
-  {
-    hot:false,
-    title:'WordPress vs サブドメイン 配信 を 徹底 比較 | SEO に 強い の は どっち？',
-    kw:'WordPress サブドメイン 比較',
-    sv:1900, comp:'上位 が 古い (= 抜ける)', lp:'+ 0-1 LP / mo', expectLp:0.5,
-  },
-];
+// 0 PV 農場の真因だった「ハードコードの偽おすすめKW」を撤去。
+// 起動時に loadRealKwSuggestions() が実エンジン(勝率/想定PV/競合)で埋める。
+const KW_SUGGESTIONS = [];
 const GEN_CHECK = new Set();
 
 function renderGenKw(){
@@ -3851,7 +3822,7 @@ function renderGenKw(){
         <span class="gen-kw-expect">${esc(k.lp)}</span>
       </span>
       <span class="gen-kw-side">
-        <button class="gen-kw-instant" onclick="event.stopPropagation();genStartOne(${i})" title="1 件 だけ 即 起動">
+        <button class="gen-kw-instant" onclick="event.stopPropagation();genStartInstant(${i})" title="1 件 だけ 即 起動">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none"/></svg>
         </button>
       </span>
@@ -3888,11 +3859,48 @@ function genToggle(i){
   renderGenKw();
 }
 
+// 🔍 実エンジン(/keyword-suggestions = Googleサジェスト+勝率スコア)から勝てるKWを取得し、
+//    農場ハードコードの KW_SUGGESTIONS を上書きする。0 PV の根本原因(偽の提案)を断つ。
+async function loadRealKwSuggestions(force){
+  const list = document.getElementById('genKwList');
+  const s = (typeof SITES !== 'undefined') && SITES[window.activeSiteIdx || 0];
+  const agentId = s && s._raw && s._raw.id;
+  if(!agentId){
+    if(list) list.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:12.5px">上 の 入力欄 に キーワード を 入れて 生成 できます。<br><span style="font-size:11px">サイト を 選ぶ と「勝てる KW」を 自動 提案 します</span></div>';
+    return;
+  }
+  if(list) list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--text3);font-size:13px">🔍 <b>勝てるキーワードを調査中…</b><br><span style="font-size:11px">Google サジェスト＋勝率スコアで算出</span></div>';
+  try {
+    const r = await window._mb_api('GET', '/api/agents/' + agentId + '/keyword-suggestions' + (force ? '?refresh=1' : ''));
+    const cands = (r && Array.isArray(r.candidates)) ? r.candidates : [];
+    if(!cands.length) throw new Error('候補なし');
+    KW_SUGGESTIONS.length = 0; // 農場ハードコードを破棄
+    cands.slice(0, 6).forEach(c => {
+      const comp = (c.signals && c.signals.competition) || '?';
+      KW_SUGGESTIONS.push({
+        hot: (c.win_probability || 0) >= 80,
+        title: c.keyword || '',
+        kw: c.keyword || '',
+        sv: c.volume_est || c.estimated_pv || 0,
+        comp: '勝率 ' + (c.win_probability != null ? c.win_probability : '?') + '% · 競合' + comp + (c.type ? ' · ' + c.type : ''),
+        lp: '想定 ' + (c.estimated_pv || 0).toLocaleString() + ' PV / 月',
+        expectLp: Math.max(0, Math.round((c.estimated_pv || 0) / 300)),
+        reason: c.reason || '',
+      });
+    });
+    GEN_CHECK.clear();
+    renderGenKw();
+  } catch(e){
+    if(list) list.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:12.5px">キーワード調査に失敗しました。<br>上の入力欄に直接キーワードを入れて生成できます。<br><button class="btn-sm" style="margin-top:10px" onclick="loadRealKwSuggestions(true)">↻ 再調査</button></div>';
+  }
+}
+
 function openGenModal(){
   GEN_CHECK.clear();
-  renderGenKw();
+  renderGenKw();                 // まず前回/フォールバックを即表示
   document.getElementById('genModal').classList.add('show');
   setTimeout(()=>document.getElementById('genKwInput').focus(), 200);
+  loadRealKwSuggestions();        // 実エンジン(勝てるKW)で上書き
 }
 function closeGenModal(){
   document.getElementById('genModal').classList.remove('show');

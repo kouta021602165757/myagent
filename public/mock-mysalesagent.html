@@ -228,14 +228,14 @@ table.sheet td .contact-ng{color:var(--text4)}
         <div class="msg-av">🤖</div>
         <div class="msg-bd">
           <div class="msg-meta"><span class="msg-from">MY Sales AI</span><span class="msg-time">10:32</span></div>
-          <div class="msg-text">承 知 し ま し た。 国 内 法 人 DB と LinkedIn を 検 索 中 で す。</div>
+          <div class="msg-text">承 知 し ま し た。 国 内 法 人 DB を 検 索 中 で す。</div>
           <div class="progress-card">
-            <div class="row done"><span class="ic">✓</span> <b>国 税 庁 法 人 DB</b> 検 索 (= 1,247 社 ヒット)</div>
+            <div class="row done"><span class="ic">✓</span> <b>国 税 庁 法 人 番 号 DB</b> 検 索 (= 1,247 社 ヒット)</div>
             <div class="row done"><span class="ic">✓</span> <b>gBizINFO</b> 業 種 + 規 模 フィルター (= 287 社)</div>
-            <div class="row done"><span class="ic">✓</span> <b>リクナビ / Wantedly</b> 採 用 状 況 (= 「成 長 中」 検 出)</div>
-            <div class="row now"><span class="ic">◌</span> <b>LinkedIn</b> 担 当 者 検 索 中 ...</div>
-            <div class="row pending"><span class="ic">○</span> メール アドレス 検 証 (= 5 社 waterfall)</div>
-            <div class="row pending"><span class="ic">○</span> 電 話 番 号 検 証</div>
+            <div class="row done"><span class="ic">✓</span> <b>法 務 省 商 業 登 記</b> 役 員 名 取 得 (= 代 表 取 締 役)</div>
+            <div class="row now"><span class="ic">◌</span> <b>HP + 問 合 せ フォーム URL</b> 自動 検 出 中 ...</div>
+            <div class="row pending"><span class="ic">○</span> 代 表 メール 検 出 (= HP scrape)</div>
+            <div class="row pending"><span class="ic">○</span> Fit Score 計 算</div>
           </div>
         </div>
       </div>
@@ -286,13 +286,12 @@ table.sheet td .contact-ng{color:var(--text4)}
               <th style="width:30px"><input type="checkbox" class="row-checkbox"></th>
               <th>会 社 名<span class="source-hint">国 税 庁 + gBiz</span></th>
               <th>業 種<span class="source-hint">JSIC</span></th>
-              <th>規 模<span class="source-hint">gBiz / 求 人</span></th>
+              <th>規 模<span class="source-hint">gBiz</span></th>
               <th>地 域<span class="source-hint">登 記</span></th>
-              <th>担 当 者<span class="source-hint">LinkedIn / 役 員</span></th>
-              <th>メール<span class="source-hint">Findymail + 4 社</span></th>
-              <th>電 話<span class="source-hint">DB 9 社</span></th>
+              <th>代 表 名<span class="source-hint">法 務 省 登 記 (= あれ ば)</span></th>
+              <th>問 合 せ URL<span class="source-hint">HP scrape</span></th>
+              <th>代 表 メール<span class="source-hint">HP 公 開 (= あれ ば)</span></th>
               <th>Fit<span class="source-hint">AI 推 論</span></th>
-              <th>信 頼 度<span class="source-hint">検 証</span></th>
               <th>状 態<span class="source-hint">送 信</span></th>
             </tr>
           </thead>
@@ -309,16 +308,16 @@ table.sheet td .contact-ng{color:var(--text4)}
     <div class="view" id="view-seq">
       <div class="seq-wrap">
         <div class="seq-head">シーケンス 編 集</div>
-        <p class="seq-sub">メール + LinkedIn の 自動 送 信 step を 設 計 し ま す。 各 step は AI が 各 法 人 用 に カスタマイズ し て 送 信。</p>
+        <p class="seq-sub">問 合 せ フォーム + メール の 自動 送 信 step を 設 計 し ま す。 各 step は AI が 各 法 人 用 に カスタマイズ し て 送 信。</p>
 
         <div class="seq-step">
           <div class="seq-step-head">
             <div class="seq-step-num">1</div>
             <div class="seq-step-meta">
-              <div class="ti">初 回 アプローチ メール</div>
-              <div class="sub">送 信: 即 時 · チャネル: Email · AI 個 別 化: ON</div>
+              <div class="ti">問 合 せ フォーム 自動 送 信</div>
+              <div class="sub">送 信: 即 時 · チャネル: HP 問 合 せ フォーム · AI 個 別 化: ON</div>
             </div>
-            <span class="seq-step-ch">📧 Email</span>
+            <span class="seq-step-ch">📝 フォーム</span>
           </div>
           <div class="seq-step-bd">
             <div class="subject">件 名: 【{会 社 名}】 営 業 リソース 不 足 を AI で 解 決 し ま せ ん か</div>
@@ -329,7 +328,7 @@ table.sheet td .contact-ng{color:var(--text4)}
           </div>
           <div class="seq-step-foot">
             <span>📤 送 信 数: <b>87</b></span>
-            <span>👀 開 封: <b>42</b> (= 48%)</span>
+            <span>✓ 完 了: <b>72</b></span>
             <span>💬 返 信: <b>9</b> (= 10.3%)</span>
           </div>
         </div>
@@ -338,31 +337,12 @@ table.sheet td .contact-ng{color:var(--text4)}
           <div class="seq-step-head">
             <div class="seq-step-num">2</div>
             <div class="seq-step-meta">
-              <div class="ti">LinkedIn 接 続 リクエスト</div>
-              <div class="sub">送 信: 1 日 後 · チャネル: LinkedIn · 接 続 メッセージ + メモ</div>
-            </div>
-            <span class="seq-step-ch">💼 LinkedIn</span>
-          </div>
-          <div class="seq-step-bd">
-            <div class="subject">メモ: {会 社 名} 様 へ 営 業 効 率 化 の ご 提 案</div>
-            初 め ま し て、 {自社 名} で 営 業 自動 化 SaaS を 運 営 し て お り ま す。 ...
-          </div>
-          <div class="seq-step-foot">
-            <span>📤 送 信: <b>67</b></span>
-            <span>🤝 承 認: <b>23</b> (= 34%)</span>
-          </div>
-        </div>
-
-        <div class="seq-step">
-          <div class="seq-step-head">
-            <div class="seq-step-num">3</div>
-            <div class="seq-step-meta">
-              <div class="ti">フォロー アップ メール (= 不 在 票)</div>
-              <div class="sub">送 信: 3 日 後 (= 未 返 信 のみ) · チャネル: Email</div>
+              <div class="ti">フォロー メール (= 代 表 公 開 メール の み)</div>
+              <div class="sub">送 信: 3 日 後 (= 未 返 信 + メール 公 開 法 人 のみ) · チャネル: Email</div>
             </div>
             <span class="seq-step-ch">📧 Email</span>
           </div>
-          <div class="seq-step-bd" style="color:var(--text3)">先 日 ご 連 絡 し た {自社 名} の {自分} で す。 ご 確 認 い た だ け ま し た で し ょ う か。 ...</div>
+          <div class="seq-step-bd" style="color:var(--text3)">先 日 ご 連 絡 し た {自社 名} の {自分} で す。 問 合 せ フォーム より ご 連 絡 し ま し た 件、 ご 確 認 い た だ け ま し た で し ょ う か。 ...</div>
           <div class="seq-step-foot">
             <span>📤 送 信: <b>45</b></span>
             <span>💬 返 信: <b>3</b></span>
@@ -375,7 +355,7 @@ table.sheet td .contact-ng{color:var(--text4)}
     <div class="view" id="view-inbox">
       <div class="inbox-wrap">
         <div class="seq-head" style="margin-bottom:8px">統 合 受 信 箱</div>
-        <p class="seq-sub">メール + LinkedIn の 返 信 を 1 画 面 で。 反 応 来 たら 自動 で 全 チャネル 停 止。</p>
+        <p class="seq-sub">問 合 せ フォーム + メール の 返 信 を 1 画 面 で。 反 応 来 たら 自動 で 全 チャネル 停 止。</p>
 
         <div class="inbox-row">
           <div class="av email">A</div>
@@ -391,11 +371,11 @@ table.sheet td .contact-ng{color:var(--text4)}
         </div>
 
         <div class="inbox-row">
-          <div class="av linkedin">D</div>
+          <div class="av form">D</div>
           <div class="bd">
             <div class="h">
-              <span class="from">DEF テクノロジー · 佐 藤 様</span>
-              <span class="ch">LinkedIn</span>
+              <span class="from">DEF テクノロジー</span>
+              <span class="ch">フォーム 自動 返 信</span>
               <span class="ts">12:45</span>
             </div>
             <div class="snippet">ご 連 絡 ありがとう ござ いま す。 料 金 体 系 を 教 え て く だ さ い。 50 人 規 模 で 月 い く ら ぐ ら い で し ょ う か。 既 存 sales tool と の 連 携 は 可 能?</div>
@@ -439,7 +419,6 @@ table.sheet td .contact-ng{color:var(--text4)}
         <div class="set-section">
           <h2>🔗 連 携</h2>
           <div class="set-row"><span class="lbl">📧 Gmail / Outlook</span><span class="val" style="color:var(--green)">✓ 連 携 済 (kota@protocol.ooo)</span><button>解 除</button></div>
-          <div class="set-row"><span class="lbl">💼 LinkedIn</span><span class="val" style="color:var(--green)">✓ 連 携 済</span><button>解 除</button></div>
           <div class="set-row"><span class="lbl">💬 Slack</span><span class="val">未 連 携</span><button>連 携</button></div>
           <div class="set-row"><span class="lbl">📊 HubSpot</span><span class="val">未 連 携</span><button>連 携</button></div>
           <div class="set-row"><span class="lbl">📊 Salesforce</span><span class="val">未 連 携</span><button>連 携</button></div>
@@ -473,16 +452,16 @@ function switchTab(view, btn){
 
 // === Sheet data (= 187 件 想 定、 demo で 8 件) ===
 const LEADS = [
-  { name:'株 式 会 社 ABC', ind:'SaaS', size:'25 人', region:'東 京', contact:'田 中 (営 業 部 長)', email:true, phone:true, fit:87, conf:'high', status:'replied' },
-  { name:'DEF テクノロジー', ind:'SaaS', size:'42 人', region:'東 京', contact:'佐 藤 (CTO)', email:true, phone:true, fit:82, conf:'high', status:'opened' },
-  { name:'株 式 会 社 GHI', ind:'受 託 開 発', size:'15 人', region:'大 阪', contact:'山 田 (代 表)', email:true, phone:false, fit:78, conf:'high', status:'sent' },
-  { name:'XYZ コーポレーション', ind:'SaaS', size:'38 人', region:'東 京', contact:'鈴 木 (営 業 部 長)', email:true, phone:true, fit:79, conf:'med', status:'replied' },
-  { name:'株 式 会 社 JKL マーケ', ind:'広 告 / マーケ', size:'8 人', region:'東 京', contact:'高 橋 (代 表)', email:true, phone:true, fit:75, conf:'high', status:'sent' },
-  { name:'MNO Solutions', ind:'SaaS', size:'55 人', region:'名 古 屋', contact:'渡 辺 (CTO)', email:true, phone:true, fit:73, conf:'med', status:'sent' },
-  { name:'株 式 会 社 PQR', ind:'受 託 開 発', size:'22 人', region:'東 京', contact:'伊 藤 (代 表)', email:true, phone:false, fit:71, conf:'med', status:'opened' },
-  { name:'STU テクノロジー', ind:'SaaS', size:'12 人', region:'福 岡', contact:'中 村 (CEO)', email:false, phone:true, fit:68, conf:'low', status:'queue' },
-  { name:'株 式 会 社 VWX', ind:'EC / D2C', size:'30 人', region:'東 京', contact:'小 林 (CMO)', email:true, phone:true, fit:65, conf:'high', status:'queue' },
-  { name:'YZA 株 式 会 社', ind:'SaaS', size:'7 人', region:'京 都', contact:'加 藤 (代 表)', email:true, phone:false, fit:62, conf:'med', status:'queue' },
+  { name:'株 式 会 社 ABC', ind:'SaaS', size:'25 人', region:'東 京', repName:'田 中 太 郎 (= 代 表)', contactUrl:true, email:true, fit:87, status:'replied' },
+  { name:'DEF テクノロジー', ind:'SaaS', size:'42 人', region:'東 京', repName:'佐 藤 健 (= 代 表)', contactUrl:true, email:true, fit:82, status:'opened' },
+  { name:'株 式 会 社 GHI', ind:'受 託 開 発', size:'15 人', region:'大 阪', repName:'山 田 太 郎 (= 代 表)', contactUrl:true, email:false, fit:78, status:'sent' },
+  { name:'XYZ コーポレーション', ind:'SaaS', size:'38 人', region:'東 京', repName:'—', contactUrl:true, email:true, fit:79, status:'replied' },
+  { name:'株 式 会 社 JKL マーケ', ind:'広 告 / マーケ', size:'8 人', region:'東 京', repName:'高 橋 大 輔 (= 代 表)', contactUrl:true, email:true, fit:75, status:'sent' },
+  { name:'MNO Solutions', ind:'SaaS', size:'55 人', region:'名 古 屋', repName:'—', contactUrl:true, email:false, fit:73, status:'sent' },
+  { name:'株 式 会 社 PQR', ind:'受 託 開 発', size:'22 人', region:'東 京', repName:'伊 藤 真 一 (= 代 表)', contactUrl:true, email:true, fit:71, status:'opened' },
+  { name:'STU テクノロジー', ind:'SaaS', size:'12 人', region:'福 岡', repName:'—', contactUrl:false, email:false, fit:68, status:'queue' },
+  { name:'株 式 会 社 VWX', ind:'EC / D2C', size:'30 人', region:'東 京', repName:'小 林 一 郎 (= 代 表)', contactUrl:true, email:true, fit:65, status:'queue' },
+  { name:'YZA 株 式 会 社', ind:'SaaS', size:'7 人', region:'京 都', repName:'加 藤 太 郎 (= 代 表)', contactUrl:true, email:false, fit:62, status:'queue' },
 ];
 function fitCls(f){ return f >= 80 ? 'hi' : f >= 60 ? 'mid' : 'lo'; }
 function statusLabel(s){
@@ -498,16 +477,15 @@ function renderSheet(){
         <td><input type="checkbox" class="row-checkbox" ${checked}></td>
         <td>
           <div class="name">${l.name}</div>
-          <div class="sub-meta">${l.contact}</div>
+          <div class="sub-meta">ご 担 当 者 様 宛</div>
         </td>
         <td>${l.ind}</td>
         <td>${l.size}</td>
         <td>${l.region}</td>
-        <td style="font-size:11.5px">${l.contact}</td>
-        <td>${l.email ? '<span class="contact-ok">✓ 検 証 済</span>' : '<span class="contact-ng">—</span>'}</td>
-        <td>${l.phone ? '<span class="contact-ok">✓</span>' : '<span class="contact-ng">—</span>'}</td>
+        <td style="font-size:11.5px">${l.repName}</td>
+        <td>${l.contactUrl ? '<span class="contact-ok">✓ 検 出 済</span>' : '<span class="contact-ng">— なし</span>'}</td>
+        <td>${l.email ? '<span class="contact-ok">✓</span>' : '<span class="contact-ng">—</span>'}</td>
         <td><span class="fit-pill ${fitCls(l.fit)}">${l.fit}</span></td>
-        <td><span class="conf-pill ${l.conf}">${l.conf === 'high' ? '高' : l.conf === 'med' ? '中' : '低'}</span></td>
         <td><span class="status-pill ${l.status}">${statusLabel(l.status)}</span></td>
       </tr>
     `;

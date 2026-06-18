@@ -447,43 +447,6 @@ a{color:inherit;text-decoration:none}
         </div>
       </div>
 
-      <div class="hero-result">
-        <div class="v-big">1</div>
-        <div class="meta">
-          <div class="ti">▌ Latest Win</div>
-          <div class="desc">株 式 会 社 ABC · ¥300,000 受 注 成 約</div>
-          <div class="sub">SaaS 業 種 · 25 人 · 送 信 から 11 日 で 商 談 化 → 受 注</div>
-        </div>
-        <button>事 例 を 公 開 →</button>
-      </div>
-
-      <div class="mb-block">
-        <div class="mb-block-head">
-          <div class="mb-block-title"><span class="dot"></span> AI 営 業 チーム · 今 動 い て る</div>
-          <div class="mb-block-right">3 active · 自動 実 行 中</div>
-        </div>
-        <div class="team-grid">
-          <div class="team-card">
-            <div class="state"><span class="pulse"></span> ペル ソナ 解 析 中</div>
-            <div class="ti">株 式 会 社 XYZ の LP 解 析</div>
-            <div class="meta">🎯 Persona Analyst · 8s 経 過</div>
-            <div class="bar"><div class="bar-fill" style="width:62%"></div></div>
-          </div>
-          <div class="team-card purple">
-            <div class="state"><span class="pulse"></span> 文 面 生 成 中</div>
-            <div class="ti">「営 業 工 数 を 80% 削 減」 文 面 作 成</div>
-            <div class="meta">📝 Writer-3 · 11s 経 過</div>
-            <div class="bar"><div class="bar-fill" style="width:78%"></div></div>
-          </div>
-          <div class="team-card amber">
-            <div class="state"><span class="pulse"></span> 送 信 待 機</div>
-            <div class="ti">5 件 の 送 信 ジョブ を キュー 中</div>
-            <div class="meta">⚡ Sender Bot · queue 5</div>
-            <div class="bar"><div class="bar-fill" style="width:35%"></div></div>
-          </div>
-        </div>
-      </div>
-
       <div class="today-strip">
         <div class="ic-big">⚡</div>
         <div class="info">
@@ -498,16 +461,13 @@ a{color:inherit;text-decoration:none}
 
       <div class="mb-block">
         <div class="mb-block-head">
-          <div class="mb-block-title"><span class="dot"></span> Activity Feed</div>
-          <div class="mb-block-right">12 events · 過 去 24h</div>
+          <div class="mb-block-title"><span class="dot"></span> 直 近 の 反 応</div>
+          <a class="mb-block-right" onclick="navTo('responses',document.querySelector('.nav-btn[data-view=responses]'))" style="cursor:pointer;color:var(--teal);font-weight:800">全 て 見 る →</a>
         </div>
         <div class="feed">
-          <div class="feed-row"><span class="feed-time">14:23</span><span class="feed-tag">反応</span><span class="feed-msg">株 式 会 社 ABC から 返 信 「興 味 あ り ま す。 詳 細 を 」</span><a class="feed-link">→</a></div>
-          <div class="feed-row"><span class="feed-time">14:11</span><span class="feed-tag">送信</span><span class="feed-msg">株 式 会 社 DEF へ 送 信 完 了 (= fit 87)</span><a class="feed-link">→</a></div>
-          <div class="feed-row"><span class="feed-time">13:58</span><span class="feed-tag purple">生成</span><span class="feed-msg">AI が 「BtoB SaaS スタート アップ 向 け」 文 面 12 種 生 成</span><a class="feed-link">→</a></div>
-          <div class="feed-row"><span class="feed-time">13:42</span><span class="feed-tag amber">CAPTCHA</span><span class="feed-msg">株 式 会 社 GHI で reCAPTCHA 検 出 = 手 動 介 入 要</span><a class="feed-link">→</a></div>
-          <div class="feed-row"><span class="feed-time">12:30</span><span class="feed-tag">商談</span><span class="feed-msg">株 式 会 社 ABC と 商 談 set (= 14:00 / Google Meet)</span><a class="feed-link">→</a></div>
-          <div class="feed-row"><span class="feed-time">11:08</span><span class="feed-tag purple">解析</span><span class="feed-msg">100 件 の 法 人 リスト 抽 出 完 了 (= 国 税 庁 + Google)</span><a class="feed-link">→</a></div>
+          <div class="feed-row"><span class="feed-time">14:23</span><span class="feed-tag">興 味</span><span class="feed-msg">株 式 会 社 ABC 「興 味 あ り ま す。 詳 細 を 」</span><a class="feed-link">→</a></div>
+          <div class="feed-row"><span class="feed-time">12:45</span><span class="feed-tag amber">質 問</span><span class="feed-msg">株 式 会 社 DEF 「料 金 体 系 を 教 え て」</span><a class="feed-link">→</a></div>
+          <div class="feed-row"><span class="feed-time">11:08</span><span class="feed-tag red">辞 退</span><span class="feed-msg">株 式 会 社 JKL 「現 状 間 に 合 っ て いま す」</span><a class="feed-link">→</a></div>
         </div>
       </div>
     </div>
@@ -519,9 +479,10 @@ a{color:inherit;text-decoration:none}
         <span class="crumb">▌ FormTap · 自社 サービス の 顧 客 定 義</span>
       </div>
 
-      <div class="url-input">
-        <input type="url" id="urlInput" value="https://my-saas.com" placeholder="https://your-service.com">
-        <button onclick="aiAnalyze()">⚡ AI 再 解 析</button>
+      <div class="url-input" style="padding:28px 30px;border-width:2px;border-radius:14px;flex-direction:column;align-items:stretch;gap:14px;box-shadow:0 4px 20px rgba(192,255,92,.15)">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:.16em;text-transform:uppercase;font-weight:800">▌ STEP 1 · URL を 入 れ る だ け</div>
+        <input type="url" id="urlInput" value="https://my-saas.com" placeholder="https://your-service.com" style="padding:18px 22px;font-size:18px;font-weight:600;border-radius:10px">
+        <button onclick="aiAnalyze()" style="padding:14px 28px;font-size:15px;border-radius:10px;align-self:flex-end;min-width:200px">⚡ AI で 解 析 する →</button>
       </div>
 
       <div class="mb-block">
@@ -565,18 +526,6 @@ a{color:inherit;text-decoration:none}
               <span class="persona-tag-add">+ 追 加</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="mb-block" style="background:linear-gradient(135deg,var(--lime-soft),#fff);border-color:var(--lime)">
-        <div class="mb-block-head">
-          <div class="mb-block-title" style="color:var(--green)"><span class="dot"></span> Fit Score ルール</div>
-          <div class="mb-block-right">スコア 60+ のみ 送 信</div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-          <div style="padding:12px 14px;background:#fff;border-radius:8px"><div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">業 種 一 致</div><div style="font-size:18px;font-weight:900;color:var(--green)">+30 点</div></div>
-          <div style="padding:12px 14px;background:#fff;border-radius:8px"><div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">規 模 一 致</div><div style="font-size:18px;font-weight:900;color:var(--green)">+25 点</div></div>
-          <div style="padding:12px 14px;background:#fff;border-radius:8px"><div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">課 題 マッチ</div><div style="font-size:18px;font-weight:900;color:var(--green)">+45 点</div></div>
         </div>
       </div>
 

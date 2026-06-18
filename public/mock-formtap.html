@@ -50,6 +50,31 @@ a{color:inherit;text-decoration:none}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--lime),var(--lime-dark));color:var(--teal2);font-weight:900;font-size:14px}
 
 /* === Sidebar === */
+/* URL switcher (= 旧 MY AI Agent の site switcher を 継 承) */
+.site-switch{position:relative;margin-bottom:10px}
+.site-btn{width:100%;padding:11px 12px;border-radius:9px;background:var(--paper);border:1px solid var(--wire);display:flex;align-items:center;gap:10px;text-align:left;transition:all .15s;cursor:pointer}
+.site-btn:hover{border-color:var(--teal-line);background:var(--teal-soft)}
+.site-btn.open{border-color:var(--teal);background:var(--teal-soft)}
+.site-logo{width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0}
+.site-logo.purple{background:linear-gradient(135deg,var(--purple),#a78bfa)}
+.site-logo.amber{background:linear-gradient(135deg,var(--amber),var(--peach))}
+.site-info{flex:1;min-width:0;overflow:hidden}
+.site-name{font-size:12.5px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.005em}
+.site-url{font-family:var(--mono);font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+.site-caret{color:var(--text3);font-size:9px;transition:transform .2s}
+.site-btn.open .site-caret{transform:rotate(180deg)}
+.site-dd{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--paper);border:1px solid var(--wire);border-radius:10px;box-shadow:0 8px 28px rgba(13,79,74,.12);padding:6px;z-index:20;display:none}
+.site-dd.show{display:block;animation:fadeDown .18s ease}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.site-opt{padding:9px 10px;border-radius:7px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .12s}
+.site-opt:hover{background:var(--cream)}
+.site-opt.active{background:var(--teal-soft)}
+.site-opt-check{margin-left:auto;color:var(--teal);font-weight:900;opacity:0;font-size:13px}
+.site-opt.active .site-opt-check{opacity:1}
+.site-dd-sep{height:1px;background:var(--wire);margin:5px 6px}
+.site-dd-add{padding:9px 10px;border-radius:7px;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--teal);font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.04em}
+.site-dd-add:hover{background:var(--teal-soft)}
+
 .primary-cta{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border-radius:10px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;text-align:left;transition:all .15s;box-shadow:0 2px 8px rgba(13,79,74,.18);margin-bottom:4px;position:relative;overflow:hidden}
 .primary-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(13,79,74,.28)}
 .primary-cta .ic{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
@@ -339,6 +364,19 @@ a{color:inherit;text-decoration:none}
 
   <!-- ━━━ SIDEBAR ━━━ -->
   <aside class="sb">
+    <!-- URL Switcher (= 旧 MY AI Agent の サイト switcher を 継 承) -->
+    <div class="site-switch">
+      <button class="site-btn" id="siteBtn" onclick="toggleSiteDD()">
+        <div class="site-logo" id="siteLogo">M</div>
+        <div class="site-info">
+          <div class="site-name" id="siteName">my-saas.com</div>
+          <div class="site-url" id="siteUrl">SaaS · 87 法 人</div>
+        </div>
+        <span class="site-caret">▼</span>
+      </button>
+      <div class="site-dd" id="siteDD"></div>
+    </div>
+
     <button class="primary-cta" onclick="openWizard()">
       <span class="ic">⚡</span>
       <div>
@@ -962,6 +1000,185 @@ a{color:inherit;text-decoration:none}
 </div>
 
 <script>
+// ─── Campaigns (= URL ごと の 独立 dashboard) ───
+const CAMPAIGNS = [
+  {
+    id: 'my-saas',
+    url: 'https://my-saas.com',
+    name: 'my-saas.com',
+    sub: 'SaaS · 87 法 人',
+    logoText: 'M', logoCls: '',
+    persona: { industry:['SaaS','受 託'], size:['1-10','11-50'], role:['CEO','営 業 部 長'], pain:['営 業 リソース 不 足','商 談 化 率 低 い'] },
+    stats: { sent:87, response:12, meeting:4, revenue:'¥300K', revenueSub:'1 件 受 注' },
+    companies: [
+      { name:'株 式 会 社 ABC', industry:'SaaS', size:'25 人', region:'東 京', fit:87, contact:true },
+      { name:'株 式 会 社 DEF', industry:'SaaS', size:'42 人', region:'東 京', fit:82, contact:true },
+      { name:'株 式 会 社 GHI', industry:'受 託 開 発', size:'15 人', region:'大 阪', fit:78, contact:true },
+      { name:'XYZ コーポレーション', industry:'SaaS', size:'38 人', region:'東 京', fit:79, contact:true },
+      { name:'株 式 会 社 JKL マーケ', industry:'広 告', size:'8 人', region:'東 京', fit:75, contact:true },
+    ],
+    plan:{ used:87, cap:200 },
+  },
+  {
+    id: 'my-tool',
+    url: 'https://my-tool.com',
+    name: 'my-tool.com',
+    sub: 'B2B Tool · 42 法 人',
+    logoText: 'T', logoCls: 'purple',
+    persona: { industry:['IT 企 業','コンサル'], size:['51-200','201+'], role:['CTO','エンジニア リング 部 長'], pain:['DX 推 進 困 難','内 製 化 不 足'] },
+    stats: { sent:42, response:7, meeting:2, revenue:'¥150K', revenueSub:'1 件 受 注' },
+    companies: [
+      { name:'株 式 会 社 TechA', industry:'IT', size:'120 人', region:'東 京', fit:91, contact:true },
+      { name:'コンサル B', industry:'コンサル', size:'80 人', region:'大 阪', fit:84, contact:true },
+      { name:'Tech Solutions C', industry:'IT', size:'200 人', region:'東 京', fit:76, contact:true },
+    ],
+    plan:{ used:42, cap:200 },
+  },
+  {
+    id: 'agency',
+    url: 'https://agency-pr.jp',
+    name: 'agency-pr.jp',
+    sub: '広 告 代 理 · 12 法 人',
+    logoText: 'A', logoCls: 'amber',
+    persona: { industry:['EC','D2C'], size:['11-50','51-200'], role:['マーケ 部 長','CMO'], pain:['広 告 費 高 騰','ROAS 低 下'] },
+    stats: { sent:12, response:1, meeting:0, revenue:'¥0', revenueSub:'未 受 注' },
+    companies: [
+      { name:'EC ブランド X', industry:'EC', size:'45 人', region:'東 京', fit:88, contact:true },
+      { name:'D2C スタジオ Y', industry:'D2C', size:'22 人', region:'福 岡', fit:79, contact:false },
+    ],
+    plan:{ used:12, cap:200 },
+  },
+];
+let activeCampaignIdx = 0;
+function renderSiteDD(){
+  const dd = document.getElementById('siteDD');
+  if(!dd) return;
+  dd.innerHTML = CAMPAIGNS.map((c, i) => `
+    <div class="site-opt${i === activeCampaignIdx ? ' active' : ''}" onclick="pickCampaign(${i})">
+      <div class="site-logo ${c.logoCls}">${c.logoText}</div>
+      <div class="site-info">
+        <div class="site-name">${c.name}</div>
+        <div class="site-url">${c.sub}</div>
+      </div>
+      <span class="site-opt-check">✓</span>
+    </div>
+  `).join('') + `
+    <div class="site-dd-sep"></div>
+    <div class="site-dd-add" onclick="closeSiteDD();openWizard()"><span>＋</span> 新 規 URL を 追 加</div>
+  `;
+}
+function toggleSiteDD(){
+  const btn = document.getElementById('siteBtn');
+  const dd = document.getElementById('siteDD');
+  btn.classList.toggle('open');
+  dd.classList.toggle('show');
+}
+function closeSiteDD(){
+  document.getElementById('siteBtn').classList.remove('open');
+  document.getElementById('siteDD').classList.remove('show');
+}
+function pickCampaign(idx){
+  activeCampaignIdx = idx;
+  loadActiveCampaign();
+  closeSiteDD();
+  showToast('▶ ' + CAMPAIGNS[idx].name + ' に 切 替');
+}
+function loadActiveCampaign(){
+  const c = CAMPAIGNS[activeCampaignIdx];
+  // sidebar site-btn
+  const sl = document.getElementById('siteLogo');
+  if(sl){ sl.textContent = c.logoText; sl.className = 'site-logo ' + c.logoCls; }
+  document.getElementById('siteName').textContent = c.name;
+  document.getElementById('siteUrl').textContent = c.sub;
+  // crumb (= dashboard など)
+  document.querySelectorAll('.crumb').forEach((el, i) => {
+    if(i === 0) el.textContent = '▌ FormTap · ' + c.name + ' · 今 月';
+  });
+  // dashboard stats
+  const stats = document.querySelectorAll('#view-home .stat-card .v');
+  if(stats.length >= 4){
+    stats[0].textContent = c.stats.sent;
+    stats[1].textContent = c.stats.response;
+    stats[2].textContent = c.stats.meeting;
+    stats[3].textContent = c.stats.revenue;
+  }
+  // hero result
+  const heroV = document.querySelector('#view-home .hero-result .v-big');
+  const heroDesc = document.querySelector('#view-home .hero-result .meta .desc');
+  const heroSub = document.querySelector('#view-home .hero-result .meta .sub');
+  if(heroV){ heroV.textContent = c.stats.meeting; }
+  if(heroDesc){ heroDesc.textContent = c.name + ' · ' + c.stats.revenue + ' ' + c.stats.revenueSub; }
+  if(heroSub){ heroSub.textContent = c.persona.industry[0] + ' 業 種 · 送 信 ' + c.stats.sent + ' 件 · 反 応 ' + c.stats.response + ' 件'; }
+  // company list
+  renderCompaniesForCampaign(c);
+  // persona view
+  renderPersonaForCampaign(c);
+  // plan card
+  const planUsed = document.querySelector('.plan-card .head span:last-child');
+  if(planUsed) planUsed.textContent = c.plan.used + ' / ' + c.plan.cap;
+  const planFill = document.querySelector('.plan-card .bar-fill');
+  if(planFill) planFill.style.width = Math.round(c.plan.used / c.plan.cap * 100) + '%';
+  // nav badge (companies)
+  const navCompBadge = document.querySelector('.nav-btn[data-view="companies"] .nav-badge');
+  if(navCompBadge) navCompBadge.textContent = c.companies.length;
+  // dropdown 再 描 画
+  renderSiteDD();
+}
+function renderCompaniesForCampaign(c){
+  const el = document.getElementById('companyList');
+  if(!el) return;
+  el.innerHTML = c.companies.map(co => {
+    const fitCls = co.fit >= 80 ? 'hi' : co.fit >= 60 ? 'mid' : 'lo';
+    return `
+      <div class="company-row">
+        <div>
+          <div class="name">${co.name}</div>
+          <div class="meta">▌ <b>${co.industry}</b> · ${co.size} · ${co.region}</div>
+        </div>
+        <span class="fit-score ${fitCls}">fit ${co.fit}</span>
+        <span class="contact-detect ${co.contact ? '' : 'no'}">${co.contact ? '✓ /contact' : '✕ なし'}</span>
+        <button class="row-action ghost">プレビュー</button>
+        <button class="row-action">送 信</button>
+      </div>
+    `;
+  }).join('');
+  // companies filter ct
+  const ct = document.querySelector('#view-companies .filter-bar .ct b');
+  if(ct) ct.textContent = c.companies.length;
+}
+function renderPersonaForCampaign(c){
+  const cards = document.querySelectorAll('#view-persona .persona-grid .persona-card');
+  if(cards.length < 4) return;
+  const fields = ['industry', 'size', 'role', 'pain'];
+  cards.forEach((card, i) => {
+    const tags = card.querySelector('.persona-tags');
+    if(!tags) return;
+    const vals = c.persona[fields[i]] || [];
+    tags.innerHTML = vals.map(v => `<span class="persona-tag removable">${v}</span>`).join('') + '<span class="persona-tag-add">+ 追 加</span>';
+  });
+  // URL input
+  const urlInput = document.getElementById('urlInput');
+  if(urlInput) urlInput.value = c.url;
+}
+
+// dropdown 外 click で 閉 じ る
+document.addEventListener('click', e => {
+  const sw = document.querySelector('.site-switch');
+  if(sw && !sw.contains(e.target)) closeSiteDD();
+});
+
+// toast (= 簡 易)
+function showToast(msg){
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;top:70px;right:24px;background:var(--teal2);color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:700;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:fadeIn .2s';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}
+
+// 初 期 ロード
+setTimeout(() => { renderSiteDD(); loadActiveCampaign(); }, 50);
+
 // ─── Top clock ───
 function tick(){
   const d = new Date();
@@ -1014,7 +1231,7 @@ function renderCompanies(){
     `;
   }).join('');
 }
-renderCompanies();
+// 旧 renderCompanies は loadActiveCampaign の renderCompaniesForCampaign に 置 換 済
 
 // ─── Wizard ───
 let wizStep = 1;

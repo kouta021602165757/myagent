@@ -289,8 +289,8 @@ table.sheet td .contact-ng{color:var(--text4)}
               <th>規 模<span class="source-hint">gBiz</span></th>
               <th>地 域<span class="source-hint">登 記</span></th>
               <th>代 表 名<span class="source-hint">法 務 省 登 記 (= あれ ば)</span></th>
-              <th>問 合 せ URL<span class="source-hint">HP scrape</span></th>
-              <th>代 表 メール<span class="source-hint">HP 公 開 (= あれ ば)</span></th>
+              <th>HP URL<span class="source-hint">Google 検 索</span></th>
+              <th>問 合 せ URL<span class="source-hint">HP 解 析</span></th>
               <th>Fit<span class="source-hint">AI 推 論</span></th>
               <th>状 態<span class="source-hint">送 信</span></th>
             </tr>
@@ -452,16 +452,16 @@ function switchTab(view, btn){
 
 // === Sheet data (= 187 件 想 定、 demo で 8 件) ===
 const LEADS = [
-  { name:'株 式 会 社 ABC', ind:'SaaS', size:'25 人', region:'東 京', repName:'田 中 太 郎 (= 代 表)', contactUrl:true, email:true, fit:87, status:'replied' },
-  { name:'DEF テクノロジー', ind:'SaaS', size:'42 人', region:'東 京', repName:'佐 藤 健 (= 代 表)', contactUrl:true, email:true, fit:82, status:'opened' },
-  { name:'株 式 会 社 GHI', ind:'受 託 開 発', size:'15 人', region:'大 阪', repName:'山 田 太 郎 (= 代 表)', contactUrl:true, email:false, fit:78, status:'sent' },
-  { name:'XYZ コーポレーション', ind:'SaaS', size:'38 人', region:'東 京', repName:'—', contactUrl:true, email:true, fit:79, status:'replied' },
-  { name:'株 式 会 社 JKL マーケ', ind:'広 告 / マーケ', size:'8 人', region:'東 京', repName:'高 橋 大 輔 (= 代 表)', contactUrl:true, email:true, fit:75, status:'sent' },
-  { name:'MNO Solutions', ind:'SaaS', size:'55 人', region:'名 古 屋', repName:'—', contactUrl:true, email:false, fit:73, status:'sent' },
-  { name:'株 式 会 社 PQR', ind:'受 託 開 発', size:'22 人', region:'東 京', repName:'伊 藤 真 一 (= 代 表)', contactUrl:true, email:true, fit:71, status:'opened' },
-  { name:'STU テクノロジー', ind:'SaaS', size:'12 人', region:'福 岡', repName:'—', contactUrl:false, email:false, fit:68, status:'queue' },
-  { name:'株 式 会 社 VWX', ind:'EC / D2C', size:'30 人', region:'東 京', repName:'小 林 一 郎 (= 代 表)', contactUrl:true, email:true, fit:65, status:'queue' },
-  { name:'YZA 株 式 会 社', ind:'SaaS', size:'7 人', region:'京 都', repName:'加 藤 太 郎 (= 代 表)', contactUrl:true, email:false, fit:62, status:'queue' },
+  { name:'株 式 会 社 ABC', ind:'SaaS', size:'25 人', region:'東 京', repName:'田 中 太 郎', hpUrl:'abc.co.jp', contactUrl:true, fit:87, status:'replied' },
+  { name:'DEF テクノロジー', ind:'SaaS', size:'42 人', region:'東 京', repName:'佐 藤 健', hpUrl:'def-tech.jp', contactUrl:true, fit:82, status:'opened' },
+  { name:'株 式 会 社 GHI', ind:'受 託 開 発', size:'15 人', region:'大 阪', repName:'山 田 太 郎', hpUrl:'ghi.co.jp', contactUrl:true, fit:78, status:'sent' },
+  { name:'XYZ コーポレーション', ind:'SaaS', size:'38 人', region:'東 京', repName:'—', hpUrl:'xyz-corp.com', contactUrl:true, fit:79, status:'replied' },
+  { name:'株 式 会 社 JKL マーケ', ind:'広 告 / マーケ', size:'8 人', region:'東 京', repName:'高 橋 大 輔', hpUrl:'jkl-marke.jp', contactUrl:true, fit:75, status:'sent' },
+  { name:'MNO Solutions', ind:'SaaS', size:'55 人', region:'名 古 屋', repName:'—', hpUrl:'mno-sol.co.jp', contactUrl:true, fit:73, status:'sent' },
+  { name:'株 式 会 社 PQR', ind:'受 託 開 発', size:'22 人', region:'東 京', repName:'伊 藤 真 一', hpUrl:'pqr.co.jp', contactUrl:true, fit:71, status:'opened' },
+  { name:'STU テクノロジー', ind:'SaaS', size:'12 人', region:'福 岡', repName:'—', hpUrl:'stu-tech.jp', contactUrl:false, fit:68, status:'queue' },
+  { name:'株 式 会 社 VWX', ind:'EC / D2C', size:'30 人', region:'東 京', repName:'小 林 一 郎', hpUrl:'vwx.co.jp', contactUrl:true, fit:65, status:'queue' },
+  { name:'YZA 株 式 会 社', ind:'SaaS', size:'7 人', region:'京 都', repName:'加 藤 太 郎', hpUrl:'yza.com', contactUrl:true, fit:62, status:'queue' },
 ];
 function fitCls(f){ return f >= 80 ? 'hi' : f >= 60 ? 'mid' : 'lo'; }
 function statusLabel(s){
@@ -483,8 +483,8 @@ function renderSheet(){
         <td>${l.size}</td>
         <td>${l.region}</td>
         <td style="font-size:11.5px">${l.repName}</td>
+        <td><a href="https://${l.hpUrl}" target="_blank" rel="noopener" style="color:var(--teal);font-family:var(--mono);font-size:11.5px;text-decoration:underline">${l.hpUrl} ↗</a></td>
         <td>${l.contactUrl ? '<span class="contact-ok">✓ 検 出 済</span>' : '<span class="contact-ng">— なし</span>'}</td>
-        <td>${l.email ? '<span class="contact-ok">✓</span>' : '<span class="contact-ng">—</span>'}</td>
         <td><span class="fit-pill ${fitCls(l.fit)}">${l.fit}</span></td>
         <td><span class="status-pill ${l.status}">${statusLabel(l.status)}</span></td>
       </tr>

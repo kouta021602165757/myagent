@@ -962,26 +962,6 @@ a{color:inherit;text-decoration:none}
 </div>
 
 <script>
-// ━━━ 🔐 認 証 ガード + me data ━━━
-(async function _authGuard(){
-  const token = localStorage.getItem('token');
-  if(!token){ location.href = '/auth.html'; return; }
-  try {
-    const r = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token }});
-    if(r.status === 401){ localStorage.removeItem('token'); location.href = '/auth.html'; return; }
-    const data = await r.json();
-    window._me = data.user || data;
-    // topbar plan / avatar
-    setTimeout(()=>{
-      const plan = (window._me.plan || 'free').toUpperCase();
-      const planBadge = document.querySelector('.plan-badge');
-      if(planBadge) planBadge.textContent = '⚡ ' + plan;
-      const av = document.querySelector('.avatar-btn');
-      if(av) av.textContent = ((window._me.name || window._me.email || 'U')+'').charAt(0).toUpperCase();
-    }, 200);
-  } catch(e){ console.warn('[auth] fail', e); }
-})();
-
 // ─── Top clock ───
 function tick(){
   const d = new Date();

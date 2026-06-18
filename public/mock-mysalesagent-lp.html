@@ -209,7 +209,7 @@ footer{padding:60px 28px 40px;background:var(--cream);border-top:1px solid var(-
   <p class="sub">「ど ん な 顧 客 が 欲 し い」 を 自然 文 で 入 力 す る だ け。<br>AI が <b>国 内 法 人 500 万 社</b> の 公 式 DB を 検 索 し、<br>リスト + 問 合 せ URL + 文 面 + 送 信 まで <b>全 部 自動</b>。</p>
 
   <div class="hero-prompt">
-    <textarea placeholder="例: 東 京 の SaaS で 10-50 人 規 模 の 会 社 を 探 し て。 営 業 部 長 か 代 表 直 取 り 希 望。" rows="2"></textarea>
+    <textarea placeholder="例: 東 京 の SaaS で 10-50 人 規 模 の 会 社 を 探 し て。 代 表 直 取 り 希 望。" rows="2"></textarea>
     <div class="row">
       <button class="opt">🌐 自社 URL から</button>
       <button class="opt">📋 業 種 で 絞 る</button>
@@ -230,13 +230,13 @@ footer{padding:60px 28px 40px;background:var(--cream);border-top:1px solid var(-
 <section class="demo-section">
   <div class="s-eyebrow">▌ ACTUAL UI</div>
   <h2 class="s-h">入 力 し て、 リスト が 流 れ る だ け。</h2>
-  <p class="s-p">左 で AI に 話 し、 右 に <b>リアル タイム で リード が ポップ イン</b>。 Excel に 慣 れ た 営 業 が そ の ま ま 使 え る シンプル UI。</p>
+  <p class="s-p">左 で AI に 話 し、 右 に <b>リアル タイム で 法 人 が ポップ イン</b>。 Excel に 慣 れ た 営 業 が そ の ま ま 使 え る シンプル UI。</p>
 
   <div class="demo-mock">
     <div class="demo-window">
       <div class="chat">
         <div class="ti">▌ AI チャット</div>
-        <div class="bubble user">東 京 の SaaS で 10-50 人 規 模、 営 業 部 長 か 代 表 で。</div>
+        <div class="bubble user">東 京 の SaaS で 10-50 人 規 模、 代 表 直 取 り 希 望。</div>
         <div class="bubble">承 知。 検 索 中 です。</div>
         <div class="progress">
           <div class="done">✓ 国 税 庁 (= 1,247 社)</div>
@@ -250,17 +250,17 @@ footer{padding:60px 28px 40px;background:var(--cream);border-top:1px solid var(-
       <div class="sheet">
         <table>
           <thead>
-            <tr><th>会 社</th><th>業 種</th><th>規 模</th><th>担 当</th><th>メール</th><th>Fit</th></tr>
+            <tr><th>会 社</th><th>業 種</th><th>規 模</th><th>代 表 名</th><th>HP URL</th><th>Fit</th></tr>
           </thead>
           <tbody>
-            <tr><td><b>株 ABC</b></td><td>SaaS</td><td>25</td><td>田 中 (部 長)</td><td style="color:var(--green)">✓</td><td><span class="fit hi">87</span></td></tr>
-            <tr><td><b>DEF テクノロジー</b></td><td>SaaS</td><td>42</td><td>佐 藤 (CTO)</td><td style="color:var(--green)">✓</td><td><span class="fit hi">82</span></td></tr>
-            <tr><td><b>株 GHI</b></td><td>受 託</td><td>15</td><td>山 田 (代 表)</td><td style="color:var(--green)">✓</td><td><span class="fit mid">78</span></td></tr>
-            <tr><td><b>XYZ コーポ</b></td><td>SaaS</td><td>38</td><td>鈴 木 (部 長)</td><td style="color:var(--green)">✓</td><td><span class="fit mid">79</span></td></tr>
-            <tr><td><b>株 JKL</b></td><td>広 告</td><td>8</td><td>高 橋 (代 表)</td><td style="color:var(--green)">✓</td><td><span class="fit mid">75</span></td></tr>
-            <tr><td><b>MNO Sol.</b></td><td>SaaS</td><td>55</td><td>渡 辺 (CTO)</td><td style="color:var(--green)">✓</td><td><span class="fit mid">73</span></td></tr>
-            <tr><td><b>株 PQR</b></td><td>受 託</td><td>22</td><td>伊 藤 (代 表)</td><td style="color:var(--green)">✓</td><td><span class="fit mid">71</span></td></tr>
-            <tr><td><b>STU テック</b></td><td>SaaS</td><td>12</td><td>中 村 (CEO)</td><td style="color:var(--text4)">—</td><td><span class="fit mid">68</span></td></tr>
+            <tr><td><b>株 ABC</b></td><td>SaaS</td><td>25</td><td>田 中 太 郎</td><td style="color:var(--teal)">abc.co.jp ↗</td><td><span class="fit hi">87</span></td></tr>
+            <tr><td><b>DEF テクノロジー</b></td><td>SaaS</td><td>42</td><td>佐 藤 健</td><td style="color:var(--teal)">def-tech.jp ↗</td><td><span class="fit hi">82</span></td></tr>
+            <tr><td><b>株 GHI</b></td><td>受 託</td><td>15</td><td>山 田 太 郎</td><td style="color:var(--teal)">ghi.co.jp ↗</td><td><span class="fit mid">78</span></td></tr>
+            <tr><td><b>XYZ コーポ</b></td><td>SaaS</td><td>38</td><td style="color:var(--text4)">—</td><td style="color:var(--teal)">xyz-corp.com ↗</td><td><span class="fit mid">79</span></td></tr>
+            <tr><td><b>株 JKL</b></td><td>広 告</td><td>8</td><td>高 橋 大 輔</td><td style="color:var(--teal)">jkl-marke.jp ↗</td><td><span class="fit mid">75</span></td></tr>
+            <tr><td><b>MNO Sol.</b></td><td>SaaS</td><td>55</td><td style="color:var(--text4)">—</td><td style="color:var(--teal)">mno-sol.co.jp ↗</td><td><span class="fit mid">73</span></td></tr>
+            <tr><td><b>株 PQR</b></td><td>受 託</td><td>22</td><td>伊 藤 真 一</td><td style="color:var(--teal)">pqr.co.jp ↗</td><td><span class="fit mid">71</span></td></tr>
+            <tr><td><b>STU テック</b></td><td>SaaS</td><td>12</td><td style="color:var(--text4)">—</td><td style="color:var(--teal)">stu-tech.jp ↗</td><td><span class="fit mid">68</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -373,7 +373,7 @@ footer{padding:60px 28px 40px;background:var(--cream);border-top:1px solid var(-
 <section id="pricing">
   <div class="s-eyebrow">▌ PRICING</div>
   <h2 class="s-h">シンプル な 料 金</h2>
-  <p class="s-p">クレ カ 不 要 で Free から 開 始。 unlimited 送 信 + unlimited アカウント。</p>
+  <p class="s-p">クレ カ 不 要 で フリー から 開 始。 無 制 限 送 信 + メール 連 携 数 無 制 限。</p>
 
   <div class="price-grid">
     <div class="price-card">

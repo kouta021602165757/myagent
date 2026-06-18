@@ -23898,6 +23898,79 @@ async function handleAPI(req,res,pathname,method,ip){
     return;
   }
 
+  // ━━━ 🆕 FormTap: ペル ソナ AI 抽 出 ━━━
+  //   POST /api/formtap/persona { url }
+  //   入力 = サービス URL
+  //   出力 = { industry[], size[], role[], pain[] }
+  if(pathname === '/api/formtap/persona' && method === 'POST'){
+    const body = await readBody(req).catch(() => ({}));
+    const url0 = String(body && body.url || '').trim();
+    if(!url0 || !/^https?:\/\//.test(url0)) return jres(res, 400, { error: 'url required (http/https)' });
+    if(!ANTHROPIC) return jres(res, 503, { error: 'AI provider not configured' });
+    // LP fetch
+    let lpText = '';
+    try {
+      const u = new URL(url0);
+      const r = await new Promise((resolve, reject) => {
+        const lib = u.protocol === 'https:' ? require('https') : require('http');
+        const req2 = lib.request({ hostname: u.hostname, port: u.port || (u.protocol === 'https:' ? 443 : 80), path: u.pathname + u.search, method: 'GET', headers: { 'User-Agent': 'FormTap-PersonaBot/1.0' }, timeout: 15000 }, res2 => {
+          let buf = '';
+          res2.on('data', c => { buf += c; if(buf.length > 200000) buf = buf.slice(0, 200000); });
+          res2.on('end', () => resolve({ s: res2.statusCode, d: buf }));
+        });
+        req2.on('error', reject);
+        req2.on('timeout', () => { req2.destroy(); reject(new Error('timeout')); });
+        req2.end();
+      });
+      if(r.s >= 400) return jres(res, 422, { error: 'LP fetch failed: HTTP ' + r.s });
+      // HTML から テキスト 抜 き 出 し
+      lpText = String(r.d || '')
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/\s+/g, ' ').trim().slice(0, 6000);
+    } catch(e){ return jres(res, 422, { error: 'LP fetch failed: ' + e.message }); }
+    if(lpText.length < 100) return jres(res, 422, { error: 'LP content too thin' });
+    // Claude / Haiku で structured 解 析
+    const sys = '【ROLE】 B2B 営業 ペル ソナ 抽出 の 専 門 家。 与 え ら れ た LP テキスト か ら、 そ の サービス が ターゲット に す べき 法 人 ペル ソナ を 抽 出 す る。\n\n'
+      + '【出 力】 JSON のみ (= 厳 守):\n'
+      + '{\n'
+      + '  "industry": ["業種 1", "業種 2", ...],  // 3-5 個 (例: SaaS, 受託 開発, EC, 製造, 金融)\n'
+      + '  "size": ["1-10 人", "11-50 人"],  // 2-3 個\n'
+      + '  "role": ["役職 1", "役職 2", ...],  // 3-5 個 (例: CEO, 営業 部長, マーケ 責任者)\n'
+      + '  "pain": ["課題 1", "課題 2", ...]  // 3-5 個 (= LP から 推論 する 顧客 の pain)\n'
+      + '}\n'
+      + '【厳守】 JSON 以外 出 力 禁止。 コードフェンス 禁 止。';
+    const usr = '【サービス URL】 ' + url0 + '\n\n【LP テキスト 抜 粋】\n' + lpText;
+    try {
+      const headers = { 'x-api-key': ANTHROPIC, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
+      const r2 = await httpsReq('POST', 'api.anthropic.com', '/v1/messages', headers,
+        { model: 'claude-haiku-4-5-20251001', max_tokens: 600, system: sys, messages: [{ role: 'user', content: usr }] },
+        { timeout: 25000 });
+      if(r2.s >= 400){
+        const errMsg = (r2.d && r2.d.error && r2.d.error.message) || ('Anthropic ' + r2.s);
+        return jres(res, 502, { error: errMsg });
+      }
+      const txt = (r2.d && r2.d.content && r2.d.content[0] && r2.d.content[0].text) || '';
+      // JSON parse
+      let parsed = null;
+      try {
+        const m = txt.match(/\{[\s\S]*\}/);
+        if(m) parsed = JSON.parse(m[0]);
+      } catch(_){}
+      if(!parsed || !parsed.industry) return jres(res, 502, { error: 'AI returned invalid JSON', raw: txt.slice(0, 500) });
+      return jres(res, 200, {
+        url: url0,
+        industry: Array.isArray(parsed.industry) ? parsed.industry.slice(0, 5).map(String) : [],
+        size: Array.isArray(parsed.size) ? parsed.size.slice(0, 3).map(String) : [],
+        role: Array.isArray(parsed.role) ? parsed.role.slice(0, 5).map(String) : [],
+        pain: Array.isArray(parsed.pain) ? parsed.pain.slice(0, 5).map(String) : [],
+        generated_at: new Date().toISOString(),
+      });
+    } catch(e){ return jres(res, 502, { error: e.message }); }
+  }
+
   // ── Service-key authenticated admin endpoints (= 認証は X-Service-Key header) ──
   //   POST /api/admin/bulk-rewrite — 任意 user の 指定 agent の 記事を 一括リライト
   //   body: { userId, agentId, limit? }

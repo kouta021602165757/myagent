@@ -342,6 +342,12 @@ a{color:inherit;text-decoration:none}
 </head>
 <body>
 
+<!-- ━━━ BETA banner (= 既 user / 新 user 全 員 に 明 示) ━━━ -->
+<div id="betaBanner" style="background:linear-gradient(135deg,#fff8e1,#fde68a);color:#92400e;padding:10px 24px;font-size:12.5px;font-weight:700;text-align:center;border-bottom:1px solid #fbbf24;font-family:'Noto Sans JP',sans-serif;display:flex;align-items:center;justify-content:center;gap:14px">
+  🚧 <b>BETA 開 発 中</b> · 数 字 / 送 信 機 能 = mock 動 作 (= 実 装 進 行 中) · <b>既 MY AI Agent 機 能 は 3 ヶ月 維 持</b> · <a href="mailto:support@myaiagents.agency" style="color:#92400e;text-decoration:underline;font-weight:800">フィード バック ↗</a>
+  <button onclick="this.parentElement.style.display='none'" style="margin-left:auto;background:transparent;border:0;color:#92400e;font-size:18px;cursor:pointer;padding:0 4px;font-weight:300">✕</button>
+</div>
+
 <div class="layout">
 
   <!-- ━━━ TOPBAR ━━━ -->
@@ -1323,9 +1329,35 @@ document.getElementById('chatInput').addEventListener('keydown', e => {
   }
 });
 
-// ─── ペル ソナ AI 解 析 (= mock) ───
-function aiAnalyze(){
-  alert('🔍 AI 解 析 を 開 始 し ま し た (= mock 動 作)');
+// ─── ペル ソナ AI 解 析 (= 実 機 能) ───
+async function aiAnalyze(){
+  const urlEl = document.getElementById('urlInput');
+  const url = urlEl ? urlEl.value.trim() : '';
+  if(!url || !/^https?:\/\//.test(url)){ showToast('⚠ URL を https:// で 入力'); return; }
+  showToast('🔍 AI 解 析 中 ... (= 10-20 秒)');
+  try {
+    const r = await fetch('/api/formtap/persona', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    if(!r.ok){
+      const er = await r.json().catch(() => ({ error: 'HTTP ' + r.status }));
+      showToast('❌ ' + (er.error || '失 敗'));
+      return;
+    }
+    const data = await r.json();
+    // 結 果 を persona view に 反 映
+    const fields = ['industry', 'size', 'role', 'pain'];
+    const cards = document.querySelectorAll('#view-persona .persona-grid .persona-card');
+    cards.forEach((card, i) => {
+      const tags = card.querySelector('.persona-tags');
+      if(!tags) return;
+      const vals = data[fields[i]] || [];
+      tags.innerHTML = vals.map(v => `<span class="persona-tag removable">${v}</span>`).join('') + '<span class="persona-tag-add">+ 追 加</span>';
+    });
+    showToast('✓ AI 解 析 完 了');
+  } catch(e){ showToast('❌ ' + (e.message || '失 敗')); }
 }
 </script>
 

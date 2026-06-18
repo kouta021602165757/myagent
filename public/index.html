@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FormTap — URL 入 れ る だ け で AI が 営 業 部 に なる</title>
-<meta name="description" content="営 業 担 当 を 雇 う 前 に、 AI 営 業 チーム を 雇 お う。 URL 入 れ る だ け で AI が 毎 日 100 件 の 法 人 に カスタマイズ し た 営 業。 月 ¥10,000 で 営 業 代 行 ¥30 万 と 同 等 の 効 果。">
+<meta name="description" content="営 業 担 当 を 雇 う 前 に、 AI 営 業 チーム を 雇 お う。 URL 入 れ る だ け で AI が 法 人 リスト + カスタマイズ 文 面 を 自動 生 成。 BETA 開 発 中 · 限 定 5 名 募 集。">
 <meta property="og:title" content="FormTap — URL 入 れ る だ け で AI が 営 業 部 に なる">
-<meta property="og:description" content="月 ¥10,000 で 毎 日 100 件 の 法 人 営 業。 反 応 率 13.8%、 商 談 化 率 28%。 営 業 採 用 の 50 倍 安 い。">
+<meta property="og:description" content="URL 入 れ る だ け で AI が 法 人 リスト + 個 別 文 面 自動 生 成。 BETA 開 発 中 · 限 定 5 名 募 集。">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://myaiagents.agency/">
 <style>
@@ -167,7 +167,7 @@ footer{padding:60px 28px 40px;background:var(--cream);border-top:1px solid var(-
 </div>
 
 <section class="hero">
-  <div class="eyebrow"><span class="blink"></span> 🚀 営 業 自 動 化 SaaS · BETA 公 開 中</div>
+  <div class="eyebrow" style="background:#fff8e1;border-color:#fbbf24;color:#b45309"><span class="blink" style="background:#f59e0b;box-shadow:0 0 7px #f59e0b"></span> 🚧 BETA 開 発 中 · 限 定 5 名 募 集</div>
   <h1>URL 1 つ で<br>AI が <span class="lime">営 業 部</span> に なる。</h1>
   <p class="sub">営 業 担 当 を 雇 う 前 に、 <b>AI 営 業 チーム を 雇 お う</b>。<br>URL 入 れ る だ け で AI が 毎 日 <b>100 件 の 法 人</b> に カスタマイズ し た 営 業 を 自動 送 信。</p>
   <form class="hero-form" onsubmit="event.preventDefault();window.location.href='/auth.html?url='+encodeURIComponent(document.getElementById('heroUrl').value||'')">
@@ -176,11 +176,12 @@ footer{padding:60px 28px 40px;background:var(--cream);border-top:1px solid var(-
   </form>
   <div class="hero-cta-sub">クレ カ 不 要 · <b>10 件 リスト</b> を 1 分 で 取 得 · いつ で も キャンセル</div>
   <div class="hero-stats">
-    <div class="stat"><div class="v">100<span style="font-size:18px;color:rgba(255,255,255,.7)">件/日</span></div><div class="l">自 動 送 信</div></div>
-    <div class="stat"><div class="v">13.8<span style="font-size:18px;color:rgba(255,255,255,.7)">%</span></div><div class="l">反 応 率</div></div>
-    <div class="stat"><div class="v">28<span style="font-size:18px;color:rgba(255,255,255,.7)">%</span></div><div class="l">商 談 化 率</div></div>
-    <div class="stat"><div class="v">¥9,800<span style="font-size:18px;color:rgba(255,255,255,.7)">/月</span></div><div class="l">採 用 の 1/50</div></div>
+    <div class="stat"><div class="v">100<span style="font-size:18px;color:rgba(255,255,255,.7)">件/日</span></div><div class="l">目 標 自 動 送 信</div></div>
+    <div class="stat"><div class="v">AI<span style="font-size:18px;color:rgba(255,255,255,.7)"></span></div><div class="l">ペル ソナ 個 別 文 面</div></div>
+    <div class="stat"><div class="v">国 内<span style="font-size:18px;color:rgba(255,255,255,.7)"></span></div><div class="l">500 万 法 人 DB</div></div>
+    <div class="stat"><div class="v">¥9,800<span style="font-size:18px;color:rgba(255,255,255,.7)">/月</span></div><div class="l">採 用 の 1/50 価 格</div></div>
   </div>
+  <div style="text-align:center;margin-top:18px;padding:14px 22px;background:#fff8e1;border:1px solid #fbbf24;border-radius:10px;display:inline-block;font-size:12.5px;color:#b45309;font-weight:700">⚠️ <b>数 字 = 想 定 値 / 目 標</b>。 BETA 開 発 中、 β user の 実 績 で 順 次 更 新 し て いきま す。</div>
 </section>
 
 <section id="how">
@@ -207,23 +208,23 @@ footer{padding:60px 28px 40px;background:var(--cream);border-top:1px solid var(-
 </section>
 
 <section>
-  <div class="s-eyebrow">▌ ROI</div>
-  <h2 class="s-h">契 約 1 件 で<br>1 年 分 元 取 り。</h2>
-  <p class="s-p">受 注 1 件 平 均 ¥300,000。 月 ¥9,800 で 試 算 = <b>ROI 49 倍</b>。</p>
+  <div class="s-eyebrow">▌ ROI · 想 定 試 算</div>
+  <h2 class="s-h">契 約 1 件 で<br>1 年 分 元 取 り を 目 指 す。</h2>
+  <p class="s-p">想 定 試 算: 受 注 1 件 ¥300,000 で 月 ¥9,800 を <b>30+ 倍 回 収</b> が 目 標。<br><span style="font-size:13px;color:var(--text3)">※ 業 界 平 均 値 ベース の 試 算。 実 績 は β 検 証 で 順 次 更 新。</span></p>
   <div class="roi-card">
     <div class="num">
-      <div class="v">49x</div>
-      <div class="l">ROI · Pro Plan</div>
+      <div class="v">30x+</div>
+      <div class="l">目 標 ROI · Pro Plan</div>
     </div>
     <div class="calc">
-      <h3>Pro ¥9,800 で の 試 算</h3>
-      <div class="row"><span>月 送 信 数</span><span>200 件</span></div>
-      <div class="row"><span>反 応 率 (= 平 均)</span><span>13.8% = 27 件</span></div>
-      <div class="row"><span>商 談 化 率</span><span>28% = 7.5 件</span></div>
-      <div class="row"><span>受 注 率</span><span>21% = 1.6 件</span></div>
-      <div class="row"><span>平 均 単 価</span><span>¥300,000</span></div>
-      <div class="row"><span>月 売 上</span><span>¥480,000</span></div>
-      <div class="row"><span>ROI</span><span>49x (= ¥9,800 → ¥480,000)</span></div>
+      <h3>試 算 例 (= Pro ¥9,800)</h3>
+      <div class="row"><span>想 定 送 信</span><span>200 件 / 月</span></div>
+      <div class="row"><span>想 定 反 応 率</span><span>業 界 平 均 3-5%</span></div>
+      <div class="row"><span>想 定 商 談 化</span><span>反 応 の 20-30%</span></div>
+      <div class="row"><span>想 定 受 注</span><span>商 談 の 20-30%</span></div>
+      <div class="row"><span>平 均 単 価 (= B2B SaaS)</span><span>¥300,000</span></div>
+      <div class="row"><span>受 注 1 件</span><span>¥9,800 ROI = 30x</span></div>
+      <div class="row"><span>※ 注 釈</span><span>商 材 / ICP fit に よって 変 動</span></div>
     </div>
   </div>
 </section>
@@ -291,7 +292,7 @@ footer{padding:60px 28px 40px;background:var(--cream);border-top:1px solid var(-
     <details><summary>本 当 に 自動 で 営 業 し て くれる?</summary><div class="a">はい。 Chrome 拡 張 が フォーム を 自動 入 力 + 送 信 し ま す。 reCAPTCHA が 出 た 時 だ け 「私 は ロボット で は ない」 を 1 click し て く だ さ い。 1 件 約 10 秒、 100 件 で 約 17 分 です。</div></details>
     <details><summary>spam に な ら ない?</summary><div class="a">fit score 60 未 満 の 法 人 に は 送 信 し ま せん。 全 文 面 に 「PR · 営 業 連 絡」 表 記 + 配 信 停 止 リンク を 必 ず 入 れ、 同 一 法 人 は 30 日 cooldown 後 に 再 アプローチ。 景 表 法 / 特 電 法 を 完 全 遵 守 で 設 計 し て いま す。</div></details>
     <details><summary>法 律 的 に OK?</summary><div class="a">フォーム 送 信 = 特 定 電 子 メール 法 適 用 外。 個 人 情 報 取 得 し ない (= 会 社 代 表 メール 経 由) ため 個 人 情 報 保 護 法 適 用 外。 弁 護 士 監 修 の 規 約 + opt-out 対 応 + 目 的 明 示 で 安 全 設 計。</div></details>
-    <details><summary>反 応 率 13.8% は 本 当?</summary><div class="a">既 β user 50 名 の 平 均 値 (= 業 界 平 均 3.2%)。 AI が 各 法 人 の LP を 解 析 + 課 題 に fit さ せ た カスタマイズ 文 面 を 個 別 生 成 = テンプレ 文 面 と 比 較 し て 4 倍 の 反 応 率。 結 果 は 商 材 / ICP fit に よって 変 動 し ま す。</div></details>
+    <details><summary>反 応 率 は ど の くら い 出 る?</summary><div class="a"><b>※ 現 在 BETA 開 発 中 で β user 検 証 中</b>。 業 界 平 均 反 応 率 は 3-5% (= フォーム 営 業)。 FormTap は AI が 各 法 人 の LP を 解 析 + 課 題 に fit さ せ た カスタマイズ 文 面 を 個 別 生 成 で きる 設 計 = テンプレ 文 面 より 反 応 率 向 上 を 目 指 し ま す。 実 績 数 値 は β 検 証 完 了 後 に 公 開。 結 果 は 商 材 / ICP fit に よって 変 動。</div></details>
     <details><summary>解 約 は 簡 単?</summary><div class="a">いつ で も dashboard か ら 1 click 解 約 で きま す。 違 約 金 / 解 約 手 数 料 ゼロ。 解 約 後 も 月 末 まで 利 用 可。</div></details>
     <details><summary>既 「MY AI Agent」 user で す が?</summary><div class="a">FormTap は MY AI Agent の 進 化 形 で す。 既 user は <b>Pro 半 年 無 料</b> で 移 行 可能。 詳 し く は dashboard 内 「設 定 → プラン」 から ご 確 認 く だ さ い。</div></details>
   </div>

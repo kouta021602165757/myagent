@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MY Sales Agent — 1 行 で 完 璧 な 顧 客 を 見 つ け る AI</title>
+<meta name="description" content="顧 客 像 を 1 行 入 力 する だ け で AI が 国 内 法 人 + 連 絡 先 + 文 面 + 送 信 を 自動。 営 業 を 雇 う 前 に、 AI を 雇 お う。 BETA 開 発 中 · 限 定 5 名 募 集。">
+<style>
+:root{
+  --cream:#fafaf7;--paper:#ffffff;--wire:rgba(13,79,74,.08);
+  --teal:#0d4f4a;--teal2:#0a3d39;--teal-soft:rgba(13,79,74,.06);
+  --lime:#c0ff5c;--lime-soft:#f7ffe9;--lime-dark:#a3e635;
+  --peach:#fb923c;--peach-dark:#ea580c;
+  --rose:#ef4444;--green:#15803d;--purple:#7c3aed;--amber:#f59e0b;
+  --text:#0a0a0a;--text2:#525252;--text3:#71717a;--text4:#a3a3a3;
+  --mono:'DM Mono',ui-monospace,Menlo,monospace;
+  --sans:'Noto Sans JP','Hiragino Sans','Yu Gothic',-apple-system,system-ui,sans-serif;
+  --serif:'Times New Roman','Hiragino Mincho ProN','Yu Mincho',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:#fff;color:var(--text);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:inherit;border:0;background:transparent}
+
+/* === Topbar === */
+.topbar{position:sticky;top:0;background:rgba(255,255,255,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--wire);padding:14px 28px;display:flex;align-items:center;gap:14px;z-index:50}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:16px;color:var(--teal)}
+.brand-mark{width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900}
+.brand-sub{color:var(--text3);font-size:10px;letter-spacing:.16em;padding:3px 8px;border:1px solid var(--wire);border-radius:4px;margin-left:4px;font-family:var(--mono);background:rgba(255,255,255,.5);font-weight:700}
+.nav{margin-left:auto;display:flex;align-items:center;gap:22px;font-size:13px;font-weight:600;color:var(--text2)}
+.nav a:hover{color:var(--teal)}
+.nav .cta{padding:10px 22px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:99px;font-weight:800;font-size:13px;transition:all .15s}
+.nav .cta:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,79,74,.25)}
+
+/* === Hero === */
+.hero{padding:80px 28px 90px;max-width:1100px;margin:0 auto;text-align:center;background:radial-gradient(ellipse at top,var(--lime-soft) 0%,#fff 60%)}
+.hero .eyebrow{display:inline-flex;align-items:center;gap:8px;background:#fff8e1;border:1px solid #fbbf24;color:#92400e;padding:7px 16px;border-radius:99px;font-size:11.5px;font-weight:800;letter-spacing:.08em;margin-bottom:28px;font-family:var(--mono)}
+.hero .eyebrow .blink{display:inline-block;width:6px;height:6px;border-radius:50%;background:#f59e0b;animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.hero h1{font-family:var(--serif);font-size:clamp(40px,6vw,76px);font-weight:900;line-height:1.05;letter-spacing:-.03em;margin-bottom:26px}
+.hero h1 .accent{color:var(--teal);position:relative;display:inline-block;z-index:1}
+.hero h1 .accent::after{content:'';position:absolute;bottom:6px;left:0;right:0;height:16px;background:var(--lime);z-index:-1;opacity:.8}
+.hero .sub{font-size:18.5px;color:var(--text2);max-width:680px;margin:0 auto 36px;line-height:1.7;letter-spacing:-.005em}
+.hero .sub b{color:var(--teal);font-weight:800}
+
+/* === Big prompt input (= Origami 風 = 1 入 力 で 全 部) === */
+.hero-prompt{max-width:660px;margin:0 auto 12px;background:#fff;border:2px solid var(--teal);border-radius:18px;padding:18px;box-shadow:0 14px 40px rgba(13,79,74,.12)}
+.hero-prompt textarea{width:100%;padding:6px 8px;border:0;font-size:16px;font-family:inherit;resize:none;outline:none;background:transparent;min-height:54px;color:var(--text)}
+.hero-prompt textarea::placeholder{color:var(--text4)}
+.hero-prompt .row{display:flex;align-items:center;gap:8px;padding-top:10px;border-top:1px solid var(--wire)}
+.hero-prompt .opt{padding:6px 12px;background:var(--cream);border:1px solid var(--wire);border-radius:7px;font-family:var(--mono);font-size:11px;color:var(--text2);font-weight:700}
+.hero-prompt .opt:hover{border-color:var(--teal);color:var(--teal)}
+.hero-prompt .go{margin-left:auto;padding:11px 24px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:8px;font-weight:900;font-size:13.5px;letter-spacing:.04em}
+.hero-prompt .go:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(13,79,74,.25)}
+.hero-cta-sub{font-family:var(--mono);font-size:11.5px;color:var(--text3);margin:18px 0 60px}
+.hero-cta-sub b{color:var(--green);font-weight:800}
+
+.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;max-width:880px;margin:0 auto;padding:32px;background:linear-gradient(135deg,var(--teal2),#000);border-radius:16px;color:#fff;box-shadow:0 30px 60px rgba(13,79,74,.18)}
+.hero-stats .stat{text-align:center}
+.hero-stats .v{font-family:var(--serif);font-size:42px;font-weight:900;color:var(--lime);letter-spacing:-.02em;line-height:1}
+.hero-stats .l{font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,.65);letter-spacing:.14em;text-transform:uppercase;margin-top:8px;font-weight:700}
+
+/* === Demo video / mock screenshot === */
+.demo-section{padding:60px 28px;max-width:1100px;margin:0 auto}
+.demo-mock{background:linear-gradient(135deg,var(--cream),#fff);border:1px solid var(--wire);border-radius:16px;padding:30px;box-shadow:0 20px 50px rgba(0,0,0,.04);position:relative;overflow:hidden}
+.demo-mock::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,var(--lime-soft) 0%,transparent 50%);z-index:0}
+.demo-window{background:#fff;border:1px solid var(--wire);border-radius:12px;overflow:hidden;position:relative;z-index:1;display:grid;grid-template-columns:280px 1fr;height:380px}
+.demo-window .chat{background:#fafaf7;border-right:1px solid var(--wire);padding:14px;display:flex;flex-direction:column;gap:10px;font-size:11.5px}
+.demo-window .chat .ti{font-family:var(--mono);font-size:9.5px;color:var(--teal);font-weight:900;letter-spacing:.12em;margin-bottom:4px}
+.demo-window .chat .bubble{background:#fff;border:1px solid var(--wire);border-radius:8px;padding:8px 11px;color:var(--text2);line-height:1.6}
+.demo-window .chat .bubble.user{background:var(--teal);color:#fff;border-color:var(--teal);align-self:flex-end;max-width:90%}
+.demo-window .chat .progress{background:#fff;border:1px solid var(--wire);border-radius:8px;padding:8px 11px;font-family:var(--mono);font-size:10.5px;color:var(--text2);line-height:1.8}
+.demo-window .chat .progress .done{color:var(--green)}
+.demo-window .chat .progress .now{color:var(--amber);font-weight:800}
+.demo-window .chat .progress .pending{opacity:.4}
+.demo-window .sheet{padding:0;overflow:auto}
+.demo-window table{width:100%;border-collapse:collapse;font-size:10.5px}
+.demo-window thead{background:var(--cream);border-bottom:2px solid var(--teal2);position:sticky;top:0}
+.demo-window th{padding:7px 9px;text-align:left;font-family:var(--mono);font-size:9.5px;color:var(--text2);font-weight:900;letter-spacing:.04em;border-right:1px solid var(--wire);text-transform:uppercase}
+.demo-window td{padding:6px 9px;border-top:1px solid var(--wire);border-right:1px solid var(--wire)}
+.demo-window td b{color:var(--text);font-weight:800}
+.demo-window .fit{font-family:var(--mono);font-size:10px;font-weight:900;padding:1px 6px;border-radius:4px;letter-spacing:.04em}
+.demo-window .fit.hi{background:#dcfce7;color:var(--green)}
+.demo-window .fit.mid{background:#fef3c7;color:#92400e}
+
+/* === Section base === */
+section{padding:90px 28px;max-width:1100px;margin:0 auto}
+.s-eyebrow{font-family:var(--mono);font-size:12px;font-weight:900;color:var(--teal);letter-spacing:.22em;text-transform:uppercase;text-align:center;margin-bottom:18px}
+.s-h{font-family:var(--serif);font-size:clamp(32px,4.5vw,54px);font-weight:900;line-height:1.15;letter-spacing:-.025em;text-align:center;margin-bottom:18px}
+.s-p{font-size:16.5px;color:var(--text2);max-width:680px;margin:0 auto 54px;text-align:center;line-height:1.85}
+
+/* === 4 Step === */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.step{background:#fff;border:1px solid var(--wire);border-radius:14px;padding:28px 22px;text-align:left;transition:all .25s;position:relative}
+.step:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(13,79,74,.08);border-color:var(--teal)}
+.step .num{font-family:var(--serif);font-size:54px;font-weight:900;color:var(--lime-dark);line-height:1;margin-bottom:14px;letter-spacing:-.04em}
+.step .ic{position:absolute;top:24px;right:22px;font-size:24px}
+.step h3{font-size:17px;font-weight:900;margin-bottom:10px;color:var(--text);letter-spacing:-.01em}
+.step p{font-size:13px;color:var(--text2);line-height:1.7}
+.step p b{color:var(--teal);font-weight:800}
+
+/* === Data sources === */
+.sources-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.source-card{background:#fff;border:1px solid var(--wire);border-radius:12px;padding:20px;text-align:left}
+.source-card .ic{font-size:28px;margin-bottom:10px}
+.source-card .name{font-weight:900;font-size:14.5px;margin-bottom:5px;color:var(--text)}
+.source-card .num{font-family:var(--serif);font-size:26px;font-weight:900;color:var(--teal);margin-bottom:5px;letter-spacing:-.02em}
+.source-card .desc{font-size:11.5px;color:var(--text3);line-height:1.65}
+
+/* === ROI / Compare === */
+.compare-wrap{max-width:880px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.compare-card{background:#fff;border:1.5px solid var(--wire);border-radius:14px;padding:32px;position:relative}
+.compare-card.bad{opacity:.72}
+.compare-card.good{border-color:var(--teal);background:linear-gradient(135deg,var(--teal2),#000);color:#fff;box-shadow:0 24px 50px rgba(13,79,74,.2)}
+.compare-card .lbl{font-family:var(--mono);font-size:10.5px;font-weight:900;color:var(--text3);letter-spacing:.16em;text-transform:uppercase;margin-bottom:14px}
+.compare-card.good .lbl{color:var(--lime)}
+.compare-card .price{font-family:var(--serif);font-size:48px;font-weight:900;line-height:1;letter-spacing:-.02em;margin-bottom:5px}
+.compare-card.bad .price{color:var(--rose)}
+.compare-card.good .price{color:var(--lime)}
+.compare-card .unit{font-family:var(--mono);font-size:12px;color:var(--text3);font-weight:700}
+.compare-card.good .unit{color:rgba(255,255,255,.7)}
+.compare-card ul{list-style:none;padding:24px 0 0;margin-top:18px;border-top:1px solid var(--wire);display:flex;flex-direction:column;gap:9px}
+.compare-card.good ul{border-color:rgba(255,255,255,.2)}
+.compare-card li{font-size:13px;color:var(--text2);display:flex;gap:8px}
+.compare-card.good li{color:rgba(255,255,255,.85)}
+
+/* === Pricing === */
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1000px;margin:0 auto}
+.price-card{background:#fff;border:1.5px solid var(--wire);border-radius:14px;padding:28px 22px;display:flex;flex-direction:column;transition:all .25s;position:relative}
+.price-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(13,79,74,.08)}
+.price-card.featured{border-color:var(--teal);box-shadow:0 8px 24px rgba(13,79,74,.12);transform:scale(1.03)}
+.price-card.featured::before{content:'⭐ POPULAR';position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--teal);color:#fff;font-family:var(--mono);font-size:10.5px;font-weight:900;padding:5px 12px;border-radius:99px;letter-spacing:.1em;white-space:nowrap}
+.price-card .name{font-family:var(--mono);font-size:11.5px;font-weight:900;color:var(--text3);letter-spacing:.16em;text-transform:uppercase;margin-bottom:14px}
+.price-card .v{font-family:var(--serif);font-size:38px;font-weight:900;color:var(--text);line-height:1;letter-spacing:-.02em}
+.price-card .v .unit{font-size:13px;color:var(--text3);font-family:var(--mono);font-weight:700;letter-spacing:.04em;margin-left:4px}
+.price-card .desc{font-size:12.5px;color:var(--text3);margin-top:8px;min-height:36px;line-height:1.6}
+.price-card ul{list-style:none;padding:18px 0 22px;margin:18px 0;border-top:1px solid var(--wire);border-bottom:1px solid var(--wire);display:flex;flex-direction:column;gap:9px;flex:1}
+.price-card li{font-size:12.5px;color:var(--text2);display:flex;gap:8px}
+.price-card li::before{content:'✓';color:var(--green);font-weight:900;flex-shrink:0}
+.price-card .cta{padding:11px 16px;background:var(--cream);color:var(--text2);border:1px solid var(--wire);border-radius:8px;font-weight:800;font-size:13px;text-align:center}
+.price-card.featured .cta{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border:0}
+
+/* === FAQ === */
+.faq{max-width:780px;margin:0 auto}
+.faq details{background:#fff;border:1px solid var(--wire);border-radius:10px;margin-bottom:8px;overflow:hidden;transition:border-color .15s}
+.faq details:hover{border-color:var(--teal)}
+.faq details summary{padding:18px 22px;font-weight:800;font-size:14.5px;cursor:pointer;display:flex;align-items:center;gap:14px;list-style:none}
+.faq details summary::-webkit-details-marker{display:none}
+.faq details summary::before{content:'Q';background:var(--teal);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0;font-family:var(--mono)}
+.faq details[open] summary::before{background:var(--peach-dark)}
+.faq details .a{padding:0 22px 18px 64px;font-size:13.5px;color:var(--text2);line-height:1.85}
+
+/* === Final CTA === */
+.final-cta{background:linear-gradient(135deg,var(--teal2),#000);color:#fff;padding:90px 28px;text-align:center;border-radius:20px;max-width:1100px;margin:50px auto 100px}
+.final-cta h2{font-family:var(--serif);font-size:clamp(34px,4.5vw,52px);font-weight:900;line-height:1.15;letter-spacing:-.025em;margin-bottom:22px}
+.final-cta p{font-size:17px;color:rgba(255,255,255,.85);margin-bottom:36px;max-width:580px;margin-left:auto;margin-right:auto;line-height:1.75}
+.final-cta .ctabtn{display:inline-block;padding:18px 44px;background:var(--lime);color:var(--teal2);border-radius:99px;font-weight:900;font-size:16px;letter-spacing:.02em;transition:all .2s;box-shadow:0 12px 30px rgba(192,255,92,.3)}
+.final-cta .ctabtn:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(192,255,92,.45)}
+.final-cta .sub{font-size:11.5px;color:rgba(255,255,255,.5);margin-top:18px;font-family:var(--mono);letter-spacing:.06em}
+
+/* === Footer === */
+footer{padding:60px 28px 40px;background:var(--cream);border-top:1px solid var(--wire)}
+.foot-wrap{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:36px}
+.foot-brand p{font-size:12.5px;color:var(--text3);line-height:1.7;max-width:320px;margin-top:14px}
+.foot-col h4{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;font-weight:800}
+.foot-col a{display:block;font-size:13px;color:var(--text2);padding:5px 0;font-weight:600}
+.foot-col a:hover{color:var(--teal)}
+.foot-bot{max-width:1100px;margin:48px auto 0;padding-top:24px;border-top:1px solid var(--wire);display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--text3);font-weight:600;flex-wrap:wrap;gap:14px}
+
+@media(max-width:880px){
+  .hero{padding:60px 20px}
+  .hero h1{font-size:38px}
+  .hero-stats{grid-template-columns:repeat(2,1fr);gap:14px;padding:22px}
+  section{padding:60px 20px}
+  .steps{grid-template-columns:1fr;gap:14px}
+  .sources-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .compare-wrap{grid-template-columns:1fr;gap:14px}
+  .price-grid{grid-template-columns:1fr;gap:14px}
+  .price-card.featured{transform:none}
+  .demo-window{grid-template-columns:1fr;height:auto}
+  .demo-window .chat{border-right:0;border-bottom:1px solid var(--wire)}
+  .foot-wrap{grid-template-columns:1fr 1fr;gap:24px}
+}
+</style>
+</head>
+<body>
+
+<!-- ━━━ TOPBAR ━━━ -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">S</div>
+    <span>MY Sales Agent</span>
+    <span class="brand-sub">v0.1 BETA</span>
+  </div>
+  <div class="nav">
+    <a href="#how">使 い 方</a>
+    <a href="#pricing">料 金</a>
+    <a href="#faq">FAQ</a>
+    <a href="/auth.html">ログ イン</a>
+    <a href="/auth.html" class="cta">無 料 で 試 す →</a>
+  </div>
+</div>
+
+<!-- ━━━ HERO ━━━ -->
+<section class="hero">
+  <div class="eyebrow"><span class="blink"></span> 🚧 BETA 開 発 中 · 限 定 5 名 募 集</div>
+  <h1>1 行 で<br><span class="accent">完 璧 な 顧 客</span> を 見 つ け る。</h1>
+  <p class="sub">「ど ん な 顧 客 が 欲 し い」 を 自然 文 で 入 力 す る だ け。<br>AI が <b>国 内 法 人 500 万 社 + LinkedIn + 採 用 サイト</b> を 巡 回 し、<br>リスト + 連 絡 先 + 文 面 + 送 信 まで <b>全 部 自動</b>。</p>
+
+  <div class="hero-prompt">
+    <textarea placeholder="例: 東 京 の SaaS で 10-50 人 規 模 の 会 社 を 探 し て。 営 業 部 長 か 代 表 直 取 り 希 望。" rows="2"></textarea>
+    <div class="row">
+      <button class="opt">🌐 自社 URL から</button>
+      <button class="opt">📋 業 種 で 絞 る</button>
+      <button class="go">⚡ AI に お 願 い →</button>
+    </div>
+  </div>
+  <div class="hero-cta-sub">無 料 で <b>10 件 試 せ る</b> · クレ カ 不 要 · 1 分 で 開 始</div>
+
+  <div class="hero-stats">
+    <div class="stat"><div class="v">500<span style="font-size:18px;color:rgba(255,255,255,.7)">万 社</span></div><div class="l">国 内 法 人 DB</div></div>
+    <div class="stat"><div class="v">50<span style="font-size:18px;color:rgba(255,255,255,.7)">+</span></div><div class="l">情 報 source</div></div>
+    <div class="stat"><div class="v">5<span style="font-size:18px;color:rgba(255,255,255,.7)">分</span></div><div class="l">setup → 送 信</div></div>
+    <div class="stat"><div class="v">¥4.8K<span style="font-size:18px;color:rgba(255,255,255,.7)">/月</span></div><div class="l">採 用 の 1/160</div></div>
+  </div>
+</section>
+
+<!-- ━━━ DEMO mock ━━━ -->
+<section class="demo-section">
+  <div class="s-eyebrow">▌ ACTUAL UI</div>
+  <h2 class="s-h">入 力 し て、 リスト が 流 れ る だ け。</h2>
+  <p class="s-p">左 で AI に 話 し、 右 に <b>リアル タイム で リード が ポップ イン</b>。 Excel に 慣 れ た 営 業 が そ の ま ま 使 え る シンプル UI。</p>
+
+  <div class="demo-mock">
+    <div class="demo-window">
+      <div class="chat">
+        <div class="ti">▌ AI チャット</div>
+        <div class="bubble user">東 京 の SaaS で 10-50 人 規 模、 営 業 部 長 か 代 表 で。</div>
+        <div class="bubble">承 知。 検 索 中 です。</div>
+        <div class="progress">
+          <div class="done">✓ 国 税 庁 (= 1,247 社)</div>
+          <div class="done">✓ gBizINFO 絞 込 (= 287)</div>
+          <div class="done">✓ 採 用 サイト (= 成 長 中)</div>
+          <div class="now">◌ LinkedIn 担 当 検 索 中</div>
+          <div class="pending">○ メール 検 証</div>
+        </div>
+        <div class="bubble">✓ <b>187 社</b> 用 意 で きま した。 →</div>
+      </div>
+      <div class="sheet">
+        <table>
+          <thead>
+            <tr><th>会 社</th><th>業 種</th><th>規 模</th><th>担 当</th><th>メール</th><th>Fit</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><b>株 ABC</b></td><td>SaaS</td><td>25</td><td>田 中 (部 長)</td><td style="color:var(--green)">✓</td><td><span class="fit hi">87</span></td></tr>
+            <tr><td><b>DEF テクノロジー</b></td><td>SaaS</td><td>42</td><td>佐 藤 (CTO)</td><td style="color:var(--green)">✓</td><td><span class="fit hi">82</span></td></tr>
+            <tr><td><b>株 GHI</b></td><td>受 託</td><td>15</td><td>山 田 (代 表)</td><td style="color:var(--green)">✓</td><td><span class="fit mid">78</span></td></tr>
+            <tr><td><b>XYZ コーポ</b></td><td>SaaS</td><td>38</td><td>鈴 木 (部 長)</td><td style="color:var(--green)">✓</td><td><span class="fit mid">79</span></td></tr>
+            <tr><td><b>株 JKL</b></td><td>広 告</td><td>8</td><td>高 橋 (代 表)</td><td style="color:var(--green)">✓</td><td><span class="fit mid">75</span></td></tr>
+            <tr><td><b>MNO Sol.</b></td><td>SaaS</td><td>55</td><td>渡 辺 (CTO)</td><td style="color:var(--green)">✓</td><td><span class="fit mid">73</span></td></tr>
+            <tr><td><b>株 PQR</b></td><td>受 託</td><td>22</td><td>伊 藤 (代 表)</td><td style="color:var(--green)">✓</td><td><span class="fit mid">71</span></td></tr>
+            <tr><td><b>STU テック</b></td><td>SaaS</td><td>12</td><td>中 村 (CEO)</td><td style="color:var(--text4)">—</td><td><span class="fit mid">68</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ━━━ 4 STEP ━━━ -->
+<section id="how">
+  <div class="s-eyebrow">▌ HOW IT WORKS</div>
+  <h2 class="s-h">入 力 → 5 分 後 に、<br>営 業 が 動 き 出 す。</h2>
+  <p class="s-p">複 雑 な 設 定 ゼロ。 1 つ の prompt から AI が 4 step を 全 部 自動。</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="num">01</div>
+      <span class="ic">💬</span>
+      <h3>顧 客 像 を 1 行 で</h3>
+      <p>「東 京 の SaaS で 10-50 人」 等 を <b>自然 文 で 入 力</b>。 自社 URL を 入 れ れば 自動 で ICP 推 定。</p>
+    </div>
+    <div class="step">
+      <div class="num">02</div>
+      <span class="ic">🔍</span>
+      <h3>AI が 50+ source 巡 回</h3>
+      <p>国 税 庁 + gBizINFO + LinkedIn + 採 用 サイト 等 を リアル タイム 検 索。 <b>「今 何 を 見 て いる か」 が 可 視 化</b>。</p>
+    </div>
+    <div class="step">
+      <div class="num">03</div>
+      <span class="ic">📨</span>
+      <h3>連 絡 先 + 文 面 自動 生 成</h3>
+      <p>メール 5 社 検 証 + 電 話 9 社 検 証。 各 法 人 に <b>カスタマイズ 文 面</b> を AI が 生 成。</p>
+    </div>
+    <div class="step">
+      <div class="num">04</div>
+      <span class="ic">⚡</span>
+      <h3>あ なた の メール で 送 信</h3>
+      <p>Gmail / Outlook 連 携。 <b>your own domain</b> で 安 全 に 送 信。 反 応 来 たら 全 チャネル 自動 停 止。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ━━━ DATA SOURCES ━━━ -->
+<section>
+  <div class="s-eyebrow">▌ DATA SOURCES</div>
+  <h2 class="s-h">国 内 法 人 500 万 社 から、<br>正 確 に 拾 う。</h2>
+  <p class="s-p">国 内 法 人 DB と LinkedIn + 採 用 サイト を <b>リアル タイム 検 索</b>。 古 い data な し、 全 部 最 新。</p>
+
+  <div class="sources-grid">
+    <div class="source-card">
+      <div class="ic">🏛️</div>
+      <div class="name">国 税 庁 法 人 番 号 DB</div>
+      <div class="num">500 万</div>
+      <div class="desc">国 内 全 法 人 + 住 所 + 設 立。 公 式 API。</div>
+    </div>
+    <div class="source-card">
+      <div class="ic">📊</div>
+      <div class="name">gBizINFO</div>
+      <div class="num">業 種 別</div>
+      <div class="desc">経 産 省 = 業 種 + 上 場 + 補 助 金 + 業 績。</div>
+    </div>
+    <div class="source-card">
+      <div class="ic">💼</div>
+      <div class="name">LinkedIn / Wantedly</div>
+      <div class="num">担 当 者</div>
+      <div class="desc">役 員 + 営 業 部 長 + 採 用 担 当 を 検 出。</div>
+    </div>
+    <div class="source-card">
+      <div class="ic">📨</div>
+      <div class="name">メール / 電 話 検 証</div>
+      <div class="num">14 社</div>
+      <div class="desc">5 社 waterfall + 電 話 9 社 で 検 証 済。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ━━━ COMPARE ━━━ -->
+<section>
+  <div class="s-eyebrow">▌ COMPARE</div>
+  <h2 class="s-h">営 業 1 人 雇 う お 金 で、<br><span style="color:var(--teal)">AI を 14 年 動 か せる</span>。</h2>
+
+  <div class="compare-wrap">
+    <div class="compare-card bad">
+      <div class="lbl">📋 営 業 採 用</div>
+      <div class="price">¥800K</div>
+      <div class="unit">/ 月 · 1 人</div>
+      <ul>
+        <li>⏱ 採 用 3 ヶ月</li>
+        <li>🎓 教 育 6 ヶ月</li>
+        <li>💔 離 職 リスク 30%</li>
+        <li>😴 動 く 8h / 日</li>
+        <li>⚖ 労 基 / ハラスメント リスク</li>
+      </ul>
+    </div>
+    <div class="compare-card good">
+      <div class="lbl">🤖 MY Sales Agent</div>
+      <div class="price">¥4.8K</div>
+      <div class="unit">/ 月</div>
+      <ul>
+        <li>⚡ 採 用 <b>5 分</b></li>
+        <li>🎯 教 育 <b>な し</b></li>
+        <li>💪 離 職 <b>0%</b></li>
+        <li>🔄 動 く <b>24h / 日</b></li>
+        <li>✅ 法 律 リスク <b>な し</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ━━━ PRICING ━━━ -->
+<section id="pricing">
+  <div class="s-eyebrow">▌ PRICING</div>
+  <h2 class="s-h">シンプル な 料 金</h2>
+  <p class="s-p">クレ カ 不 要 で Free から 開 始。 unlimited 送 信 + unlimited アカウント。</p>
+
+  <div class="price-grid">
+    <div class="price-card">
+      <div class="name">FREE</div>
+      <div class="v">¥0<span class="unit">/月</span></div>
+      <div class="desc">ま ず 試 し たい 個 人 向 け</div>
+      <ul>
+        <li>リード 10 件 / 月</li>
+        <li>AI 文 面 確 認</li>
+        <li>手 動 送 信</li>
+        <li>1 ワーク スペース</li>
+      </ul>
+      <a href="/auth.html" class="cta">無 料 で 始 め る</a>
+    </div>
+    <div class="price-card featured">
+      <div class="name">STARTER</div>
+      <div class="v">¥4,800<span class="unit">/月</span></div>
+      <div class="desc">B2B SaaS · 受 託 · 個 人 事 業 (= 推 奨)</div>
+      <ul>
+        <li>リード 2,000 件 / 月</li>
+        <li>unlimited 送 信</li>
+        <li>unlimited メール アカウント</li>
+        <li>営 業 NG 検 出</li>
+        <li>業 種 別 AI 文 面</li>
+        <li>統 合 inbox</li>
+      </ul>
+      <a href="/auth.html" class="cta">Starter で 始 め る →</a>
+    </div>
+    <div class="price-card">
+      <div class="name">BUSINESS</div>
+      <div class="v">¥19,800<span class="unit">/月</span></div>
+      <div class="desc">中 堅 営 業 部 · スタート アップ</div>
+      <ul>
+        <li>リード 10,000 件 / 月</li>
+        <li>multi-account (= 3 user)</li>
+        <li>HubSpot / Salesforce 連 携</li>
+        <li>A/B テスト</li>
+        <li>専 任 サポート</li>
+      </ul>
+      <a href="/auth.html" class="cta">Business で 始 め る</a>
+    </div>
+  </div>
+</section>
+
+<!-- ━━━ FAQ ━━━ -->
+<section id="faq">
+  <div class="s-eyebrow">▌ FAQ</div>
+  <h2 class="s-h">よ く あ る 質 問</h2>
+
+  <div class="faq">
+    <details><summary>本 当 に URL 入 力 だ け で 動 く?</summary><div class="a">はい。 自然 文 で 「ど ん な 顧 客 が 欲 し い」 を 説 明 する か、 自社 URL を 入 れ る だ け で AI が ICP を 自動 推 論 し、 国 内 500 万 社 から 該 当 法 人 + 連 絡 先 を 5 分 以 内 で 用 意 し ま す。</div></details>
+    <details><summary>送 信 は user の メール で?</summary><div class="a">はい。 Gmail / Outlook 連 携 で <b>your own domain</b> から 送 信 し ま す。 SendGrid 等 共 有 IP は 使 わ ない の で deliverability を 保 護。 spam フォルダ に 入 る リスク を 最 小 化 し て いま す。</div></details>
+    <details><summary>spam に な ら ない?</summary><div class="a">「営 業 お 断 り」 文 言 を フォーム / LP / 利 用 規 約 から AI が 自動 検 出 し、 該 当 法 人 は skip し ま す。 fit score 60 未 満 も 送 信 ブロック。 同 一 法 人 30 日 cooldown + 全 文 面 に opt-out リンク 必 須 で 安 全 設 計。</div></details>
+    <details><summary>法 律 的 に OK?</summary><div class="a">フォーム 送 信 は 特 定 電 子 メール 法 適 用 外。 user の メール アカウント から 送 信 する ため deliverability 法 違 反 リスク な し。 弁 護 士 監 修 の 規 約 + opt-out 対 応 + 目 的 明 示 で 安 全 設 計。</div></details>
+    <details><summary>反 応 率 は ど の くら い?</summary><div class="a"><b>※ 現 在 BETA 開 発 中</b>。 業 界 平 均 反 応 率 は 3-5%。 AI が 業 種 + 課 題 に fit さ せ た 個 別 文 面 を 生 成 する 設 計 で、 テンプレ 文 面 よ り 反 応 率 向 上 を 目 指 し て いま す。 β 検 証 後 に 実 績 公 開。</div></details>
+    <details><summary>解 約 は 簡 単?</summary><div class="a">いつ で も dashboard か ら 1 click 解 約 で きま す。 違 約 金 / 解 約 手 数 料 ゼロ。 解 約 後 も 月 末 まで 利 用 可。</div></details>
+  </div>
+</section>
+
+<!-- ━━━ FINAL CTA ━━━ -->
+<div class="final-cta">
+  <h2>今 日 か ら、 AI Sales Agent を 雇 お う。</h2>
+  <p>無 料 で 10 件 試 せる · クレ カ 不 要 · 1 分 で 開 始。<br>営 業 採 用 の 1/160 価 格、 24h 動 き 続 け ま す。</p>
+  <a href="/auth.html" class="ctabtn">⚡ 無 料 で 試 す →</a>
+  <div class="sub">SETUP IN 60 SECONDS · NO CREDIT CARD</div>
+</div>
+
+<!-- ━━━ FOOTER ━━━ -->
+<footer>
+  <div class="foot-wrap">
+    <div class="foot-brand">
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <span>MY Sales Agent</span>
+      </div>
+      <p>「ど ん な 顧 客 が 欲 し い」 を 1 行 で 入 力 する だ け で、 AI が 国 内 法 人 + 連 絡 先 + 文 面 + 送 信 ま で 全 部 自動。</p>
+    </div>
+    <div class="foot-col">
+      <h4>プロダクト</h4>
+      <a href="#how">使 い 方</a>
+      <a href="#pricing">料 金</a>
+      <a href="#faq">FAQ</a>
+      <a href="/auth.html">ログ イン</a>
+    </div>
+    <div class="foot-col">
+      <h4>会 社</h4>
+      <a href="#">About</a>
+      <a href="#">Blog</a>
+      <a href="mailto:support@myaiagents.agency">お 問 い 合 わ せ</a>
+    </div>
+    <div class="foot-col">
+      <h4>法 律</h4>
+      <a href="/privacy.html">プライバシー</a>
+      <a href="/terms.html">利 用 規 約</a>
+      <a href="/tokushoho.html">特 定 商 取 引 法</a>
+    </div>
+  </div>
+  <div class="foot-bot">
+    <span>© 2026 MY Sales Agent · Protocol Co., Ltd.</span>
+    <span>v0.1 BETA · Powered by AI</span>
+  </div>
+</footer>
+
+</body>
+</html>

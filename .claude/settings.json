@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m ' *)",
+      "Bash(sed -i.bak 's|_mediaGenerateHeroImage\\(article\\\\.title, ag\\\\.media\\\\.template\\)|_mediaGenerateHeroImage\\({ title: article.title, category_name: article.category_name }, ag.media\\)|g; s|_mediaGenerateHeroImage\\(article\\\\.title, agent\\\\.media\\\\.template\\)|_mediaGenerateHeroImage\\({ title: article.title, category_name: article.category_name }, agent.media\\)|g' /Users/takeuchikouta/Desktop/myagent/server/index.js *)",
+      "Bash(python3 -c ' *)",
+      "Bash(date -j -f '%H:%M:%S' '01:05:19' +%s)",
+      "Bash(echo \"$\\(date +%s\\) - $\\(date -j -f '%H:%M:%S' '01:05:19' +%s || date -d '01:05:19' +%s || echo 0\\)\")",
+      "Bash(echo \"経過: $\\(echo \"$\\(date +%s\\) - $\\(date -j -f '%H:%M:%S' '01:05:19' +%s || date -d '01:05:19' +%s || echo 0\\)\")",
+      "Bash(node /tmp/edit_block.js)",
+      "Bash(cat /private/tmp/claude-501/-Users-takeuchikouta-Desktop-myagent/7608368b-afe1-49e6-9152-1b18daac6993/tasks/bx7gh1jn1.output *)",
+      "Bash(SUPA_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpoZGZodmJ2bGNoeWR6c2V0dmZxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzMxNjYwNiwiZXhwIjoyMDkyODkyNjA2fQ.1ciTyYLkjCWLBkzIRqIkeraCad-tKBbi-5HEBkv6dAE\" *)",
+      "Bash(date +\"%H:%M:%S *)",
+      "Bash(sed -i.bak 's|const mediaCatRoute = pathname.match|const mediaCatRoute = effectivePath.match|; s|const mediaPostRoute = pathname.match|const mediaPostRoute = effectivePath.match|; s|const mediaIndexRoute = pathname.match|const mediaIndexRoute = effectivePath.match|' /Users/takeuchikouta/Desktop/myagent/server/index.js && rm /Users/takeuchikouta/Desktop/myagent/server/index.js.bak *)",
+      "Bash(dig +short myaiagents.agency)",
+      "Bash(nslookup myaiagents.agency)",
+      "Bash(dig +short CNAME myaiagents.agency)",
+      "Bash(dig +short test.myaiagents.agency)",
+      "Bash(dig +short media-blog.myaiagents.agency)",
+      "Bash(dig +short CAA myaiagents.agency)",
+      "Bash(dig +short TXT _cf-custom-hostname.myaiagents.agency)",
+      "Bash(dig +short TXT _acme-challenge.myaiagents.agency)",
+      "Bash(dig @8.8.8.8 +short media-blog.myaiagents.agency)",
+      "Bash(dig @1.1.1.1 +short media-blog.myaiagents.agency)",
+      "Bash(dig @8.8.8.8 +short test.myaiagents.agency CNAME)",
+      "Bash(dig @8.8.8.8 +short AAAA test.myaiagents.agency)",
+      "Bash(openssl s_client -servername media-blog.myaiagents.agency -connect media-blog.myaiagents.agency:443)",
+      "Bash(openssl x509 *)"
+    ],
+    "additionalDirectories": [
+      "/Users/takeuchikouta/Desktop/myagent/server",
+      "/tmp",
+      "/private/tmp"
+    ]
+  }
+}

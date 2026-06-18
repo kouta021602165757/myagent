@@ -36136,7 +36136,7 @@ const server=http.createServer(async(req,res)=>{
   // /lp-en → serve lp.html (= same content、 JS が pathname を見て EN を default に)
   // /app, /dashboard (no .html) → app.html (= clean URL post-login)
   let resolved = pathname;
-  if(resolved === '/') resolved = 'lp.html';
+  if(resolved === '/') resolved = 'index.html';  // 🆕 FormTap LP に 切 替 (= 旧 lp.html は legacy)
   else if(resolved === '/lp-en' || resolved === '/lp-en/' || resolved === '/en' || resolved === '/en/') resolved = 'lp.html';
   else if(resolved === '/app' || resolved === '/app/' || resolved === '/dashboard' || resolved === '/dashboard/') resolved = 'app.html';
   // /store hidden 2026-05-24 (一旦非表示) — redirect to home

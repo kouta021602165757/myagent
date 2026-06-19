@@ -3,19 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MY AI Sales — AI 営業 部 が 動 く</title>
+<title>MY Sales Agent — AI が 営 業 リスト + 連 絡 + 送 信 を 自動</title>
 <style>
 :root{
-  --cream:#fafaf7; --paper:#ffffff; --wire:rgba(13,79,74,.08);
-  --teal:#0d4f4a; --teal2:#0a3d39; --teal-soft:rgba(13,79,74,.06); --teal-line:rgba(13,79,74,.18);
-  --lime:#c0ff5c; --lime-soft:#f7ffe9; --lime-dark:#a3e635;
-  --peach:#fb923c; --peach-soft:#fff7ed; --peach-dark:#ea580c;
-  --rose:#ef4444; --rose-soft:#fef2f2;
-  --green:#15803d; --green-soft:#dcfce7;
-  --purple:#7c3aed; --purple-soft:#f5f3ff;
-  --amber:#f59e0b; --amber-soft:#fffbeb;
-  --text:#1a1a1a; --text2:#525252; --text3:#71717a; --text4:#a3a3a3;
-  --mono:'DM Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --cream:#fafaf7;--paper:#ffffff;--wire:rgba(13,79,74,.08);
+  --teal:#0d4f4a;--teal2:#0a3d39;--teal-soft:rgba(13,79,74,.06);
+  --lime:#c0ff5c;--lime-soft:#f7ffe9;--lime-dark:#a3e635;
+  --peach:#fb923c;--peach-dark:#ea580c;
+  --rose:#ef4444;--green:#15803d;--purple:#7c3aed;--amber:#f59e0b;
+  --text:#1a1a1a;--text2:#525252;--text3:#71717a;--text4:#a3a3a3;
+  --mono:'DM Mono',ui-monospace,Menlo,monospace;
   --sans:'Noto Sans JP','Hiragino Sans','Yu Gothic',-apple-system,system-ui,sans-serif;
   --serif:'Times New Roman','Hiragino Mincho ProN','Yu Mincho',serif;
 }
@@ -26,325 +23,170 @@ button,input,textarea,select{font-family:inherit;font-size:inherit;color:inherit
 button{cursor:pointer;background:transparent;border:0}
 a{color:inherit;text-decoration:none}
 
-/* === Layout === */
-.layout{display:grid;grid-template-columns:240px 1fr 380px;grid-template-rows:56px 1fr;height:100vh;overflow:hidden}
-.topbar{grid-column:1/-1;grid-row:1;display:flex;align-items:center;gap:14px;padding:0 18px;border-bottom:1px solid var(--wire);background:rgba(255,255,255,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:5}
-.sb{grid-column:1;grid-row:2;background:rgba(255,255,255,.6);border-right:1px solid var(--wire);padding:14px 12px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
-.main{grid-column:2;grid-row:2;padding:20px 24px;overflow-y:auto;overflow-x:hidden;background:var(--cream);display:flex;flex-direction:column;gap:18px}
-.chat{grid-column:3;grid-row:2;background:rgba(255,255,255,.7);border-left:1px solid var(--wire);display:flex;flex-direction:column;overflow:hidden}
+/* === Layout: 2 ペイン (= chat 左 + spreadsheet 右) === */
+.layout{display:grid;grid-template-columns:380px 1fr;grid-template-rows:54px 1fr;height:100vh;overflow:hidden}
+.topbar{grid-column:1/-1;grid-row:1;display:flex;align-items:center;gap:14px;padding:0 18px;border-bottom:1px solid var(--wire);background:rgba(255,255,255,.85);backdrop-filter:blur(16px);z-index:5}
+.chat-pane{grid-column:1;grid-row:2;background:#fff;border-right:1px solid var(--wire);display:flex;flex-direction:column;overflow:hidden}
+.sheet-pane{grid-column:2;grid-row:2;background:#fff;overflow:hidden;display:flex;flex-direction:column}
 
 /* === Topbar === */
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:14px}
-.brand-mark{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900}
+.brand-mark{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900}
 .brand-name{color:var(--teal);letter-spacing:-.01em}
 .brand-sub{color:var(--text3);font-size:10px;letter-spacing:.16em;padding:3px 7px;border:1px solid var(--wire);border-radius:4px;margin-left:4px;font-family:var(--mono);background:rgba(255,255,255,.5)}
 .plan-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,var(--lime-soft),#fff8e1);border:1px solid var(--lime);color:var(--green);font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:5px;letter-spacing:.04em;font-family:var(--mono)}
-.top-time{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:14px}
+.tab-bar{display:flex;gap:2px;margin-left:18px;flex:1}
+.tab-bar .tab{padding:8px 16px;font-family:var(--mono);font-size:11.5px;color:var(--text3);font-weight:700;border-radius:7px;letter-spacing:.04em;cursor:pointer;transition:all .15s}
+.tab-bar .tab.active{background:var(--teal);color:#fff}
+.tab-bar .tab:hover:not(.active){background:var(--cream);color:var(--text2)}
+.top-time{font-family:var(--mono);font-size:11px;color:var(--text2);display:flex;align-items:center;gap:14px}
 .top-time .blink{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);animation:blink 1.5s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
-.top-btn{padding:6px 12px;border:1px solid var(--wire);border-radius:6px;font-family:var(--mono);font-size:11px;color:var(--text2);transition:all .15s;background:#fff}
+.top-btn{padding:6px 12px;border:1px solid var(--wire);border-radius:6px;font-family:var(--mono);font-size:11px;color:var(--text2);background:#fff}
 .top-btn:hover{border-color:var(--teal);color:var(--teal)}
-.top-icon-btn{width:34px;height:34px;border-radius:7px;border:1px solid var(--wire);background:#fff;position:relative;font-size:15px}
-.top-icon-btn:hover{border-color:var(--teal)}
-.top-badge{position:absolute;top:-2px;right:-2px;background:var(--rose);color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:8px;font-family:var(--mono)}
-.avatar-btn{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--lime),var(--lime-dark));color:var(--teal2);font-weight:900;font-size:14px}
+.avatar-btn{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--lime),var(--lime-dark));color:var(--teal2);font-weight:900;font-size:14px}
 
-/* === Sidebar === */
-/* URL switcher (= 旧 MY AI Agent の site switcher を 継 承) */
-.site-switch{position:relative;margin-bottom:10px}
-.site-btn{width:100%;padding:11px 12px;border-radius:9px;background:var(--paper);border:1px solid var(--wire);display:flex;align-items:center;gap:10px;text-align:left;transition:all .15s;cursor:pointer}
-.site-btn:hover{border-color:var(--teal-line);background:var(--teal-soft)}
-.site-btn.open{border-color:var(--teal);background:var(--teal-soft)}
-.site-logo{width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0}
-.site-logo.purple{background:linear-gradient(135deg,var(--purple),#a78bfa)}
-.site-logo.amber{background:linear-gradient(135deg,var(--amber),var(--peach))}
-.site-info{flex:1;min-width:0;overflow:hidden}
-.site-name{font-size:12.5px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.005em}
-.site-url{font-family:var(--mono);font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
-.site-caret{color:var(--text3);font-size:9px;transition:transform .2s}
-.site-btn.open .site-caret{transform:rotate(180deg)}
-.site-dd{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--paper);border:1px solid var(--wire);border-radius:10px;box-shadow:0 8px 28px rgba(13,79,74,.12);padding:6px;z-index:20;display:none}
-.site-dd.show{display:block;animation:fadeDown .18s ease}
-@keyframes fadeDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-.site-opt{padding:9px 10px;border-radius:7px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .12s}
-.site-opt:hover{background:var(--cream)}
-.site-opt.active{background:var(--teal-soft)}
-.site-opt-check{margin-left:auto;color:var(--teal);font-weight:900;opacity:0;font-size:13px}
-.site-opt.active .site-opt-check{opacity:1}
-.site-dd-sep{height:1px;background:var(--wire);margin:5px 6px}
-.site-dd-add{padding:9px 10px;border-radius:7px;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--teal);font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.04em}
-.site-dd-add:hover{background:var(--teal-soft)}
-
-.primary-cta{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border-radius:10px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;text-align:left;transition:all .15s;box-shadow:0 2px 8px rgba(13,79,74,.18);margin-bottom:4px;position:relative;overflow:hidden}
-.primary-cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(13,79,74,.28)}
-.primary-cta .ic{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.primary-cta .ti{font-weight:800;font-size:13px}
-.primary-cta .sb-t{font-family:var(--mono);font-size:10px;opacity:.78;margin-top:1px}
-.sb-section{padding:8px 10px 4px;font-family:var(--mono);font-size:9.5px;color:var(--text3);letter-spacing:.14em;font-weight:700;margin-top:6px}
-.nav-btn{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:var(--text2);transition:all .12s;font-size:13px;font-weight:600;width:100%;text-align:left}
-.nav-btn .ic{font-size:15px;flex-shrink:0;width:18px;text-align:center}
-.nav-btn .nav-badge{margin-left:auto;background:var(--lime-soft);color:var(--green);font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:8px;font-family:var(--mono)}
-.nav-btn:hover{background:var(--teal-soft);color:var(--teal)}
-.nav-btn.active{background:var(--teal);color:#fff;font-weight:800}
-.nav-btn.active .nav-badge{background:rgba(255,255,255,.22);color:#fff}
-
-.plan-card{margin:10px 4px 4px;padding:12px 14px;background:linear-gradient(135deg,var(--lime-soft),#fff);border:1px solid var(--lime);border-radius:10px;font-family:var(--mono);font-size:11px;color:var(--green);font-weight:700}
-.plan-card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.plan-card .bar{height:5px;background:rgba(13,79,74,.1);border-radius:99px;overflow:hidden;margin-top:8px}
-.plan-card .bar-fill{height:100%;background:linear-gradient(90deg,var(--lime-dark),var(--green));border-radius:99px;width:42%}
-.plan-card .sub{font-size:9.5px;color:var(--text3);margin-top:7px;font-weight:600}
-
-.sb-search{margin-top:auto;padding:7px 4px}
-.sb-search input{width:100%;padding:8px 12px;background:rgba(255,255,255,.6);border:1px solid var(--wire);border-radius:7px;font-size:12px;color:var(--text2);font-family:var(--mono);outline:none}
-.sb-search input::placeholder{color:var(--text4)}
-
-/* === Main === */
-.view{display:none}
-.view.show{display:flex;flex-direction:column;gap:18px}
-.crumbs{display:flex;align-items:baseline;gap:14px;padding-bottom:14px;border-bottom:1px solid var(--wire);margin-bottom:4px}
-.crumb-h1{font-size:22px;font-weight:900;color:var(--text);letter-spacing:-.02em}
-.crumb{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
-
-/* mb block (= shared section card) */
-.mb-block{background:var(--paper);border:1px solid var(--wire);border-radius:12px;padding:18px 22px;box-shadow:0 1px 2px rgba(13,79,74,.03);transition:box-shadow .2s}
-.mb-block:hover{box-shadow:0 2px 8px rgba(13,79,74,.06)}
-.mb-block-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.mb-block-title{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;font-weight:700}
-.mb-block-title .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);display:inline-block}
-.mb-block-right{font-family:var(--mono);font-size:10.5px;color:var(--text3)}
-
-/* stat 4 col */
-.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.stat-card{background:var(--paper);border:1px solid var(--wire);border-radius:12px;padding:16px 18px;transition:all .2s}
-.stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(13,79,74,.06)}
-.stat-card .label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;font-weight:700}
-.stat-card .v{font-size:30px;font-weight:900;color:var(--text);letter-spacing:-.02em;line-height:1.1}
-.stat-card .sub{font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono)}
-.stat-card.purple{background:linear-gradient(135deg,#faf5ff 0%,#fff 100%)}
-.stat-card.purple .v{background:linear-gradient(135deg,var(--purple),#9333ea);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.stat-card.lime{background:linear-gradient(135deg,var(--lime-soft) 0%,#fff 100%)}
-.stat-card.lime .v{background:linear-gradient(135deg,var(--lime-dark),var(--green));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.stat-card.peach{background:linear-gradient(135deg,var(--peach-soft) 0%,#fff 100%)}
-.stat-card.peach .v{background:linear-gradient(135deg,var(--peach),var(--peach-dark));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-
-/* hero result card */
-.hero-result{background:linear-gradient(135deg,var(--teal2) 0%,var(--teal) 60%,#000 100%);color:#fff;padding:30px 36px;border-radius:14px;display:flex;align-items:center;gap:24px}
-.hero-result .v-big{font-family:var(--serif);font-size:54px;font-weight:900;letter-spacing:-.02em;line-height:1;color:var(--lime)}
-.hero-result .meta{flex:1}
-.hero-result .meta .ti{font-size:11px;font-family:var(--mono);letter-spacing:.18em;color:var(--lime);font-weight:800;margin-bottom:6px;text-transform:uppercase}
-.hero-result .meta .desc{font-size:17px;font-weight:800;line-height:1.4;letter-spacing:-.01em}
-.hero-result .meta .sub{font-size:12.5px;color:rgba(255,255,255,.7);margin-top:8px}
-.hero-result button{background:#fff;color:var(--teal2);padding:11px 22px;border-radius:8px;font-weight:900;font-size:13px;letter-spacing:.04em}
-
-/* AI team working cards */
-.team-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.team-card{background:var(--paper);border:1px solid var(--wire);border-radius:10px;padding:14px 16px;transition:all .15s;cursor:pointer}
-.team-card:hover{border-color:var(--teal);transform:translateY(-2px)}
-.team-card .state{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.08em;text-transform:uppercase;font-weight:800;margin-bottom:8px}
-.team-card .state .pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 1.5s infinite}
-.team-card.purple .state{color:var(--purple)}
-.team-card.purple .state .pulse{background:var(--purple);box-shadow:0 0 6px var(--purple)}
-.team-card.amber .state{color:var(--amber)}
-.team-card.amber .state .pulse{background:var(--amber);box-shadow:0 0 6px var(--amber)}
-.team-card .ti{font-size:13.5px;font-weight:800;color:var(--text);line-height:1.4;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.team-card .meta{font-size:11px;color:var(--text3);margin-bottom:8px}
-.team-card .bar{height:4px;background:rgba(13,79,74,.08);border-radius:99px;overflow:hidden}
-.team-card .bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--lime-dark));border-radius:99px;transition:width .3s}
-.team-card.purple .bar-fill{background:linear-gradient(90deg,var(--purple),#a78bfa)}
-.team-card.amber .bar-fill{background:linear-gradient(90deg,var(--amber),var(--peach))}
-
-/* feed */
-.feed{display:flex;flex-direction:column}
-.feed-row{display:grid;grid-template-columns:60px 100px 1fr auto;gap:12px;align-items:center;padding:10px 4px;border-top:1px solid var(--wire);font-size:13px}
-.feed-row:first-child{border-top:0}
-.feed-time{font-family:var(--mono);font-size:11px;color:var(--text3)}
-.feed-tag{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--green);background:var(--green-soft);padding:3px 8px;border-radius:5px;text-transform:uppercase;text-align:center}
-.feed-tag.red{color:var(--rose);background:var(--rose-soft)}
-.feed-tag.amber{color:var(--amber);background:var(--amber-soft)}
-.feed-tag.purple{color:var(--purple);background:var(--purple-soft)}
-.feed-msg{color:var(--text2);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
-.feed-link{font-family:var(--mono);font-size:11px;color:var(--teal);font-weight:700}
-
-/* progress strip (today) */
-.today-strip{background:linear-gradient(135deg,var(--lime-soft) 0%,#fff 100%);border:1px solid var(--lime);border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:18px}
-.today-strip .ic-big{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--lime),var(--lime-dark));display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
-.today-strip .info{flex:1}
-.today-strip .ti{font-weight:800;font-size:14px;color:var(--teal2);margin-bottom:4px}
-.today-strip .sub{font-size:11.5px;color:var(--text3);font-family:var(--mono)}
-.today-strip .right-stat{text-align:right;font-family:var(--mono)}
-.today-strip .right-stat .v{font-size:24px;font-weight:900;color:var(--teal2);line-height:1}
-.today-strip .right-stat .l{font-size:10px;color:var(--text3);margin-top:3px;letter-spacing:.08em;text-transform:uppercase}
-
-/* === ペルソナ view === */
-.persona-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.persona-card{background:var(--paper);border:1px solid var(--wire);border-radius:10px;padding:14px 16px}
-.persona-card .lbl{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;font-weight:700}
-.persona-tags{display:flex;flex-wrap:wrap;gap:6px}
-.persona-tag{background:var(--teal-soft);color:var(--teal2);padding:5px 11px;border-radius:99px;font-size:12px;font-weight:700;border:1px solid var(--teal-line)}
-.persona-tag.removable{cursor:pointer}
-.persona-tag.removable::after{content:' ×';opacity:.5}
-.persona-tag-add{background:var(--cream);color:var(--text3);padding:5px 11px;border-radius:99px;font-size:12px;font-weight:700;border:1px dashed var(--wire);cursor:pointer}
-.persona-tag-add:hover{border-color:var(--teal);color:var(--teal)}
-
-.url-input{display:flex;gap:10px;padding:18px 20px;background:linear-gradient(135deg,var(--lime-soft),#fff);border:1.5px solid var(--lime);border-radius:12px;align-items:center}
-.url-input input{flex:1;padding:11px 14px;border:1px solid var(--wire);border-radius:8px;font-size:13.5px;background:#fff;outline:none}
-.url-input input:focus{border-color:var(--teal)}
-.url-input button{padding:11px 20px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:8px;font-weight:900;font-size:13px;letter-spacing:.04em}
-.url-input button:hover{transform:translateY(-1px)}
-
-/* === 法人リスト view === */
-.filter-bar{display:flex;gap:10px;align-items:center;padding:12px 16px;background:var(--paper);border:1px solid var(--wire);border-radius:10px}
-.filter-bar .lbl{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-right:4px}
-.filter-bar select,.filter-bar input{padding:7px 11px;border:1px solid var(--wire);border-radius:6px;font-size:12px;background:#fff;outline:none;color:var(--text2)}
-.filter-bar .ct{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--text2);font-weight:700}
-.filter-bar .ct b{color:var(--teal2);font-weight:900}
-
-.company-row{display:grid;grid-template-columns:1fr auto auto auto auto;gap:14px;align-items:center;padding:14px 20px;background:var(--paper);border:1px solid var(--wire);border-radius:10px;transition:all .15s;cursor:pointer}
-.company-row:hover{border-color:var(--teal);box-shadow:0 4px 14px rgba(13,79,74,.06)}
-.company-row .name{font-weight:800;font-size:14.5px;color:var(--text);letter-spacing:-.005em;margin-bottom:4px}
-.company-row .meta{font-size:11.5px;color:var(--text3);font-family:var(--mono)}
-.company-row .meta b{color:var(--text2);font-weight:700}
-.fit-score{font-family:var(--mono);font-size:11px;font-weight:900;padding:5px 11px;border-radius:6px;letter-spacing:.04em;min-width:70px;text-align:center}
-.fit-score.hi{background:var(--green-soft);color:var(--green);border:1px solid var(--green)}
-.fit-score.mid{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber)}
-.fit-score.lo{background:rgba(0,0,0,.04);color:var(--text3);border:1px solid var(--wire)}
-.contact-detect{font-family:var(--mono);font-size:10.5px;color:var(--green);font-weight:800;background:var(--green-soft);padding:3px 8px;border-radius:5px}
-.contact-detect.no{color:var(--rose);background:var(--rose-soft)}
-.row-action{padding:6px 12px;background:var(--teal);color:#fff;border-radius:6px;font-size:11.5px;font-weight:800;font-family:var(--mono);letter-spacing:.04em}
-.row-action.ghost{background:#fff;color:var(--teal);border:1px solid var(--teal)}
-
-/* === 文面 view === */
-.pitch-split{display:grid;grid-template-columns:1fr 1.2fr;gap:14px}
-.pitch-lp,.pitch-text{background:var(--paper);border:1px solid var(--wire);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
-.pitch-head{padding:14px 18px;border-bottom:1px solid var(--wire);font-family:var(--mono);font-size:11px;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;font-weight:700;display:flex;justify-content:space-between;align-items:center}
-.pitch-bd{padding:18px 20px;flex:1;overflow-y:auto;font-size:13.5px;line-height:1.75}
-.pitch-bd .subject{padding:11px 14px;background:var(--lime-soft);border:1px solid var(--lime);border-radius:8px;font-weight:800;color:var(--teal2);margin-bottom:14px;font-size:14px}
-.pitch-bd p{margin:0 0 12px}
-.pitch-bd .cta-row{margin-top:18px;padding-top:14px;border-top:1px solid var(--wire);display:flex;gap:8px;align-items:center}
-.pitch-bd .cta-row a{color:var(--teal);font-weight:800;text-decoration:underline}
-.pitch-actions{padding:14px 18px;border-top:1px solid var(--wire);display:flex;gap:8px;background:var(--cream)}
-.pitch-actions button{flex:1;padding:9px 12px;border-radius:7px;font-size:12px;font-weight:800;font-family:var(--mono);letter-spacing:.04em}
-.pitch-actions .ai-btn{background:linear-gradient(135deg,var(--purple),#a78bfa);color:#fff}
-.pitch-actions .edit-btn{background:#fff;border:1px solid var(--wire);color:var(--text2)}
-.pitch-actions .send-btn{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff}
-
-/* === 送信 view === */
-.send-bar{background:var(--paper);border:1px solid var(--wire);border-radius:12px;padding:22px 26px}
-.send-bar .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
-.send-bar .head .ti{font-size:18px;font-weight:900;letter-spacing:-.01em}
-.send-bar .head .ct{font-family:var(--mono);font-size:13px;color:var(--text3)}
-.send-bar .head .ct b{color:var(--teal2);font-size:18px;font-weight:900}
-.send-bar .bar{height:10px;background:rgba(13,79,74,.08);border-radius:99px;overflow:hidden;margin-bottom:8px}
-.send-bar .bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--lime-dark),var(--lime));border-radius:99px;width:23%;transition:width .4s}
-.send-bar .sub{font-size:12px;color:var(--text3);font-family:var(--mono)}
-
-.send-now-card{background:linear-gradient(135deg,var(--amber-soft),#fff);border:1.5px solid var(--amber);border-radius:12px;padding:18px 22px;display:flex;align-items:center;gap:18px}
-.send-now-card .ic{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--amber),var(--peach));display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.send-now-card .info{flex:1}
-.send-now-card .info .ti{font-weight:800;color:var(--peach-dark);margin-bottom:4px}
-.send-now-card .info .sub{font-size:12px;color:var(--text3)}
-.send-now-card button{background:var(--peach-dark);color:#fff;padding:10px 18px;border-radius:7px;font-weight:800;font-size:12.5px;font-family:var(--mono);letter-spacing:.04em}
-
-.send-log{background:var(--paper);border:1px solid var(--wire);border-radius:12px;overflow:hidden}
-.send-log-row{display:grid;grid-template-columns:30px 1fr auto auto;gap:14px;align-items:center;padding:12px 18px;border-top:1px solid var(--wire);font-size:12.5px}
-.send-log-row:first-child{border-top:0}
-.send-log-row .ic{font-size:16px}
-.send-log-row .ti{font-weight:700;color:var(--text)}
-.send-log-row .meta{font-family:var(--mono);font-size:10.5px;color:var(--text3)}
-.send-log-row.sent .ic{color:var(--green)}
-.send-log-row.pending .ic{color:var(--amber)}
-.send-log-row.skipped{opacity:.6}
-
-/* === 反応 view === */
-.response-card{background:var(--paper);border:1px solid var(--wire);border-radius:12px;padding:18px 22px;display:flex;flex-direction:column;gap:14px;transition:all .15s}
-.response-card:hover{border-color:var(--teal);box-shadow:0 8px 20px rgba(13,79,74,.06)}
-.response-card .head{display:flex;align-items:center;justify-content:space-between}
-.response-card .from{font-weight:800;color:var(--text);font-size:14.5px}
-.response-card .from .ts{font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:8px;font-weight:600}
-.response-card .badge{font-family:var(--mono);font-size:10px;font-weight:800;padding:3px 9px;border-radius:5px;letter-spacing:.04em}
-.response-card .badge.interest{background:var(--green-soft);color:var(--green)}
-.response-card .badge.question{background:var(--amber-soft);color:var(--amber)}
-.response-card .badge.decline{background:var(--rose-soft);color:var(--rose)}
-.response-card .raw{padding:12px 14px;background:var(--cream);border-radius:8px;font-size:13px;line-height:1.7;color:var(--text2);font-style:italic;border-left:3px solid var(--teal)}
-.response-card .ai-reply{padding:12px 14px;background:var(--lime-soft);border-radius:8px;font-size:13px;line-height:1.7;color:var(--text2);border-left:3px solid var(--lime-dark)}
-.response-card .ai-reply .lbl{font-family:var(--mono);font-size:10px;color:var(--green);font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
-.response-card .actions{display:flex;gap:8px;flex-wrap:wrap}
-.response-card .actions button{padding:7px 13px;border-radius:6px;font-size:11.5px;font-weight:800;font-family:var(--mono);letter-spacing:.04em}
-.response-card .actions .send{background:var(--teal);color:#fff}
-.response-card .actions .edit{background:#fff;border:1px solid var(--wire);color:var(--text2)}
-.response-card .actions .apo{background:linear-gradient(135deg,var(--green),#16a34a);color:#fff}
-
-/* === Chat (= right panel) === */
-.chat::before{content:'AI ASSISTANT';display:block;padding:14px 18px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--text2);text-transform:uppercase;border-bottom:1px solid var(--wire);background:var(--cream);font-weight:700}
+/* === Chat pane (= 左) === */
+.chat-head{padding:14px 18px;border-bottom:1px solid var(--wire);background:var(--cream)}
+.chat-head .ti{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--teal);font-weight:900;text-transform:uppercase;margin-bottom:4px}
+.chat-head .sub{font-size:12.5px;color:var(--text3);font-weight:600;line-height:1.55}
 .chat-body{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
 .msg{display:flex;gap:10px}
-.msg-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0}
+.msg-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0}
 .msg.ai .msg-av{background:linear-gradient(135deg,var(--lime),var(--lime-dark));color:var(--teal2)}
 .msg-bd{flex:1;min-width:0}
-.msg-meta{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.msg-meta{display:flex;gap:8px;align-items:baseline;margin-bottom:4px}
 .msg-from{font-weight:800;font-size:12px;color:var(--text)}
 .msg-time{font-family:var(--mono);font-size:10px;color:var(--text3)}
-.msg-text{font-size:13px;line-height:1.65;color:var(--text2)}
-.msg-text b{color:var(--text)}
-.msg-card{margin-top:10px;padding:12px 14px;background:var(--cream);border:1px solid var(--wire);border-radius:9px}
-.msg-card .card-ti{font-weight:800;color:var(--text);margin-bottom:4px;font-size:13px}
-.msg-card .card-meta{font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-bottom:8px}
-.msg-card .card-actions{display:flex;gap:6px}
-.msg-card .card-actions button{padding:5px 10px;border-radius:5px;font-size:11px;font-weight:800;background:#fff;border:1px solid var(--wire);color:var(--text2);font-family:var(--mono)}
+.msg-text{font-size:13px;line-height:1.7;color:var(--text2);background:var(--cream);padding:10px 13px;border-radius:9px;border:1px solid var(--wire)}
+.msg.user .msg-text{background:var(--teal);color:#fff;border-color:var(--teal)}
 
-.chat-foot{border-top:1px solid var(--wire);background:#fff;padding:0}
-.quick-chips{display:flex;gap:6px;padding:10px 18px;flex-wrap:wrap;border-top:1px solid var(--wire);background:var(--cream)}
-.quick-chip{font-family:var(--mono);font-size:10.5px;padding:5px 10px;border-radius:5px;background:#fff;border:1px solid var(--wire);color:var(--text2)}
-.quick-chip:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
-.composer{padding:14px 18px;background:#fff;display:flex;gap:8px;align-items:end}
-.composer textarea{flex:1;padding:9px 12px;border:1px solid var(--wire);border-radius:8px;font-size:13px;resize:none;min-height:38px;max-height:120px;outline:none;background:var(--cream)}
-.composer textarea:focus{border-color:var(--teal);background:#fff}
-.composer .send{width:38px;height:38px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+/* progress card (= AI が 動 い て いる 演 出) */
+.progress-card{margin-top:8px;background:var(--paper);border:1px solid var(--wire);border-radius:9px;padding:11px 13px;font-size:12px;color:var(--text2);line-height:1.7}
+.progress-card .row{display:flex;align-items:center;gap:8px;padding:3px 0}
+.progress-card .ic{font-size:13px;width:18px;text-align:center;flex-shrink:0}
+.progress-card .row.done .ic{color:var(--green)}
+.progress-card .row.now .ic{color:var(--amber);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.progress-card .row.pending{opacity:.4}
+.progress-card .row b{color:var(--text);font-weight:700}
 
-/* === Wizard modal (= new campaign) === */
-.modal-bg{position:fixed;inset:0;background:rgba(13,79,74,.35);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;animation:fade .2s}
-.modal-bg.show{display:flex}
-@keyframes fade{from{opacity:0}to{opacity:1}}
-.modal{background:#fff;border-radius:14px;max-width:680px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 30px 80px rgba(13,79,74,.2)}
-.modal-h{padding:20px 26px;border-bottom:1px solid var(--wire);display:flex;justify-content:space-between;align-items:center}
-.modal-h .ti{font-weight:900;font-size:17px;letter-spacing:-.01em}
-.modal-h .sub{font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.08em}
-.modal-h .close{font-size:22px;color:var(--text3);font-weight:300}
-.modal-bd{padding:26px}
-.modal-foot{padding:16px 26px;border-top:1px solid var(--wire);background:var(--cream);display:flex;gap:10px;justify-content:flex-end}
-.modal-foot button{padding:9px 18px;border-radius:7px;font-size:13px;font-weight:800;font-family:var(--mono);letter-spacing:.04em}
-.modal-foot .ghost{background:#fff;border:1px solid var(--wire);color:var(--text2)}
-.modal-foot .go{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff}
+/* chat foot (= composer) */
+.chat-foot{border-top:1px solid var(--wire);background:#fff;padding:12px 18px}
+.chat-foot .form{display:flex;gap:8px;align-items:end;background:var(--cream);border:1.5px solid var(--wire);border-radius:10px;padding:6px 6px 6px 12px;transition:border-color .15s}
+.chat-foot .form:focus-within{border-color:var(--teal)}
+.chat-foot textarea{flex:1;border:0;background:transparent;font-size:13.5px;resize:none;outline:none;max-height:100px;padding:7px 0}
+.chat-foot .send{width:34px;height:34px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.chat-foot .send:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(13,79,74,.2)}
+.chat-foot .quick{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.chat-foot .quick-chip{padding:4px 9px;background:var(--cream);border:1px solid var(--wire);border-radius:5px;font-family:var(--mono);font-size:10.5px;color:var(--text3);font-weight:700;cursor:pointer}
+.chat-foot .quick-chip:hover{border-color:var(--teal);color:var(--teal)}
 
-.wiz-step{display:none}
-.wiz-step.show{display:block;animation:fadeUp .25s}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.wiz-progress{display:flex;gap:6px;margin-bottom:24px}
-.wiz-dot{flex:1;height:5px;background:rgba(13,79,74,.1);border-radius:99px;transition:background .25s}
-.wiz-dot.active,.wiz-dot.done{background:var(--teal)}
-.wiz-h{font-family:var(--serif);font-size:24px;font-weight:900;line-height:1.3;margin-bottom:10px;letter-spacing:-.02em}
-.wiz-p{font-size:13.5px;color:var(--text2);line-height:1.7;margin-bottom:22px}
+/* === Sheet pane (= 右) === */
+.sheet-head{padding:14px 24px;border-bottom:1px solid var(--wire);background:#fff;display:flex;align-items:center;gap:16px}
+.sheet-head .ti{font-weight:900;font-size:17px;letter-spacing:-.01em}
+.sheet-head .count{font-family:var(--mono);font-size:11px;color:var(--text3);padding:4px 10px;background:var(--cream);border-radius:99px;font-weight:700}
+.sheet-head .count b{color:var(--teal);font-weight:900}
+.sheet-head .actions{margin-left:auto;display:flex;gap:6px}
+.sheet-head button{padding:7px 13px;border:1px solid var(--wire);border-radius:7px;font-family:var(--mono);font-size:11px;color:var(--text2);background:#fff;font-weight:700;transition:all .15s}
+.sheet-head button:hover{border-color:var(--teal);color:var(--teal)}
+.sheet-head .send-btn{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border:0;font-weight:900;font-size:11.5px}
 
-/* responsive */
-@media(max-width:1100px){
-  .chat{display:none}
-  .layout{grid-template-columns:240px 1fr}
-  .stat-row{grid-template-columns:repeat(2,1fr)}
-  .pitch-split{grid-template-columns:1fr}
-  .team-grid{grid-template-columns:1fr}
-}
-@media(max-width:700px){
-  .layout{grid-template-columns:1fr}
-  .sb{display:none}
-  .main{padding:14px}
+/* spreadsheet */
+.sheet-wrap{flex:1;overflow:auto;padding:0}
+table.sheet{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff}
+table.sheet thead{position:sticky;top:0;background:#fafaf7;border-bottom:2px solid var(--teal2);z-index:2}
+table.sheet th{padding:11px 14px;text-align:left;font-family:var(--mono);font-size:10.5px;font-weight:900;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;border-right:1px solid var(--wire);white-space:nowrap}
+table.sheet th:hover{background:var(--lime-soft);color:var(--green);cursor:pointer}
+table.sheet th .source-hint{display:block;font-size:9.5px;color:var(--text4);font-weight:600;margin-top:2px;text-transform:none;letter-spacing:.02em}
+table.sheet td{padding:10px 14px;border-top:1px solid var(--wire);border-right:1px solid var(--wire);vertical-align:middle}
+table.sheet tr:hover td{background:#fdfdf9}
+table.sheet td .name{font-weight:800;color:var(--text)}
+table.sheet td .sub-meta{font-size:11px;color:var(--text3);margin-top:2px}
+table.sheet td .contact-ok{color:var(--green);font-weight:800}
+table.sheet td .contact-ng{color:var(--text4)}
+.fit-pill{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:900;padding:3px 9px;border-radius:5px;letter-spacing:.04em}
+.fit-pill.hi{background:var(--green-soft,#dcfce7);color:var(--green)}
+.fit-pill.mid{background:var(--amber-soft,#fffbeb);color:var(--amber)}
+.fit-pill.lo{background:#f4f4f5;color:var(--text3)}
+.conf-pill{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px}
+.conf-pill.high{background:#dcfce7;color:var(--green)}
+.conf-pill.med{background:#fef3c7;color:#92400e}
+.conf-pill.low{background:#f4f4f5;color:var(--text3)}
+.source-pill{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--teal);background:var(--teal-soft);padding:2px 7px;border-radius:4px;font-weight:700;cursor:help}
+.status-pill{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:5px;letter-spacing:.04em}
+.status-pill.queue{background:#f4f4f5;color:var(--text3)}
+.status-pill.sent{background:#dcfce7;color:var(--green)}
+.status-pill.opened{background:#fef3c7;color:#92400e}
+.status-pill.replied{background:#dbeafe;color:#1e40af}
+.row-checkbox{width:14px;height:14px;cursor:pointer;accent-color:var(--teal)}
+
+/* footer info */
+.sheet-foot{padding:10px 24px;border-top:1px solid var(--wire);background:#fafaf7;font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:18px}
+.sheet-foot b{color:var(--text2)}
+
+/* === Tabs (= 別 view = Sequencer / Inbox 等) === */
+.view{display:none;height:100%;flex-direction:column}
+.view.show{display:flex}
+
+/* Sequencer view */
+.seq-wrap{padding:24px;overflow-y:auto;flex:1}
+.seq-head{font-family:var(--serif);font-size:24px;font-weight:900;letter-spacing:-.01em;margin-bottom:8px}
+.seq-sub{color:var(--text3);font-size:13px;margin-bottom:24px}
+.seq-step{background:#fff;border:1px solid var(--wire);border-radius:12px;margin-bottom:14px;overflow:hidden}
+.seq-step-head{padding:13px 18px;background:var(--cream);border-bottom:1px solid var(--wire);display:flex;align-items:center;gap:12px}
+.seq-step-num{width:28px;height:28px;background:var(--teal);color:#fff;border-radius:50%;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+.seq-step-meta{flex:1}
+.seq-step-meta .ti{font-weight:800;font-size:13px}
+.seq-step-meta .sub{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px}
+.seq-step-ch{font-family:var(--mono);font-size:10.5px;padding:3px 9px;border-radius:5px;background:#fff;border:1px solid var(--wire);font-weight:700;color:var(--text2)}
+.seq-step-bd{padding:14px 18px;font-size:13px;line-height:1.7;color:var(--text2)}
+.seq-step-bd .subject{font-weight:800;color:var(--text);padding:8px 12px;background:var(--lime-soft);border-radius:7px;border:1px solid var(--lime);margin-bottom:10px;font-size:13px}
+.seq-step-foot{padding:10px 18px;border-top:1px solid var(--wire);background:var(--cream);font-family:var(--mono);font-size:10.5px;color:var(--text3);display:flex;gap:14px}
+.seq-step-foot b{color:var(--text2)}
+
+/* Inbox view */
+.inbox-wrap{padding:24px;overflow-y:auto;flex:1}
+.inbox-row{background:#fff;border:1px solid var(--wire);border-radius:10px;padding:14px 18px;margin-bottom:8px;display:flex;align-items:start;gap:14px;transition:all .15s;cursor:pointer}
+.inbox-row:hover{border-color:var(--teal);box-shadow:0 4px 14px rgba(13,79,74,.06)}
+.inbox-row .av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--purple),#a78bfa);color:#fff;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.inbox-row .av.email{background:linear-gradient(135deg,var(--teal),var(--teal2))}
+.inbox-row .av.linkedin{background:linear-gradient(135deg,#0e76a8,#0a4d6e)}
+.inbox-row .av.form{background:linear-gradient(135deg,var(--amber),var(--peach))}
+.inbox-row .bd{flex:1;min-width:0}
+.inbox-row .h{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.inbox-row .from{font-weight:900;font-size:13.5px;color:var(--text)}
+.inbox-row .ch{font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--cream);padding:2px 7px;border-radius:4px;font-weight:700}
+.inbox-row .ts{font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-left:auto}
+.inbox-row .snippet{font-size:12.5px;color:var(--text2);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.inbox-row .tag{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;margin-top:6px}
+.inbox-row .tag.interest{background:#dcfce7;color:var(--green)}
+.inbox-row .tag.question{background:#fef3c7;color:#92400e}
+.inbox-row .tag.decline{background:#fee2e2;color:var(--rose)}
+
+/* Settings view */
+.set-wrap{padding:24px;overflow-y:auto;flex:1;max-width:680px}
+.set-section{background:#fff;border:1px solid var(--wire);border-radius:12px;padding:22px 26px;margin-bottom:14px}
+.set-section h2{font-family:var(--serif);font-size:18px;font-weight:900;margin-bottom:14px}
+.set-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--wire)}
+.set-row:first-of-type{border-top:0}
+.set-row .lbl{font-weight:700;font-size:13px}
+.set-row .val{font-family:var(--mono);font-size:12px;color:var(--text3)}
+.set-row button{padding:7px 14px;background:var(--cream);border:1px solid var(--wire);border-radius:6px;font-size:12px;font-weight:700}
+
+@media(max-width:880px){
+  .layout{grid-template-columns:1fr;grid-template-rows:54px auto 1fr}
+  .chat-pane{grid-column:1;grid-row:2;border-right:0;border-bottom:1px solid var(--wire);max-height:300px}
+  .sheet-pane{grid-column:1;grid-row:3}
+  .tab-bar{display:none}
 }
 </style>
 </head>
 <body>
 
 <!-- ━━━ BETA banner ━━━ -->
-<div id="betaBanner" style="background:linear-gradient(135deg,#fff8e1,#fde68a);color:#92400e;padding:10px 24px;font-size:12.5px;font-weight:700;text-align:center;border-bottom:1px solid #fbbf24;font-family:'Noto Sans JP',sans-serif;display:flex;align-items:center;justify-content:center;gap:14px">
-  🚧 <b>BETA 開 発 中</b> · 数 字 / 送 信 機 能 = mock 動 作 (= 実 装 進 行 中) · <b>既 MY AI Agent 機 能 は 3 ヶ月 維 持</b> · <a href="mailto:support@myaiagents.agency" style="color:#92400e;text-decoration:underline;font-weight:800">フィード バック ↗</a>
+<div id="betaBanner" style="background:linear-gradient(135deg,#fff8e1,#fde68a);color:#92400e;padding:9px 24px;font-size:12px;font-weight:700;text-align:center;border-bottom:1px solid #fbbf24;font-family:'Noto Sans JP',sans-serif;display:flex;align-items:center;justify-content:center;gap:14px">
+  🚧 <b>BETA 開 発 中</b> · 数 字 / 送 信 機 能 = mock 動 作 · <b>既 機 能 は 3 ヶ月 維 持</b> · <a href="mailto:support@myaiagents.agency" style="color:#92400e;text-decoration:underline;font-weight:800">フィード バック ↗</a>
   <button onclick="this.parentElement.style.display='none'" style="margin-left:auto;background:transparent;border:0;color:#92400e;font-size:18px;cursor:pointer;padding:0 4px;font-weight:300">✕</button>
 </div>
 
@@ -353,605 +195,245 @@ a{color:inherit;text-decoration:none}
   <!-- ━━━ TOPBAR ━━━ -->
   <div class="topbar">
     <div class="brand">
-      <div class="brand-mark">F</div>
-      <span class="brand-name">MY AI Sales</span>
-      <span class="brand-sub">v0.1 · MOCK</span>
+      <div class="brand-mark">S</div>
+      <span class="brand-name">MY Sales Agent</span>
+      <span class="brand-sub">v0.1 · BETA</span>
+    </div>
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab('list',this)">📋 法 人 リスト</button>
+      <button class="tab" onclick="switchTab('seq',this)">📝 シーケンス</button>
+      <button class="tab" onclick="switchTab('inbox',this)">💬 受 信 箱 <span style="color:var(--rose);font-weight:900">3</span></button>
+      <button class="tab" onclick="switchTab('set',this)">⚙ 設 定</button>
     </div>
     <span class="plan-badge">⚡ PRO</span>
     <div class="top-time">
-      <span><span class="blink"></span> AI 24h ON</span>
+      <span><span class="blink"></span> AI 動 作 中</span>
       <span id="topClock">--:--:--</span>
-      <button class="top-btn">🔍 <span style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-left:4px">⌘ K</span></button>
-      <button class="top-icon-btn">🔔<span class="top-badge">5</span></button>
-      <button class="top-btn">⌘ CHAT</button>
-      <button class="avatar-btn">K</button>
     </div>
+    <button class="top-btn">🔍 ⌘K</button>
+    <button class="avatar-btn">K</button>
   </div>
 
-  <!-- ━━━ SIDEBAR ━━━ -->
-  <aside class="sb">
-    <!-- URL Switcher (= 旧 MY AI Agent の サイト switcher を 継 承) -->
-    <div class="site-switch">
-      <button class="site-btn" id="siteBtn" onclick="toggleSiteDD()">
-        <div class="site-logo" id="siteLogo">M</div>
-        <div class="site-info">
-          <div class="site-name" id="siteName">my-saas.com</div>
-          <div class="site-url" id="siteUrl">SaaS · 87 法 人</div>
-        </div>
-        <span class="site-caret">▼</span>
-      </button>
-      <div class="site-dd" id="siteDD"></div>
+  <!-- ━━━ CHAT PANE (= 左) ━━━ -->
+  <aside class="chat-pane">
+    <div class="chat-head">
+      <div class="ti">▌ AI に お 願 い</div>
+      <div class="sub">「ど ん な 顧 客 が 欲 し い?」 を 自然 文 で 入 力 する だ け で、 AI が リスト と 連 絡 先 を 探 し て く れ ま す。</div>
     </div>
 
-    <button class="primary-cta" onclick="openWizard()">
-      <span class="ic">⚡</span>
-      <div>
-        <div class="ti">新 規 キャンペーン</div>
-        <div class="sb-t">URL → 100 件 営業</div>
-      </div>
-    </button>
-
-    <div class="sb-section">▌ メイン</div>
-    <button class="nav-btn active" data-view="home" onclick="navTo('home',this)"><span class="ic">📊</span> ダッシュ ボード</button>
-    <button class="nav-btn" data-view="persona" onclick="navTo('persona',this)"><span class="ic">🎯</span> ペルソナ</button>
-    <button class="nav-btn" data-view="companies" onclick="navTo('companies',this)"><span class="ic">🏢</span> 法 人 リスト <span class="nav-badge">87</span></button>
-    <button class="nav-btn" data-view="pitches" onclick="navTo('pitches',this)"><span class="ic">📝</span> 文 面</button>
-    <button class="nav-btn" data-view="send" onclick="navTo('send',this)"><span class="ic">⚡</span> 送 信 <span class="nav-badge" style="background:var(--amber-soft);color:var(--amber)">23</span></button>
-    <button class="nav-btn" data-view="responses" onclick="navTo('responses',this)"><span class="ic">💬</span> 反 応 <span class="nav-badge" style="background:var(--green-soft)">3</span></button>
-
-    <div class="sb-section">▌ 解 析</div>
-    <button class="nav-btn" data-view="analytics" onclick="navTo('analytics',this)"><span class="ic">📈</span> 分 析</button>
-    <button class="nav-btn" data-view="cases" onclick="navTo('cases',this)"><span class="ic">🏆</span> 成 約 事 例</button>
-
-    <div class="sb-section">▌ アカウント</div>
-    <button class="nav-btn" data-view="settings" onclick="navTo('settings',this)"><span class="ic">⚙</span> 設 定</button>
-
-    <div class="plan-card">
-      <div class="head">
-        <span style="font-weight:900">⚡ PRO</span>
-        <span style="font-family:var(--mono)">87 / 200</span>
-      </div>
-      <div class="bar"><div class="bar-fill"></div></div>
-      <div class="sub">今 月 残 113 本 · 月 末 reset</div>
-    </div>
-
-    <div class="sb-search">
-      <input type="text" placeholder="🔍 検索 (⌘K)">
-    </div>
-  </aside>
-
-  <!-- ━━━ MAIN ━━━ -->
-  <main class="main">
-
-    <!-- ===== Dashboard ===== -->
-    <div class="view show" id="view-home">
-      <div class="crumbs">
-        <h1 class="crumb-h1">ダッシュ ボード</h1>
-        <span class="crumb">▌ MY AI Sales · 今 月 13 日</span>
-      </div>
-
-      <div class="stat-row">
-        <div class="stat-card">
-          <div class="label">送 信 数</div>
-          <div class="v">87</div>
-          <div class="sub">↑ +12 vs 先 週</div>
-        </div>
-        <div class="stat-card purple">
-          <div class="label">反 応 数</div>
-          <div class="v">12</div>
-          <div class="sub">反 応 率 13.8%</div>
-        </div>
-        <div class="stat-card peach">
-          <div class="label">商 談 化</div>
-          <div class="v">4</div>
-          <div class="sub">↑ +2 vs 先 週</div>
-        </div>
-        <div class="stat-card lime">
-          <div class="label">受 注</div>
-          <div class="v">¥300K</div>
-          <div class="sub">1 件 · ROI 30x</div>
-        </div>
-      </div>
-
-      <div class="today-strip">
-        <div class="ic-big">⚡</div>
-        <div class="info">
-          <div class="ti">今 日 の 送 信 進 捗</div>
-          <div class="sub">残 り 77 件 · 推 定 完 了 14:45 · Chrome ext で 自動 実 行 中</div>
-        </div>
-        <div class="right-stat">
-          <div class="v">23<span style="font-size:14px;color:var(--text3)">/100</span></div>
-          <div class="l">完 了</div>
-        </div>
-      </div>
-
-      <div class="mb-block">
-        <div class="mb-block-head">
-          <div class="mb-block-title"><span class="dot"></span> 直 近 の 反 応</div>
-          <a class="mb-block-right" onclick="navTo('responses',document.querySelector('.nav-btn[data-view=responses]'))" style="cursor:pointer;color:var(--teal);font-weight:800">全 て 見 る →</a>
-        </div>
-        <div class="feed">
-          <div class="feed-row"><span class="feed-time">14:23</span><span class="feed-tag">興 味</span><span class="feed-msg">株 式 会 社 ABC 「興 味 あ り ま す。 詳 細 を 」</span><a class="feed-link">→</a></div>
-          <div class="feed-row"><span class="feed-time">12:45</span><span class="feed-tag amber">質 問</span><span class="feed-msg">株 式 会 社 DEF 「料 金 体 系 を 教 え て」</span><a class="feed-link">→</a></div>
-          <div class="feed-row"><span class="feed-time">11:08</span><span class="feed-tag red">辞 退</span><span class="feed-msg">株 式 会 社 JKL 「現 状 間 に 合 っ て いま す」</span><a class="feed-link">→</a></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== Persona view ===== -->
-    <div class="view" id="view-persona">
-      <div class="crumbs">
-        <h1 class="crumb-h1">ペル ソナ</h1>
-        <span class="crumb">▌ MY AI Sales · 自社 サービス の 顧 客 定 義</span>
-      </div>
-
-      <div class="url-input" style="padding:28px 30px;border-width:2px;border-radius:14px;flex-direction:column;align-items:stretch;gap:14px;box-shadow:0 4px 20px rgba(192,255,92,.15)">
-        <div style="font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:.16em;text-transform:uppercase;font-weight:800">▌ STEP 1 · URL を 入 れ る だ け</div>
-        <input type="url" id="urlInput" value="https://my-saas.com" placeholder="https://your-service.com" style="padding:18px 22px;font-size:18px;font-weight:600;border-radius:10px">
-        <button onclick="aiAnalyze()" style="padding:14px 28px;font-size:15px;border-radius:10px;align-self:flex-end;min-width:200px">⚡ AI で 解 析 する →</button>
-      </div>
-
-      <div class="mb-block">
-        <div class="mb-block-head">
-          <div class="mb-block-title"><span class="dot"></span> AI 抽 出 結 果</div>
-          <div class="mb-block-right">最 終 更 新 12:08 · Claude Sonnet 解 析</div>
-        </div>
-        <div class="persona-grid">
-          <div class="persona-card">
-            <div class="lbl">業 種</div>
-            <div class="persona-tags">
-              <span class="persona-tag removable">SaaS</span>
-              <span class="persona-tag removable">受 託 開 発</span>
-              <span class="persona-tag removable">EC / D2C</span>
-              <span class="persona-tag-add">+ 追 加</span>
-            </div>
-          </div>
-          <div class="persona-card">
-            <div class="lbl">規 模</div>
-            <div class="persona-tags">
-              <span class="persona-tag removable">1-10 人</span>
-              <span class="persona-tag removable">11-50 人</span>
-              <span class="persona-tag-add">+ 追 加</span>
-            </div>
-          </div>
-          <div class="persona-card">
-            <div class="lbl">役 職</div>
-            <div class="persona-tags">
-              <span class="persona-tag removable">CEO / 代 表</span>
-              <span class="persona-tag removable">営 業 部 長</span>
-              <span class="persona-tag removable">マーケ 責 任 者</span>
-              <span class="persona-tag-add">+ 追 加</span>
-            </div>
-          </div>
-          <div class="persona-card">
-            <div class="lbl">課 題 / Pain</div>
-            <div class="persona-tags">
-              <span class="persona-tag removable">営 業 リソース 不 足</span>
-              <span class="persona-tag removable">商 談 化 率 低 い</span>
-              <span class="persona-tag removable">リード 獲 得 単 価 高</span>
-              <span class="persona-tag-add">+ 追 加</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <button style="align-self:flex-start;padding:12px 26px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:9px;font-weight:900;font-size:14px;letter-spacing:.02em">💾 保 存 + リスト 再 生 成 →</button>
-    </div>
-
-    <!-- ===== Companies view ===== -->
-    <div class="view" id="view-companies">
-      <div class="crumbs">
-        <h1 class="crumb-h1">法 人 リスト</h1>
-        <span class="crumb">▌ MY AI Sales · AI 自動 抽 出 + Fit Score 計 算</span>
-      </div>
-
-      <div class="filter-bar">
-        <span class="lbl">▌ Filter</span>
-        <select><option>fit ≥ 60</option><option>fit ≥ 80</option><option>fit ≥ 40</option></select>
-        <select><option>全 業 種</option><option>SaaS</option><option>受 託</option><option>EC</option></select>
-        <select><option>全 規 模</option><option>1-10 人</option><option>11-50 人</option><option>51-200 人</option></select>
-        <select><option>全 地 域</option><option>東 京</option><option>大 阪</option><option>名 古 屋</option></select>
-        <input type="text" placeholder="法 人 名 で 検 索" style="flex:1;min-width:100px">
-        <span class="ct">合 計 <b>87</b> 件</span>
-      </div>
-
-      <div style="display:flex;flex-direction:column;gap:8px" id="companyList"></div>
-
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 4px">
-        <button style="padding:8px 16px;background:#fff;border:1px solid var(--wire);border-radius:7px;font-family:var(--mono);font-size:12px;color:var(--text2)">← もっと 読 む</button>
-        <button style="padding:12px 28px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:9px;font-weight:900;font-size:14px">⚡ 全 部 送 信 開 始 →</button>
-      </div>
-    </div>
-
-    <!-- ===== Pitches view ===== -->
-    <div class="view" id="view-pitches">
-      <div class="crumbs">
-        <h1 class="crumb-h1">文 面 編 集</h1>
-        <span class="crumb">▌ MY AI Sales · 株 式 会 社 ABC 用 (= fit 87)</span>
-      </div>
-
-      <div class="pitch-split">
-        <div class="pitch-lp">
-          <div class="pitch-head">
-            <span>▌ 相 手 LP プレビュー</span>
-            <a href="#" style="color:var(--teal);font-weight:800">開 く →</a>
-          </div>
-          <div class="pitch-bd" style="background:linear-gradient(180deg,#fafaf7,#fff)">
-            <div style="font-family:var(--serif);font-size:24px;font-weight:900;line-height:1.3;margin-bottom:10px">株 式 会 社 ABC</div>
-            <div style="font-size:11.5px;color:var(--text3);font-family:var(--mono);margin-bottom:14px;letter-spacing:.06em;text-transform:uppercase">▌ SaaS · 25 人 · 東 京</div>
-            <p style="font-size:13.5px;color:var(--text2);line-height:1.75;margin-bottom:14px">「中 小 企 業 の DX を 加 速 す る タスク 管 理 SaaS」。 月 額 ¥3,000/user で 1,200 社 導 入 済。</p>
-            <div style="padding:14px 16px;background:var(--lime-soft);border-radius:8px;font-size:12.5px;color:var(--green);font-weight:700;border-left:3px solid var(--lime-dark)">
-              💡 AI 解 析: 「営 業 工 数 削 減」 を 大 きく 訴 求。 営 業 リソース 不 足 が pain。
-            </div>
-            <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--wire);font-size:11.5px;color:var(--text3);font-family:var(--mono)">
-              連 絡 先: /contact (= 検 出 済)<br>
-              フォーム 形 式: 標 準 (= 名 前 / 会 社 / メール / 電 話 / 本 文)<br>
-              reCAPTCHA: あ り (= user 1 click)
-            </div>
-          </div>
-        </div>
-
-        <div class="pitch-text">
-          <div class="pitch-head">
-            <span>▌ AI 生 成 文 面 · v3</span>
-            <span style="font-family:var(--mono);font-size:10.5px;color:var(--text3)">Claude Sonnet · 12:34 生 成</span>
-          </div>
-          <div class="pitch-bd">
-            <div class="subject">件 名: ABC 様 — 営 業 工 数 を 80% 削 減 す る AI 営 業 ツール の ご 紹 介</div>
-            <p><b>株 式 会 社 ABC ご 担 当 者 様</b></p>
-            <p>突 然 の ご 連 絡 失 礼 い た し ま す。 株 式 会 社 X の 武 田 と 申 し ま す。</p>
-            <p>ABC 様 の タスク 管 理 SaaS、 月 額 ¥3,000/user で 1,200 社 導 入 さ れ て いる 実 績、 拝 見 し ま し た。 「中 小 企 業 の DX 加 速」 という ミッション に 深 く 共 感 し て お り ま す。</p>
-            <p>弊 社 サービス 「MY AI Sales」 は、 SaaS 営 業 部 が 抱 え る <b>営 業 リソース 不 足</b> を AI で 解 決 す る ツール で す。 ABC 様 と 同 規 模 の SaaS 様 で、 営 業 工 数 を <b>80% 削 減 + 商 談 化 率 1.8 倍</b> の 実 績 が ご ざ い ま す。</p>
-            <p>もし ご 興 味 あ り ま し た ら、 30 分 だ け お 時 間 い た だ け ま せ ん で し ょ う か。 デモ + ABC 様 の 営 業 課 題 を ヒア リング さ せて く だ さ い。</p>
-            <div class="cta-row">
-              <a href="#">→ ご 案 内 はこちら (= 30 秒 で 完 了)</a>
-            </div>
-            <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--wire);font-size:11px;color:var(--text3)">MY AI Sales · 株 式 会 社 X · 東 京 都 渋 谷 区 · 営 業 連 絡 (= PR) · <a href="#" style="color:var(--teal3)">配 信 停 止 は こ ち ら</a></div>
-          </div>
-          <div class="pitch-actions">
-            <button class="ai-btn">💬 AI に 改 善 依 頼</button>
-            <button class="edit-btn">✏ 編 集</button>
-            <button class="send-btn">⚡ この 文 面 で 送 る →</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== Send view ===== -->
-    <div class="view" id="view-send">
-      <div class="crumbs">
-        <h1 class="crumb-h1">送 信 実 行</h1>
-        <span class="crumb">▌ MY AI Sales · Chrome Extension で 自動 送 信 中</span>
-      </div>
-
-      <div class="send-bar">
-        <div class="head">
-          <div class="ti">送 信 進 捗</div>
-          <div class="ct"><b>23</b> / 100 件 完 了 · 残 り 約 13 分</div>
-        </div>
-        <div class="bar"><div class="bar-fill"></div></div>
-        <div class="sub">Chrome ext で 順 次 送 信 中 · 1 件 ≈ 10 秒</div>
-      </div>
-
-      <div class="send-now-card">
-        <div class="ic">⚠️</div>
-        <div class="info">
-          <div class="ti">reCAPTCHA chk お 願 い</div>
-          <div class="sub">現 在 送 信 中: 株 式 会 社 XYZ · 「私 は ロボット で は ない」 を 1 click し て く だ さ い</div>
-        </div>
-        <button>ブラウザ を 開 く →</button>
-      </div>
-
-      <div class="send-log">
-        <div class="send-log-row sent">
-          <span class="ic">✓</span>
-          <span>
-            <div class="ti">株 式 会 社 ABC</div>
-            <div class="meta">SaaS · fit 87 · 件 名 「ABC 様 — 営 業 工 数 を 80%」</div>
-          </span>
-          <span class="meta">14:23</span>
-          <span style="font-family:var(--mono);font-size:10.5px;color:var(--green);font-weight:800">SENT</span>
-        </div>
-        <div class="send-log-row sent">
-          <span class="ic">✓</span>
-          <span>
-            <div class="ti">株 式 会 社 DEF</div>
-            <div class="meta">SaaS · fit 82 · 件 名 「DEF 様 — リード 獲 得 単 価 -65%」</div>
-          </span>
-          <span class="meta">14:21</span>
-          <span style="font-family:var(--mono);font-size:10.5px;color:var(--green);font-weight:800">SENT</span>
-        </div>
-        <div class="send-log-row pending">
-          <span class="ic">⏳</span>
-          <span>
-            <div class="ti">株 式 会 社 XYZ</div>
-            <div class="meta">SaaS · fit 79 · reCAPTCHA 待 ち</div>
-          </span>
-          <span class="meta">14:25</span>
-          <span style="font-family:var(--mono);font-size:10.5px;color:var(--amber);font-weight:800">CAPTCHA</span>
-        </div>
-        <div class="send-log-row skipped">
-          <span class="ic">⏸</span>
-          <span>
-            <div class="ti">株 式 会 社 GHI</div>
-            <div class="meta">受 託 · fit 65 · 添 付 必 須 で skip</div>
-          </span>
-          <span class="meta">14:18</span>
-          <span style="font-family:var(--mono);font-size:10.5px;color:var(--text3);font-weight:800">SKIPPED</span>
-        </div>
-        <div class="send-log-row sent">
-          <span class="ic">✓</span>
-          <span>
-            <div class="ti">株 式 会 社 JKL</div>
-            <div class="meta">SaaS · fit 75 · 件 名 「JKL 様 — 商 談 化 率 1.8 倍」</div>
-          </span>
-          <span class="meta">14:15</span>
-          <span style="font-family:var(--mono);font-size:10.5px;color:var(--green);font-weight:800">SENT</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== Responses view ===== -->
-    <div class="view" id="view-responses">
-      <div class="crumbs">
-        <h1 class="crumb-h1">反 応 確 認</h1>
-        <span class="crumb">▌ MY AI Sales · 新 着 3 件 · AI が 次 の 文 面 提 案 中</span>
-      </div>
-
-      <div class="response-card">
-        <div class="head">
-          <div class="from">株 式 会 社 ABC <span class="ts">14:32 受 信</span></div>
-          <span class="badge interest">興 味 あ り</span>
-        </div>
-        <div class="raw">ご 連 絡 ありがとう ござ いま す。 営 業 工 数 削 減 に 興 味 あ り ま す。 30 分 で デモ お 願 い で きま す か。 来 週 水 曜 14:00 で い かが でしょう か。</div>
-        <div class="ai-reply">
-          <div class="lbl">▌ AI 提 案 (= 次 の 文 面)</div>
-          ABC 様 ご 返 信 ありがとう ござ い ます。 来 週 水 曜 14:00 で 30 分 デモ さ せ て く だ さ い。 Google Meet の URL を お 送 り し ま す。 当 日 は ABC 様 の 営 業 課 題 を ヒア リング + 弊 社 サービス の 該 当 部 分 を デモ し ま す。
-        </div>
-        <div class="actions">
-          <button class="send">⚡ AI 提案 を 送 る</button>
-          <button class="edit">✏ 編 集</button>
-          <button class="apo">✓ アポ 取 れ た</button>
-        </div>
-      </div>
-
-      <div class="response-card">
-        <div class="head">
-          <div class="from">株 式 会 社 DEF <span class="ts">12:45 受 信</span></div>
-          <span class="badge question">質 問</span>
-        </div>
-        <div class="raw">ご 連 絡 ありがとう ござ いま す。 料 金 体 系 を 教 え て く だ さ い。 50 人 規 模 で 月 い く ら ぐ ら い で し ょ う か。 ま た、 既 存 sales tool と の 連 携 は 可 能 で し ょ う か。</div>
-        <div class="ai-reply">
-          <div class="lbl">▌ AI 提 案 (= 次 の 文 面)</div>
-          DEF 様 ご 質 問 ありがとう ござ い ま す。 50 人 規 模 の 場 合 Business プラン (月 ¥29,800) が おす す め で す。 連 携 = HubSpot / Salesforce / Slack 等 主 要 ツール に Webhook 経 由 で 対 応 し て お り ま す。 詳 細 PDF を お 送 り し ま す ね。
-        </div>
-        <div class="actions">
-          <button class="send">⚡ AI 提案 を 送 る</button>
-          <button class="edit">✏ 編 集</button>
-          <button class="apo">✓ アポ 取 れ た</button>
-        </div>
-      </div>
-
-      <div class="response-card">
-        <div class="head">
-          <div class="from">株 式 会 社 JKL <span class="ts">11:08 受 信</span></div>
-          <span class="badge decline">辞 退</span>
-        </div>
-        <div class="raw">ご 連 絡 ありがとう ござ いま す。 現 状、 営 業 ツール は 間 に 合 っ て お り ま す。 ま た 機 会 が あれ ば よろ し く お 願 い し ま す。</div>
-        <div class="ai-reply">
-          <div class="lbl">▌ AI 自動 処 理</div>
-          opt-out リスト に 追 加 完 了。 30 日 cooldown 後 に 再 アプローチ 可 能 (= 業 況 変 化 待 ち)。
-        </div>
-        <div class="actions">
-          <button class="edit">📝 メモ 追 加</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== Analytics view ===== -->
-    <div class="view" id="view-analytics">
-      <div class="crumbs">
-        <h1 class="crumb-h1">分 析</h1>
-        <span class="crumb">▌ MY AI Sales · 過 去 30 日 · 数 字 を 全 部 見 る</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
-        <div class="stat-card"><div class="label">総 送 信</div><div class="v">2,341</div><div class="sub">3 ヶ月 累 計</div></div>
-        <div class="stat-card purple"><div class="label">反 応 率</div><div class="v">13.8%</div><div class="sub">業 界 平 均 3.2%</div></div>
-        <div class="stat-card peach"><div class="label">商 談 化 率</div><div class="v">28%</div><div class="sub">反 応 → 商 談</div></div>
-        <div class="stat-card lime"><div class="label">受 注 率</div><div class="v">21%</div><div class="sub">商 談 → 受 注</div></div>
-      </div>
-      <div class="mb-block">
-        <div class="mb-block-head">
-          <div class="mb-block-title"><span class="dot"></span> 反 応 率 推 移 (= 30 days)</div>
-        </div>
-        <div style="display:flex;align-items:flex-end;gap:4px;height:140px;padding:14px 0">
-          <div style="flex:1;height:60%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:45%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:72%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:50%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:85%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:62%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:78%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:55%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:88%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:70%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:92%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-          <div style="flex:1;height:65%;background:linear-gradient(180deg,var(--lime-dark),var(--green));border-radius:3px 3px 0 0"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== Cases view ===== -->
-    <div class="view" id="view-cases">
-      <div class="crumbs">
-        <h1 class="crumb-h1">成 約 事 例</h1>
-        <span class="crumb">▌ MY AI Sales · 公 開 OK の 受 注 事 例 を SEO 流 入 化</span>
-      </div>
-      <div style="padding:40px 24px;text-align:center;color:var(--text3);font-size:13.5px;background:var(--paper);border:1px solid var(--wire);border-radius:12px">
-        🏆 受 注 1 件 公 開 中 (= 株 式 会 社 ABC) · 月 ¥XX 流 入 中
-      </div>
-    </div>
-
-    <!-- ===== Settings view ===== -->
-    <div class="view" id="view-settings">
-      <div class="crumbs">
-        <h1 class="crumb-h1">設 定</h1>
-        <span class="crumb">▌ MY AI Sales · アカウント · プラン · 送 信 元 · 連 携</span>
-      </div>
-      <div class="mb-block">
-        <div class="mb-block-head"><div class="mb-block-title"><span class="dot"></span> プラン</div></div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase">CURRENT</div>
-            <div style="font-size:22px;font-weight:900;margin-top:3px">⚡ PRO · ¥9,800 / 月</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:5px">月 200 件 送 信 + Chrome ext + Slack 連 携 + 反 応 検 知</div>
-          </div>
-          <button style="padding:10px 20px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-radius:8px;font-weight:800">プラン 変 更</button>
-        </div>
-      </div>
-      <div class="mb-block">
-        <div class="mb-block-head"><div class="mb-block-title"><span class="dot"></span> 送 信 元 情 報</div></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-          <div><div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">会 社 名</div><input value="株 式 会 社 X" style="width:100%;padding:9px 12px;border:1px solid var(--wire);border-radius:7px;font-size:13.5px"></div>
-          <div><div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">担 当 者 名</div><input value="武 田 こう た" style="width:100%;padding:9px 12px;border:1px solid var(--wire);border-radius:7px;font-size:13.5px"></div>
-          <div><div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">メール</div><input value="kota@protocol.ooo" style="width:100%;padding:9px 12px;border:1px solid var(--wire);border-radius:7px;font-size:13.5px"></div>
-          <div><div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">電 話</div><input value="03-1234-5678" style="width:100%;padding:9px 12px;border:1px solid var(--wire);border-radius:7px;font-size:13.5px"></div>
-        </div>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- ━━━ CHAT (right) ━━━ -->
-  <aside class="chat">
     <div class="chat-body" id="chatBody">
+      <div class="msg">
+        <div class="msg-av">K</div>
+        <div class="msg-bd">
+          <div class="msg-meta"><span class="msg-from">あ な た</span><span class="msg-time">10:32</span></div>
+          <div class="msg-text">東 京 の SaaS で 10-50 人 規 模 の 会 社 を 探 し て。 代 表 直 取 り 希 望。</div>
+        </div>
+      </div>
+
       <div class="msg ai">
         <div class="msg-av">🤖</div>
         <div class="msg-bd">
-          <div class="msg-meta"><span class="msg-from">AI 営 業 チーム</span><span class="msg-time">14:23</span></div>
-          <div class="msg-text">
-            ✅ <b>株 式 会 社 ABC から 反 応</b> あり!<br>
-            「興 味 あ り ま す。 来 週 デモ お 願 い 」 と の こ と。 AI が 次 の 文 面 を 用 意 し ま し た。
-          </div>
-          <div class="msg-card">
-            <div class="card-ti">📩 アポ 設 定 文 面 提 案</div>
-            <div class="card-meta">来 週 水 14:00 / Google Meet 提案</div>
-            <div class="card-actions">
-              <button>送 る</button>
-              <button>編 集</button>
-            </div>
+          <div class="msg-meta"><span class="msg-from">MY Sales AI</span><span class="msg-time">10:32</span></div>
+          <div class="msg-text">承 知 し ま し た。 国 内 法 人 DB を 検 索 中 で す。</div>
+          <div class="progress-card">
+            <div class="row done"><span class="ic">✓</span> <b>国 税 庁 法 人 番 号 DB</b> 検 索 (= 1,247 社 ヒット)</div>
+            <div class="row done"><span class="ic">✓</span> <b>gBizINFO</b> 業 種 + 規 模 フィルター (= 287 社)</div>
+            <div class="row done"><span class="ic">✓</span> <b>法 務 省 商 業 登 記</b> 役 員 名 取 得 (= 代 表 取 締 役)</div>
+            <div class="row now"><span class="ic">◌</span> <b>HP + 問 合 せ フォーム URL</b> 自動 検 出 中 ...</div>
+            <div class="row pending"><span class="ic">○</span> 代 表 メール 検 出 (= HP scrape)</div>
+            <div class="row pending"><span class="ic">○</span> Fit Score 計 算</div>
           </div>
         </div>
       </div>
+
       <div class="msg ai">
         <div class="msg-av">🤖</div>
         <div class="msg-bd">
-          <div class="msg-meta"><span class="msg-from">AI 営 業 チーム</span><span class="msg-time">12:30</span></div>
-          <div class="msg-text">
-            ⚡ <b>送 信 開 始</b> · 100 件 中 23 件 完 了。 残 り 約 13 分。<br>
-            reCAPTCHA 検 出 = 1 件 (= 株 式 会 社 XYZ)。 ブラウザ で 1 click お 願 い し ま す。
-          </div>
-        </div>
-      </div>
-      <div class="msg ai">
-        <div class="msg-av">🤖</div>
-        <div class="msg-bd">
-          <div class="msg-meta"><span class="msg-from">AI 営 業 チーム</span><span class="msg-time">08:00</span></div>
-          <div class="msg-text">
-            お は よう ござ い ま す。 寝 て いる 間 に <b>100 件 の 法 人 リスト</b> を 用 意 し ま し た。 ダッシュ ボード で 確 認 + 「全 部 送 信 」 で 自動 営 業 開 始 で きま す。<br>
-            <br>
-            🎯 今 日 の おすす め: fit 85 以 上 が 12 件、 そ こ から 始 め ま し ょう。
-          </div>
+          <div class="msg-meta"><span class="msg-from">MY Sales AI</span><span class="msg-time">10:33</span></div>
+          <div class="msg-text">✓ <b>187 社</b> の リスト を 用 意 し ま し た。 右 の スプレッドシート で 確 認 し て く だ さ い。 <br><br>「もっと 規 模 大 きく」 「○○ 業 界 だ け」 等 で 絞 り 込 め ま す。</div>
         </div>
       </div>
     </div>
-    <div class="quick-chips">
-      <button class="quick-chip" onclick="quickChat('📊 今 月 の 数 字 を 教 え て')">📊 数 字 ま と め</button>
-      <button class="quick-chip" onclick="quickChat('📝 文 面 を 改 善 し て')">📝 文 面 改 善</button>
-      <button class="quick-chip" onclick="quickChat('🎯 ペル ソナ を 調 整')">🎯 ペル ソナ 調 整</button>
-    </div>
-    <div class="composer">
-      <textarea id="chatInput" placeholder="AI 営 業 チーム に 指 示 ... (Shift+Enter で 改 行)" rows="1"></textarea>
-      <button class="send" onclick="sendChat()">→</button>
+
+    <div class="chat-foot">
+      <div class="form">
+        <textarea placeholder="AI に お 願 い する (= 「もっと 大 き い 会 社 を 」 等)" rows="1"></textarea>
+        <button class="send">→</button>
+      </div>
+      <div class="quick">
+        <button class="quick-chip">🔍 規 模 拡 大</button>
+        <button class="quick-chip">📋 業 種 絞 り</button>
+        <button class="quick-chip">🌐 自社 URL から</button>
+        <button class="quick-chip">📨 メール 列 追 加</button>
+      </div>
     </div>
   </aside>
 
-</div>
+  <!-- ━━━ SHEET PANE (= 右) ━━━ -->
+  <section class="sheet-pane">
 
-<!-- ━━━━━━ Wizard Modal (= 新 規 キャンペーン) ━━━━━━ -->
-<div class="modal-bg" id="wizardModal">
-  <div class="modal">
-    <div class="modal-h">
-      <div>
-        <div class="ti">新 規 キャンペーン 作 成</div>
-        <div class="sub">URL 入 力 → AI が 全 部 やる · 3 分 で 完 了</div>
-      </div>
-      <button class="close" onclick="closeWizard()">✕</button>
-    </div>
-    <div class="modal-bd">
-      <div class="wiz-progress">
-        <div class="wiz-dot active" id="wd1"></div>
-        <div class="wiz-dot" id="wd2"></div>
-        <div class="wiz-dot" id="wd3"></div>
-        <div class="wiz-dot" id="wd4"></div>
-        <div class="wiz-dot" id="wd5"></div>
-      </div>
-
-      <div class="wiz-step show" id="ws1">
-        <div class="wiz-h">あ なた の サービス URL を 教 え て く だ さ い</div>
-        <div class="wiz-p">AI が LP を 解 析 し て、 ペル ソナ + ターゲット 法 人 リスト を 自 動 で 作 成 し ま す。</div>
-        <input type="url" placeholder="https://your-service.com" style="width:100%;padding:14px 18px;border:1.5px solid var(--wire);border-radius:9px;font-size:15px;outline:none">
-      </div>
-
-      <div class="wiz-step" id="ws2">
-        <div class="wiz-h">🔍 AI が 解 析 中 ...</div>
-        <div class="wiz-p">あ な た の サービス LP を 読 ん で、 最 適 な ターゲット 法 人 像 を 抽 出 し て いま す。</div>
-        <div style="padding:30px;text-align:center">
-          <div style="display:inline-block;width:60px;height:60px;border:5px solid var(--wire);border-top-color:var(--teal);border-radius:50%;animation:spin 1s linear infinite"></div>
-          <div style="margin-top:20px;font-family:var(--mono);font-size:11.5px;color:var(--text3);letter-spacing:.08em">PERSONA ANALYST · 推 定 約 10 秒</div>
+    <!-- ===== 法 人 一 覧 view ===== -->
+    <div class="view show" id="view-list">
+      <div class="sheet-head">
+        <div class="ti">法 人 一 覧</div>
+        <span class="count"><b>187</b> 件</span>
+        <div class="actions">
+          <button>+ 列 追 加</button>
+          <button>📋 全 選 択</button>
+          <button>📥 CSV エクスポート</button>
+          <button>🔗 HubSpot へ Push</button>
+          <button class="send-btn">⚡ 選 択 を 送 信 (= 12 件)</button>
         </div>
       </div>
-      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
-
-      <div class="wiz-step" id="ws3">
-        <div class="wiz-h">こ の ペル ソナ で OK?</div>
-        <div class="wiz-p">edit 可 能 · 「保 存 + 次 へ」 で 法 人 リスト を 抽 出 し ま す。</div>
-        <div class="persona-grid">
-          <div class="persona-card"><div class="lbl">業 種</div><div class="persona-tags"><span class="persona-tag removable">SaaS</span><span class="persona-tag removable">受 託</span><span class="persona-tag-add">+ 追加</span></div></div>
-          <div class="persona-card"><div class="lbl">規 模</div><div class="persona-tags"><span class="persona-tag removable">1-10</span><span class="persona-tag removable">11-50</span><span class="persona-tag-add">+ 追加</span></div></div>
-          <div class="persona-card"><div class="lbl">役 職</div><div class="persona-tags"><span class="persona-tag removable">CEO</span><span class="persona-tag removable">営 業 部 長</span><span class="persona-tag-add">+ 追加</span></div></div>
-          <div class="persona-card"><div class="lbl">課 題</div><div class="persona-tags"><span class="persona-tag removable">営 業 リソース 不 足</span><span class="persona-tag-add">+ 追加</span></div></div>
-        </div>
+      <div class="sheet-wrap">
+        <table class="sheet" id="sheetTable">
+          <thead>
+            <tr>
+              <th style="width:30px"><input type="checkbox" class="row-checkbox"></th>
+              <th>会 社 名<span class="source-hint">国 税 庁 + gBiz</span></th>
+              <th>業 種<span class="source-hint">JSIC</span></th>
+              <th>規 模<span class="source-hint">gBiz</span></th>
+              <th>地 域<span class="source-hint">登 記</span></th>
+              <th>代 表 名<span class="source-hint">法 務 省 登 記 (= あれ ば)</span></th>
+              <th>HP URL<span class="source-hint">Google 検 索</span></th>
+              <th>問 合 せ URL<span class="source-hint">HP 解 析</span></th>
+              <th>Fit<span class="source-hint">AI 推 論</span></th>
+              <th>状 態<span class="source-hint">送 信</span></th>
+            </tr>
+          </thead>
+          <tbody id="sheetBody"></tbody>
+        </table>
       </div>
-
-      <div class="wiz-step" id="ws4">
-        <div class="wiz-h">⚡ 法 人 リスト 100 件 抽 出 中 ...</div>
-        <div class="wiz-p">国 税 庁 法 人 番号 公 表 API + Google Custom Search で 該 当 法 人 + 問 合 せ URL を 検 出 し て いま す。</div>
-        <div style="padding:24px;background:var(--cream);border-radius:10px;font-family:var(--mono);font-size:12px;color:var(--text2);line-height:2">
-          ▶ 国 税 庁 から SaaS 業 種 を 検 索 中 ... <span style="color:var(--green);font-weight:800">✓</span><br>
-          ▶ 1,247 法 人 を 検 出 ... <span style="color:var(--green);font-weight:800">✓</span><br>
-          ▶ 規 模 / 地 域 で フィルター ... <span style="color:var(--green);font-weight:800">✓</span><br>
-          ▶ 各 法 人 の HP URL を 取 得 中 ... <span style="color:var(--amber);font-weight:800">87%</span><br>
-          ▶ 問 合 せ フォーム URL を 検 出 中 ...<br>
-          ▶ Fit Score 計 算 中 ...
-        </div>
-      </div>
-
-      <div class="wiz-step" id="ws5">
-        <div class="wiz-h">✅ 完 成! 100 件 の リスト + 文 面 が 準 備 で きま した</div>
-        <div class="wiz-p">「送 信 開 始」 で Chrome ext が 順 次 送 信 し ま す。 1 件 ≈ 10 秒、 100 件 で 約 17 分。</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
-          <div style="padding:14px 16px;background:var(--lime-soft);border-radius:9px;text-align:center"><div style="font-size:26px;font-weight:900;color:var(--green)">100</div><div style="font-family:var(--mono);font-size:10.5px;color:var(--green);letter-spacing:.08em;text-transform:uppercase;margin-top:3px">法 人</div></div>
-          <div style="padding:14px 16px;background:var(--lime-soft);border-radius:9px;text-align:center"><div style="font-size:26px;font-weight:900;color:var(--green)">87</div><div style="font-family:var(--mono);font-size:10.5px;color:var(--green);letter-spacing:.08em;text-transform:uppercase;margin-top:3px">フォーム 検 出</div></div>
-          <div style="padding:14px 16px;background:var(--lime-soft);border-radius:9px;text-align:center"><div style="font-size:26px;font-weight:900;color:var(--green)">76</div><div style="font-family:var(--mono);font-size:10.5px;color:var(--green);letter-spacing:.08em;text-transform:uppercase;margin-top:3px">fit ≥ 60</div></div>
-        </div>
+      <div class="sheet-foot">
+        <span>合 計 <b>187 社</b> · 平 均 Fit <b>76</b> · 検 証 済 <b>143 件</b></span>
+        <span style="margin-left:auto">使 用 クレジット <b>187 / 2,000</b> (= 9% / 月)</span>
       </div>
     </div>
-    <div class="modal-foot">
-      <button class="ghost" onclick="closeWizard()">あ と で</button>
-      <button class="go" onclick="wizNext()" id="wizGoBtn">次 へ →</button>
+
+    <!-- ===== シーケンス view ===== -->
+    <div class="view" id="view-seq">
+      <div class="seq-wrap">
+        <div class="seq-head">シーケンス 編 集</div>
+        <p class="seq-sub">問 合 せ フォーム + メール の 自動 送 信 step を 設 計 し ま す。 各 step は AI が 各 法 人 用 に カスタマイズ し て 送 信。</p>
+
+        <div class="seq-step">
+          <div class="seq-step-head">
+            <div class="seq-step-num">1</div>
+            <div class="seq-step-meta">
+              <div class="ti">問 合 せ フォーム 自動 送 信</div>
+              <div class="sub">送 信: 即 時 · チャネル: HP 問 合 せ フォーム · AI 個 別 化: ON</div>
+            </div>
+            <span class="seq-step-ch">📝 フォーム</span>
+          </div>
+          <div class="seq-step-bd">
+            <div class="subject">件 名: 【{会 社 名}】 営 業 リソース 不 足 を AI で 解 決 し ま せ ん か</div>
+            {会 社 名} ご 担 当 者 様<br><br>
+            突 然 の ご 連 絡 失 礼 い た し ま す。 {自社 名} の {自分} と 申 し ま す。<br><br>
+            {会 社 名} 様 の {サービス} を 拝 見 し、 {AI が 推 論 し た 課 題} に お 役 に 立 て る と 考 え ご 連 絡 し ま し た。<br>
+            ...
+          </div>
+          <div class="seq-step-foot">
+            <span>📤 送 信 数: <b>87</b></span>
+            <span>✓ 完 了: <b>72</b></span>
+            <span>💬 返 信: <b>9</b> (= 10.3%)</span>
+          </div>
+        </div>
+
+        <div class="seq-step">
+          <div class="seq-step-head">
+            <div class="seq-step-num">2</div>
+            <div class="seq-step-meta">
+              <div class="ti">フォロー メール (= 代 表 公 開 メール の み)</div>
+              <div class="sub">送 信: 3 日 後 (= 未 返 信 + メール 公 開 法 人 のみ) · チャネル: Email</div>
+            </div>
+            <span class="seq-step-ch">📧 Email</span>
+          </div>
+          <div class="seq-step-bd" style="color:var(--text3)">先 日 ご 連 絡 し た {自社 名} の {自分} で す。 問 合 せ フォーム より ご 連 絡 し ま し た 件、 ご 確 認 い た だ け ま し た で し ょ う か。 ...</div>
+          <div class="seq-step-foot">
+            <span>📤 送 信: <b>45</b></span>
+            <span>💬 返 信: <b>3</b></span>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
+
+    <!-- ===== 受 信 箱 view ===== -->
+    <div class="view" id="view-inbox">
+      <div class="inbox-wrap">
+        <div class="seq-head" style="margin-bottom:8px">統 合 受 信 箱</div>
+        <p class="seq-sub">問 合 せ フォーム + メール の 返 信 を 1 画 面 で。 反 応 来 たら 自動 で 全 チャネル 停 止。</p>
+
+        <div class="inbox-row">
+          <div class="av email">A</div>
+          <div class="bd">
+            <div class="h">
+              <span class="from">株 式 会 社 ABC · 田 中 様</span>
+              <span class="ch">Email</span>
+              <span class="ts">14:23</span>
+            </div>
+            <div class="snippet">ご 連 絡 ありがとう ござ いま す。 営 業 工 数 削 減 に 興 味 あ り ま す。 30 分 で デモ お 願 い で きま す か。 来 週 水 曜 14:00 で い かが でしょう か。</div>
+            <span class="tag interest">✓ 興 味 あ り</span>
+          </div>
+        </div>
+
+        <div class="inbox-row">
+          <div class="av form">D</div>
+          <div class="bd">
+            <div class="h">
+              <span class="from">DEF テクノロジー</span>
+              <span class="ch">フォーム 自動 返 信</span>
+              <span class="ts">12:45</span>
+            </div>
+            <div class="snippet">ご 連 絡 ありがとう ござ いま す。 料 金 体 系 を 教 え て く だ さ い。 50 人 規 模 で 月 い く ら ぐ ら い で し ょ う か。 既 存 sales tool と の 連 携 は 可 能?</div>
+            <span class="tag question">? 質 問 あ り</span>
+          </div>
+        </div>
+
+        <div class="inbox-row">
+          <div class="av email">X</div>
+          <div class="bd">
+            <div class="h">
+              <span class="from">XYZ コーポレーション · 鈴 木 様</span>
+              <span class="ch">Email</span>
+              <span class="ts">11:08</span>
+            </div>
+            <div class="snippet">ご 連 絡 ありがとう ござ いま す。 現 状、 営 業 ツール は 間 に 合 っ て お り ま す。 ま た 機 会 が あれ ば よろ し く お 願 い し ま す。</div>
+            <span class="tag decline">— 辞 退</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 設 定 view ===== -->
+    <div class="view" id="view-set">
+      <div class="set-wrap">
+        <div class="seq-head" style="margin-bottom:8px">設 定</div>
+        <p class="seq-sub">アカウント · プラン · 連 携 · 送 信 元 メール</p>
+
+        <div class="set-section">
+          <h2>👤 アカウント</h2>
+          <div class="set-row"><span class="lbl">名 前</span><span class="val">武 田 こう た</span><button>変 更</button></div>
+          <div class="set-row"><span class="lbl">メール</span><span class="val">kota@protocol.ooo</span><button>変 更</button></div>
+        </div>
+
+        <div class="set-section">
+          <h2>⚡ プラン</h2>
+          <div class="set-row"><span class="lbl">現 プラン</span><span class="val" style="color:var(--green);font-weight:900">⚡ PRO · ¥4,800 / 月</span><button>変 更</button></div>
+          <div class="set-row"><span class="lbl">クレジット</span><span class="val">187 / 2,000 (= 9%)</span><button>追 加</button></div>
+        </div>
+
+        <div class="set-section">
+          <h2>🔗 連 携</h2>
+          <div class="set-row"><span class="lbl">📧 Gmail / Outlook</span><span class="val" style="color:var(--green)">✓ 連 携 済 (kota@protocol.ooo)</span><button>解 除</button></div>
+          <div class="set-row"><span class="lbl">💬 Slack</span><span class="val">未 連 携</span><button>連 携</button></div>
+          <div class="set-row"><span class="lbl">📊 HubSpot</span><span class="val">未 連 携</span><button>連 携</button></div>
+          <div class="set-row"><span class="lbl">📊 Salesforce</span><span class="val">未 連 携</span><button>連 携</button></div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
 </div>
 
 <script>
@@ -974,186 +456,7 @@ a{color:inherit;text-decoration:none}
   } catch(e){ console.warn('[auth] fail', e); }
 })();
 
-// ─── Campaigns (= URL ごと の 独立 dashboard) ───
-const CAMPAIGNS = [
-  {
-    id: 'my-saas',
-    url: 'https://my-saas.com',
-    name: 'my-saas.com',
-    sub: 'SaaS · 87 法 人',
-    logoText: 'M', logoCls: '',
-    persona: { industry:['SaaS','受 託'], size:['1-10','11-50'], role:['CEO','営 業 部 長'], pain:['営 業 リソース 不 足','商 談 化 率 低 い'] },
-    stats: { sent:87, response:12, meeting:4, revenue:'¥300K', revenueSub:'1 件 受 注' },
-    companies: [
-      { name:'株 式 会 社 ABC', industry:'SaaS', size:'25 人', region:'東 京', fit:87, contact:true },
-      { name:'株 式 会 社 DEF', industry:'SaaS', size:'42 人', region:'東 京', fit:82, contact:true },
-      { name:'株 式 会 社 GHI', industry:'受 託 開 発', size:'15 人', region:'大 阪', fit:78, contact:true },
-      { name:'XYZ コーポレーション', industry:'SaaS', size:'38 人', region:'東 京', fit:79, contact:true },
-      { name:'株 式 会 社 JKL マーケ', industry:'広 告', size:'8 人', region:'東 京', fit:75, contact:true },
-    ],
-    plan:{ used:87, cap:200 },
-  },
-  {
-    id: 'my-tool',
-    url: 'https://my-tool.com',
-    name: 'my-tool.com',
-    sub: 'B2B Tool · 42 法 人',
-    logoText: 'T', logoCls: 'purple',
-    persona: { industry:['IT 企 業','コンサル'], size:['51-200','201+'], role:['CTO','エンジニア リング 部 長'], pain:['DX 推 進 困 難','内 製 化 不 足'] },
-    stats: { sent:42, response:7, meeting:2, revenue:'¥150K', revenueSub:'1 件 受 注' },
-    companies: [
-      { name:'株 式 会 社 TechA', industry:'IT', size:'120 人', region:'東 京', fit:91, contact:true },
-      { name:'コンサル B', industry:'コンサル', size:'80 人', region:'大 阪', fit:84, contact:true },
-      { name:'Tech Solutions C', industry:'IT', size:'200 人', region:'東 京', fit:76, contact:true },
-    ],
-    plan:{ used:42, cap:200 },
-  },
-  {
-    id: 'agency',
-    url: 'https://agency-pr.jp',
-    name: 'agency-pr.jp',
-    sub: '広 告 代 理 · 12 法 人',
-    logoText: 'A', logoCls: 'amber',
-    persona: { industry:['EC','D2C'], size:['11-50','51-200'], role:['マーケ 部 長','CMO'], pain:['広 告 費 高 騰','ROAS 低 下'] },
-    stats: { sent:12, response:1, meeting:0, revenue:'¥0', revenueSub:'未 受 注' },
-    companies: [
-      { name:'EC ブランド X', industry:'EC', size:'45 人', region:'東 京', fit:88, contact:true },
-      { name:'D2C スタジオ Y', industry:'D2C', size:'22 人', region:'福 岡', fit:79, contact:false },
-    ],
-    plan:{ used:12, cap:200 },
-  },
-];
-let activeCampaignIdx = 0;
-function renderSiteDD(){
-  const dd = document.getElementById('siteDD');
-  if(!dd) return;
-  dd.innerHTML = CAMPAIGNS.map((c, i) => `
-    <div class="site-opt${i === activeCampaignIdx ? ' active' : ''}" onclick="pickCampaign(${i})">
-      <div class="site-logo ${c.logoCls}">${c.logoText}</div>
-      <div class="site-info">
-        <div class="site-name">${c.name}</div>
-        <div class="site-url">${c.sub}</div>
-      </div>
-      <span class="site-opt-check">✓</span>
-    </div>
-  `).join('') + `
-    <div class="site-dd-sep"></div>
-    <div class="site-dd-add" onclick="closeSiteDD();openWizard()"><span>＋</span> 新 規 URL を 追 加</div>
-  `;
-}
-function toggleSiteDD(){
-  const btn = document.getElementById('siteBtn');
-  const dd = document.getElementById('siteDD');
-  btn.classList.toggle('open');
-  dd.classList.toggle('show');
-}
-function closeSiteDD(){
-  document.getElementById('siteBtn').classList.remove('open');
-  document.getElementById('siteDD').classList.remove('show');
-}
-function pickCampaign(idx){
-  activeCampaignIdx = idx;
-  loadActiveCampaign();
-  closeSiteDD();
-  showToast('▶ ' + CAMPAIGNS[idx].name + ' に 切 替');
-}
-function loadActiveCampaign(){
-  const c = CAMPAIGNS[activeCampaignIdx];
-  // sidebar site-btn
-  const sl = document.getElementById('siteLogo');
-  if(sl){ sl.textContent = c.logoText; sl.className = 'site-logo ' + c.logoCls; }
-  document.getElementById('siteName').textContent = c.name;
-  document.getElementById('siteUrl').textContent = c.sub;
-  // crumb (= dashboard など)
-  document.querySelectorAll('.crumb').forEach((el, i) => {
-    if(i === 0) el.textContent = '▌ MY AI Sales · ' + c.name + ' · 今 月';
-  });
-  // dashboard stats
-  const stats = document.querySelectorAll('#view-home .stat-card .v');
-  if(stats.length >= 4){
-    stats[0].textContent = c.stats.sent;
-    stats[1].textContent = c.stats.response;
-    stats[2].textContent = c.stats.meeting;
-    stats[3].textContent = c.stats.revenue;
-  }
-  // hero result
-  const heroV = document.querySelector('#view-home .hero-result .v-big');
-  const heroDesc = document.querySelector('#view-home .hero-result .meta .desc');
-  const heroSub = document.querySelector('#view-home .hero-result .meta .sub');
-  if(heroV){ heroV.textContent = c.stats.meeting; }
-  if(heroDesc){ heroDesc.textContent = c.name + ' · ' + c.stats.revenue + ' ' + c.stats.revenueSub; }
-  if(heroSub){ heroSub.textContent = c.persona.industry[0] + ' 業 種 · 送 信 ' + c.stats.sent + ' 件 · 反 応 ' + c.stats.response + ' 件'; }
-  // company list
-  renderCompaniesForCampaign(c);
-  // persona view
-  renderPersonaForCampaign(c);
-  // plan card
-  const planUsed = document.querySelector('.plan-card .head span:last-child');
-  if(planUsed) planUsed.textContent = c.plan.used + ' / ' + c.plan.cap;
-  const planFill = document.querySelector('.plan-card .bar-fill');
-  if(planFill) planFill.style.width = Math.round(c.plan.used / c.plan.cap * 100) + '%';
-  // nav badge (companies)
-  const navCompBadge = document.querySelector('.nav-btn[data-view="companies"] .nav-badge');
-  if(navCompBadge) navCompBadge.textContent = c.companies.length;
-  // dropdown 再 描 画
-  renderSiteDD();
-}
-function renderCompaniesForCampaign(c){
-  const el = document.getElementById('companyList');
-  if(!el) return;
-  el.innerHTML = c.companies.map(co => {
-    const fitCls = co.fit >= 80 ? 'hi' : co.fit >= 60 ? 'mid' : 'lo';
-    return `
-      <div class="company-row">
-        <div>
-          <div class="name">${co.name}</div>
-          <div class="meta">▌ <b>${co.industry}</b> · ${co.size} · ${co.region}</div>
-        </div>
-        <span class="fit-score ${fitCls}">fit ${co.fit}</span>
-        <span class="contact-detect ${co.contact ? '' : 'no'}">${co.contact ? '✓ /contact' : '✕ なし'}</span>
-        <button class="row-action ghost">プレビュー</button>
-        <button class="row-action">送 信</button>
-      </div>
-    `;
-  }).join('');
-  // companies filter ct
-  const ct = document.querySelector('#view-companies .filter-bar .ct b');
-  if(ct) ct.textContent = c.companies.length;
-}
-function renderPersonaForCampaign(c){
-  const cards = document.querySelectorAll('#view-persona .persona-grid .persona-card');
-  if(cards.length < 4) return;
-  const fields = ['industry', 'size', 'role', 'pain'];
-  cards.forEach((card, i) => {
-    const tags = card.querySelector('.persona-tags');
-    if(!tags) return;
-    const vals = c.persona[fields[i]] || [];
-    tags.innerHTML = vals.map(v => `<span class="persona-tag removable">${v}</span>`).join('') + '<span class="persona-tag-add">+ 追 加</span>';
-  });
-  // URL input
-  const urlInput = document.getElementById('urlInput');
-  if(urlInput) urlInput.value = c.url;
-}
-
-// dropdown 外 click で 閉 じ る
-document.addEventListener('click', e => {
-  const sw = document.querySelector('.site-switch');
-  if(sw && !sw.contains(e.target)) closeSiteDD();
-});
-
-// toast (= 簡 易)
-function showToast(msg){
-  const t = document.createElement('div');
-  t.textContent = msg;
-  t.style.cssText = 'position:fixed;top:70px;right:24px;background:var(--teal2);color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:700;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:fadeIn .2s';
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2200);
-}
-
-// 初 期 ロード
-setTimeout(() => { renderSiteDD(); loadActiveCampaign(); }, 50);
-
-// ─── Top clock ───
+// === Top clock ===
 function tick(){
   const d = new Date();
   const h = String(d.getHours()).padStart(2,'0');
@@ -1164,149 +467,56 @@ function tick(){
 }
 setInterval(tick, 1000); tick();
 
-// ─── Nav ───
-function navTo(view, btn){
+// === Tab switching ===
+function switchTab(view, btn){
+  document.querySelectorAll('.tab-bar .tab').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
   document.querySelectorAll('.view').forEach(v => v.classList.remove('show'));
   document.getElementById('view-' + view).classList.add('show');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  document.querySelector('.main').scrollTop = 0;
 }
 
-// ─── Company list (= mock data) ───
-const COMPANIES = [
-  { name: '株 式 会 社 ABC', industry: 'SaaS', size: '25 人', region: '東 京', fit: 87, contact: true },
-  { name: '株 式 会 社 DEF', industry: 'SaaS', size: '42 人', region: '東 京', fit: 82, contact: true },
-  { name: '株 式 会 社 GHI', industry: '受 託 開 発', size: '15 人', region: '大 阪', fit: 78, contact: true },
-  { name: 'XYZ コーポレーション', industry: 'SaaS', size: '38 人', region: '東 京', fit: 79, contact: true },
-  { name: '株 式 会 社 JKL マーケ', industry: '広 告 / マーケ', size: '8 人', region: '東 京', fit: 75, contact: true },
-  { name: 'MNO Solutions', industry: 'SaaS', size: '55 人', region: '名 古 屋', fit: 73, contact: true },
-  { name: '株 式 会 社 PQR', industry: '受 託 開 発', size: '22 人', region: '東 京', fit: 71, contact: true },
-  { name: 'STU テクノロジー', industry: 'SaaS', size: '12 人', region: '福 岡', fit: 68, contact: false },
-  { name: '株 式 会 社 VWX', industry: 'EC / D2C', size: '30 人', region: '東 京', fit: 65, contact: true },
-  { name: 'YZA 株 式 会 社', industry: 'SaaS', size: '7 人', region: '京 都', fit: 62, contact: true },
+// === Sheet data (= 187 件 想 定、 demo で 8 件) ===
+const LEADS = [
+  { name:'株 式 会 社 ABC', ind:'SaaS', size:'25 人', region:'東 京', repName:'田 中 太 郎', hpUrl:'abc.co.jp', contactUrl:true, fit:87, status:'replied' },
+  { name:'DEF テクノロジー', ind:'SaaS', size:'42 人', region:'東 京', repName:'佐 藤 健', hpUrl:'def-tech.jp', contactUrl:true, fit:82, status:'opened' },
+  { name:'株 式 会 社 GHI', ind:'受 託 開 発', size:'15 人', region:'大 阪', repName:'山 田 太 郎', hpUrl:'ghi.co.jp', contactUrl:true, fit:78, status:'sent' },
+  { name:'XYZ コーポレーション', ind:'SaaS', size:'38 人', region:'東 京', repName:'—', hpUrl:'xyz-corp.com', contactUrl:true, fit:79, status:'replied' },
+  { name:'株 式 会 社 JKL マーケ', ind:'広 告 / マーケ', size:'8 人', region:'東 京', repName:'高 橋 大 輔', hpUrl:'jkl-marke.jp', contactUrl:true, fit:75, status:'sent' },
+  { name:'MNO Solutions', ind:'SaaS', size:'55 人', region:'名 古 屋', repName:'—', hpUrl:'mno-sol.co.jp', contactUrl:true, fit:73, status:'sent' },
+  { name:'株 式 会 社 PQR', ind:'受 託 開 発', size:'22 人', region:'東 京', repName:'伊 藤 真 一', hpUrl:'pqr.co.jp', contactUrl:true, fit:71, status:'opened' },
+  { name:'STU テクノロジー', ind:'SaaS', size:'12 人', region:'福 岡', repName:'—', hpUrl:'stu-tech.jp', contactUrl:false, fit:68, status:'queue' },
+  { name:'株 式 会 社 VWX', ind:'EC / D2C', size:'30 人', region:'東 京', repName:'小 林 一 郎', hpUrl:'vwx.co.jp', contactUrl:true, fit:65, status:'queue' },
+  { name:'YZA 株 式 会 社', ind:'SaaS', size:'7 人', region:'京 都', repName:'加 藤 太 郎', hpUrl:'yza.com', contactUrl:true, fit:62, status:'queue' },
 ];
-function renderCompanies(){
-  const el = document.getElementById('companyList');
-  if(!el) return;
-  el.innerHTML = COMPANIES.map(c => {
-    const fitCls = c.fit >= 80 ? 'hi' : c.fit >= 60 ? 'mid' : 'lo';
+function fitCls(f){ return f >= 80 ? 'hi' : f >= 60 ? 'mid' : 'lo'; }
+function statusLabel(s){
+  return { queue:'待 機', sent:'送 信 済', opened:'開 封', replied:'✓ 返 信 あ り' }[s] || s;
+}
+function renderSheet(){
+  const body = document.getElementById('sheetBody');
+  if(!body) return;
+  body.innerHTML = LEADS.map((l, i) => {
+    const checked = l.status === 'queue' ? 'checked' : '';
     return `
-      <div class="company-row">
-        <div>
-          <div class="name">${c.name}</div>
-          <div class="meta">▌ <b>${c.industry}</b> · ${c.size} · ${c.region}</div>
-        </div>
-        <span class="fit-score ${fitCls}">fit ${c.fit}</span>
-        <span class="contact-detect ${c.contact ? '' : 'no'}">${c.contact ? '✓ /contact' : '✕ なし'}</span>
-        <button class="row-action ghost">プレビュー</button>
-        <button class="row-action">送 信</button>
-      </div>
+      <tr>
+        <td><input type="checkbox" class="row-checkbox" ${checked}></td>
+        <td>
+          <div class="name">${l.name}</div>
+          <div class="sub-meta">ご 担 当 者 様 宛</div>
+        </td>
+        <td>${l.ind}</td>
+        <td>${l.size}</td>
+        <td>${l.region}</td>
+        <td style="font-size:11.5px">${l.repName}</td>
+        <td><a href="https://${l.hpUrl}" target="_blank" rel="noopener" style="color:var(--teal);font-family:var(--mono);font-size:11.5px;text-decoration:underline">${l.hpUrl} ↗</a></td>
+        <td>${l.contactUrl ? '<span class="contact-ok">✓ 検 出 済</span>' : '<span class="contact-ng">— なし</span>'}</td>
+        <td><span class="fit-pill ${fitCls(l.fit)}">${l.fit}</span></td>
+        <td><span class="status-pill ${l.status}">${statusLabel(l.status)}</span></td>
+      </tr>
     `;
   }).join('');
 }
-// 旧 renderCompanies は loadActiveCampaign の renderCompaniesForCampaign に 置 換 済
-
-// ─── Wizard ───
-let wizStep = 1;
-function openWizard(){
-  document.getElementById('wizardModal').classList.add('show');
-  wizStep = 1;
-  showWizStep(1);
-}
-function closeWizard(){
-  document.getElementById('wizardModal').classList.remove('show');
-}
-function showWizStep(n){
-  document.querySelectorAll('.wiz-step').forEach(s => s.classList.remove('show'));
-  document.getElementById('ws' + n).classList.add('show');
-  for(let i = 1; i <= 5; i++){
-    const d = document.getElementById('wd' + i);
-    d.classList.remove('active', 'done');
-    if(i < n) d.classList.add('done');
-    if(i === n) d.classList.add('active');
-  }
-  // 自動 で 次 step に 移 動 (= step 2, 4 = AI 処 理 中)
-  if(n === 2) setTimeout(() => { wizStep = 3; showWizStep(3); }, 2500);
-  if(n === 4) setTimeout(() => { wizStep = 5; showWizStep(5); }, 3000);
-  // step 5 = 「キャンペーン 開 始」 button
-  const btn = document.getElementById('wizGoBtn');
-  if(n === 5){
-    btn.textContent = '⚡ 送 信 開 始 →';
-    btn.onclick = () => { closeWizard(); navTo('send', document.querySelector('.nav-btn[data-view=send]')); };
-  } else {
-    btn.textContent = '次 へ →';
-    btn.onclick = wizNext;
-  }
-}
-function wizNext(){
-  if(wizStep < 5){
-    wizStep++;
-    showWizStep(wizStep);
-  } else closeWizard();
-}
-
-// ─── Chat ───
-function sendChat(){
-  const input = document.getElementById('chatInput');
-  const text = input.value.trim();
-  if(!text) return;
-  const body = document.getElementById('chatBody');
-  const userMsg = document.createElement('div');
-  userMsg.className = 'msg';
-  userMsg.innerHTML = '<div class="msg-av">K</div><div class="msg-bd"><div class="msg-meta"><span class="msg-from">あ なた</span><span class="msg-time">' + new Date().toTimeString().slice(0,5) + '</span></div><div class="msg-text">' + text + '</div></div>';
-  body.appendChild(userMsg);
-  input.value = '';
-  body.scrollTop = body.scrollHeight;
-  // AI 返 答 sample
-  setTimeout(() => {
-    const aiMsg = document.createElement('div');
-    aiMsg.className = 'msg ai';
-    aiMsg.innerHTML = '<div class="msg-av">🤖</div><div class="msg-bd"><div class="msg-meta"><span class="msg-from">AI 営 業 チーム</span><span class="msg-time">' + new Date().toTimeString().slice(0,5) + '</span></div><div class="msg-text">承 知 し ま し た。 「' + text.slice(0, 40) + '」 を 反 映 し て 文 面 を 改 善 し ま す。 (= mock 動 作)</div></div>';
-    body.appendChild(aiMsg);
-    body.scrollTop = body.scrollHeight;
-  }, 800);
-}
-function quickChat(text){
-  document.getElementById('chatInput').value = text;
-  sendChat();
-}
-document.getElementById('chatInput').addEventListener('keydown', e => {
-  if(e.key === 'Enter' && !e.shiftKey){
-    e.preventDefault();
-    sendChat();
-  }
-});
-
-// ─── ペル ソナ AI 解 析 (= 実 機 能) ───
-async function aiAnalyze(){
-  const urlEl = document.getElementById('urlInput');
-  const url = urlEl ? urlEl.value.trim() : '';
-  if(!url || !/^https?:\/\//.test(url)){ showToast('⚠ URL を https:// で 入力'); return; }
-  showToast('🔍 AI 解 析 中 ... (= 10-20 秒)');
-  try {
-    const r = await fetch('/api/formtap/persona', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-    });
-    if(!r.ok){
-      const er = await r.json().catch(() => ({ error: 'HTTP ' + r.status }));
-      showToast('❌ ' + (er.error || '失 敗'));
-      return;
-    }
-    const data = await r.json();
-    const fields = ['industry', 'size', 'role', 'pain'];
-    const cards = document.querySelectorAll('#view-persona .persona-grid .persona-card');
-    cards.forEach((card, i) => {
-      const tags = card.querySelector('.persona-tags');
-      if(!tags) return;
-      const vals = data[fields[i]] || [];
-      tags.innerHTML = vals.map(v => `<span class="persona-tag removable">${v}</span>`).join('') + '<span class="persona-tag-add">+ 追 加</span>';
-    });
-    showToast('✓ AI 解 析 完 了');
-  } catch(e){ showToast('❌ ' + (e.message || '失 敗')); }
-}
+renderSheet();
 </script>
 
 </body>
